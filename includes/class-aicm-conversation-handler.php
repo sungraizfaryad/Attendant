@@ -277,6 +277,18 @@ class AICM_Conversation_Handler {
 			}
 		}
 
+		// Lead-capture phone step: the model reliably ASKS for the (optional)
+		// phone number in plain text — "…or you can skip this step" — instead
+		// of attaching a Skip chip. Give the visitor a tappable Skip so they
+		// never have to type the word. Narrow match (skip + phone/step) keeps
+		// this from firing on ordinary answers.
+		if ( empty( $options )
+			&& class_exists( 'AICM_Leads' ) && AICM_Leads::is_enabled()
+			&& preg_match( '/\bskip\b/i', $reply )
+			&& preg_match( '/\b(phone|number|this step)\b/i', $reply ) ) {
+			$options = array( 'Skip' );
+		}
+
 		// ── Fallback when the model returns an empty string ───────────────
 		if ( '' === trim( $reply ) ) {
 			$reply = __( "I'm sorry, I couldn't generate a response. Please try again.", 'ai-chatmate' );
