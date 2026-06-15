@@ -269,7 +269,7 @@ class AICM_Frontend {
 
 		$site_name = get_bloginfo( 'name' );
 		?>
-		<!-- Conciera widget — start -->
+		<!-- Attendant widget — start -->
 		<button
 			type="button"
 			id="aicm-launcher"
@@ -389,7 +389,7 @@ class AICM_Frontend {
 				</button>
 			</div>
 		</div>
-		<!-- Conciera widget — end -->
+		<!-- Attendant widget — end -->
 		<?php
 	}
 

@@ -1,4 +1,4 @@
-=== Conciera - AI Site Search & Content Finder ===
+=== Attendant - AI Site Search & Content Finder ===
 Contributors:      sungraizfaryad
 Tags:              ai, site-search, chatbot, openai, search
 Requires at least: 6.0
@@ -12,13 +12,13 @@ AI search chatbot that helps visitors find content on your website. Turns questi
 
 == Description ==
 
-Conciera is an AI-powered site search chatbot that helps your visitors find content on your website. When someone asks a question in plain language, Conciera searches your own posts, pages, products, and listings, then answers right in the chat — so visitors reach the right page without digging through menus. It combines **conversational search** with **knowledge Q&A** in one chat widget.
+Attendant is an AI-powered site search chatbot that helps your visitors find content on your website. When someone asks a question in plain language, Attendant searches your own posts, pages, products, and listings, then answers right in the chat — so visitors reach the right page without digging through menus. It combines **conversational search** with **knowledge Q&A** in one chat widget.
 
 **Mode 1 — Smart Search (for sites with listings)**
-A visitor says: "Find me apartments in Lisbon under €500K with 3 bedrooms" → Conciera extracts the parameters, searches your WordPress database, and returns a filtered results page plus preview cards — all inside the chat.
+A visitor says: "Find me apartments in Lisbon under €500K with 3 bedrooms" → Attendant extracts the parameters, searches your WordPress database, and returns a filtered results page plus preview cards — all inside the chat.
 
 **Mode 2 — Knowledge Q&A (for all sites)**
-A visitor says: "What is your return policy?" → Conciera searches your indexed content and answers the question with source citations.
+A visitor says: "What is your return policy?" → Attendant searches your indexed content and answers the question with source citations.
 
 **The AI automatically picks the right mode** based on what the visitor is asking.
 
@@ -53,10 +53,10 @@ A visitor says: "What is your return policy?" → Conciera searches your indexed
 
 1. Upload the `ai-chatmate` folder to `/wp-content/plugins/`
 2. Activate the plugin in **Plugins → Installed Plugins**
-3. Go to **Conciera → Settings**
+3. Go to **Attendant → Settings**
 4. Enter your OpenAI API key and click **Save Settings**
 5. Click **Test Connection** to confirm your key is working
-6. Go to **Conciera → Content Indexing** and click **Start Indexing**
+6. Go to **Attendant → Content Indexing** and click **Start Indexing**
 7. Add the chat widget with the shortcode `[ai_chatmate]` or enable the floating widget (appears automatically in the footer on every page)
 
 == Frequently Asked Questions ==

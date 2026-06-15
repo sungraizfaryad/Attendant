@@ -65,7 +65,7 @@ foreach ( $configured_types as $pt ) {
 ?>
 <div class="wrap" id="aicm-indexing-page">
 
-	<h1><?php echo esc_html__( 'Conciera — Content Indexing', 'ai-chatmate' ); ?></h1>
+	<h1><?php echo esc_html__( 'Attendant — Content Indexing', 'ai-chatmate' ); ?></h1>
 
 	<p class="description">
 		<?php

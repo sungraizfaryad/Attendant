@@ -1,4 +1,4 @@
-# Conciera — Plugin Working Notes
+# Attendant — Plugin Working Notes
 
 Read this BEFORE touching code. It captures what the codebase looks like, why
 specific decisions were made, and the hard-won gotchas that aren't visible
@@ -7,7 +7,7 @@ source and update this file.
 
 ## What this plugin is
 
-WP.org submission name: **Conciera - AI Site Search & Content Finder**
+WP.org submission name: **Attendant - AI Site Search & Content Finder**
 (folder, slug, text-domain, and `aicm_` PHP prefix are intentionally still
 `ai-chatmate` — keeping them locks our WP.org reservation and avoids breaking
 existing API keys / settings). GitHub:
@@ -25,7 +25,7 @@ manual indexing controls, file-based chat logs, and email lead capture.
   git repo. No separate canonical-vs-test split (unlike UNMAM).
 - FLP install (`~/Local Sites/flp/app/public/wp-content/plugins/ai-chatmate/`) is
   test-only; rsync to it after every change. Real 4,160-property dataset.
-- Build zip lives at `~/Desktop/conciera-2.0.0.zip` (Plugin Check 0 errors).
+- Build zip lives at `~/Desktop/attendant-2.0.0.zip` (Plugin Check 0 errors).
 
 ## Don't trip these mines
 
@@ -127,8 +127,8 @@ zipped build must report **0 errors**.
 
 ```sh
 SRC="/Users/sungraizfaryad/Local Sites/media-usage-inspector/app/public/wp-content/plugins/ai-chatmate"
-BUILD=/tmp/conciera-build
-ZIP="$HOME/Desktop/conciera-2.0.0.zip"
+BUILD=/tmp/attendant-build
+ZIP="$HOME/Desktop/attendant-2.0.0.zip"
 rm -rf "$BUILD" && mkdir -p "$BUILD/ai-chatmate"
 cp -R "$SRC"/. "$BUILD/ai-chatmate"/
 ( cd "$BUILD/ai-chatmate" && rm -rf .git .github .gitignore .distignore \
@@ -144,7 +144,7 @@ Verify with `wp plugin check` on the unzipped copy.
 
 - See `progress.md` (this folder) for current status.
 - See cloud memory at `~/.claude/projects/-Users-sungraizfaryad-Local-Sites-media-usage-inspector/memory/`
-  — entries prefixed `project_conciera_*` / `reference_ai_chatmate_*` belong to
+  — entries prefixed `project_attendant_*` / `reference_ai_chatmate_*` belong to
   this plugin. Entries prefixed with other plugin names (unmam, curator_ai,
   simple_wp_slider, remove_taxonomy_url) are siblings — don't touch them.
 - `wp-admin/` and `wp-includes/` are WordPress core. Never edit.

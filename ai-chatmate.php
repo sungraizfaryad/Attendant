@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: Conciera - AI Site Search & Content Finder
+ * Plugin Name: Attendant - AI Site Search & Content Finder
  * Plugin URI:  https://wordpress.org/plugins/ai-chatmate/
- * Description: Conciera is an AI search chatbot that helps your visitors find content on your website. It turns plain-language questions into a safe search of your own posts, pages, products, and listings, then answers right in a chat widget. Uses your OpenAI API key.
+ * Description: Attendant is an AI search chatbot that helps your visitors find content on your website. It turns plain-language questions into a safe search of your own posts, pages, products, and listings, then answers right in a chat widget. Uses your OpenAI API key.
  * Version:     2.0.0
  * Requires at least: 6.0
  * Requires PHP: 8.0
@@ -89,7 +89,7 @@ if ( ! aicm_requirements_met() ) {
 					sprintf(
 						/* translators: 1: Required PHP version, 2: Required WP version */
 						__(
-							'<strong>Conciera</strong> requires PHP %1$s and WordPress %2$s or higher. Please upgrade your environment.',
+							'<strong>Attendant</strong> requires PHP %1$s and WordPress %2$s or higher. Please upgrade your environment.',
 							'ai-chatmate'
 						),
 						esc_html( AICM_REQUIRED_PHP ),
@@ -248,7 +248,7 @@ final class AI_ChatMate {
 		if ( ! isset( $schedules['aicm_five_minutes'] ) ) {
 			$schedules['aicm_five_minutes'] = array(
 				'interval' => 5 * MINUTE_IN_SECONDS,
-				'display'  => __( 'Every 5 minutes (Conciera)', 'ai-chatmate' ),
+				'display'  => __( 'Every 5 minutes (Attendant)', 'ai-chatmate' ),
 			);
 		}
 		return $schedules;

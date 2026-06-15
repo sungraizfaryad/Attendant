@@ -26,7 +26,7 @@ $aicm_steps = array(
 );
 ?>
 <div class="wrap" id="aicm-wizard">
-	<h1><?php echo esc_html__( 'Conciera — Setup', 'ai-chatmate' ); ?></h1>
+	<h1><?php echo esc_html__( 'Attendant — Setup', 'ai-chatmate' ); ?></h1>
 
 	<ol class="aicm-wizard-steps" aria-hidden="true">
 		<?php foreach ( $aicm_steps as $aicm_i => $aicm_label ) : ?>

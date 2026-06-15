@@ -1,5 +1,5 @@
 /**
- * Conciera — Q&A Manager page handler.
+ * Attendant — Q&A Manager page handler.
  *
  * Enqueued by AICM_Admin::enqueue_assets() on the Q&A page.
  * Depends on the global `aicmAdmin` (REST URL + nonce) and on `aicmQA.i18n`

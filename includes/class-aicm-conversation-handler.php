@@ -105,7 +105,7 @@ class AICM_Conversation_Handler {
 		if ( null === $provider ) {
 			return self::error_response(
 				$session_id,
-				__( 'Conciera is not configured. Please add an API key in the admin settings.', 'ai-chatmate' )
+				__( 'Attendant is not configured. Please add an API key in the admin settings.', 'ai-chatmate' )
 			);
 		}
 

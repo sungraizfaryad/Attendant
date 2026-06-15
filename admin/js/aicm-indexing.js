@@ -1,5 +1,5 @@
 /**
- * Conciera — Content Indexing page handler.
+ * Attendant — Content Indexing page handler.
  *
  * Enqueued by AICM_Admin::enqueue_assets() on the Indexing page.
  * Depends on the global `aicmAdmin` (REST URL + nonce) and on `aicmIndexing`

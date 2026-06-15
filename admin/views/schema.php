@@ -26,12 +26,12 @@ $last_generated = AICM_Schema_Cache::last_generated_at();
 ?>
 <div class="wrap" id="aicm-schema-page">
 
-	<h1><?php echo esc_html__( 'Conciera — Schema', 'ai-chatmate' ); ?></h1>
+	<h1><?php echo esc_html__( 'Attendant — Schema', 'ai-chatmate' ); ?></h1>
 
 	<p class="description">
 		<?php
 		echo esc_html__(
-			'Conciera automatically discovers your post types, taxonomies, and custom fields. This schema is used to build the AI\'s search capabilities. Rescan after adding new post types or custom fields.',
+			'Attendant automatically discovers your post types, taxonomies, and custom fields. This schema is used to build the AI\'s search capabilities. Rescan after adding new post types or custom fields.',
 			'ai-chatmate'
 		);
 		?>

@@ -45,7 +45,7 @@ $logging         = ! empty( $settings['logging_enabled'] );
 ?>
 <div class="wrap" id="aicm-settings-page">
 
-	<h1><?php echo esc_html__( 'Conciera — Settings', 'ai-chatmate' ); ?></h1>
+	<h1><?php echo esc_html__( 'Attendant — Settings', 'ai-chatmate' ); ?></h1>
 
 	<p>
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=ai-chatmate&onboarding=1' ) ); ?>" class="button">

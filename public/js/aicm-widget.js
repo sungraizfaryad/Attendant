@@ -1,5 +1,5 @@
 /**
- * Conciera — Chat Widget
+ * Attendant — Chat Widget
  *
  * Handles the floating launcher, chat panel UI, and client-side chat history.
  *

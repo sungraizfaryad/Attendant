@@ -80,7 +80,7 @@ class AICM_Chat_Log {
 			update_option( self::DIR_KEY_OPTION, $key, false );
 		}
 
-		$dir = trailingslashit( $uploads['basedir'] ) . 'conciera-logs-' . $key . '/';
+		$dir = trailingslashit( $uploads['basedir'] ) . 'aicm-logs-' . $key . '/';
 
 		if ( ! is_dir( $dir ) ) {
 			if ( ! $create || ! wp_mkdir_p( $dir ) ) {

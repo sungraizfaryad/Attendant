@@ -125,7 +125,7 @@ if ( $logging_enabled ) {
 ?>
 <div class="wrap" id="aicm-analytics-page">
 
-	<h1><?php echo esc_html__( 'Conciera — Analytics', 'ai-chatmate' ); ?></h1>
+	<h1><?php echo esc_html__( 'Attendant — Analytics', 'ai-chatmate' ); ?></h1>
 
 	<?php if ( $over_budget ) : ?>
 		<div class="notice notice-error inline" style="margin-bottom:20px;">

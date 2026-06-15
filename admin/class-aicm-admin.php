@@ -66,8 +66,8 @@ class AICM_Admin {
 	public function register_menus(): void {
 		// Top-level menu — points to the Dashboard page.
 		add_menu_page(
-			__( 'Conciera', 'ai-chatmate' ),        // Page title (browser tab).
-			__( 'Conciera', 'ai-chatmate' ),        // Menu label.
+			__( 'Attendant', 'ai-chatmate' ),        // Page title (browser tab).
+			__( 'Attendant', 'ai-chatmate' ),        // Menu label.
 			'manage_options',                           // Capability required.
 			self::MENU_SLUG,                            // Menu slug.
 			array( $this, 'render_settings_page' ),    // Callback — Phase 1 shows settings.
@@ -78,7 +78,7 @@ class AICM_Admin {
 		// Submenu: Content Indexing — fully implemented in Phase 3.
 		add_submenu_page(
 			self::MENU_SLUG,
-			__( 'Content Indexing — Conciera', 'ai-chatmate' ),
+			__( 'Content Indexing — Attendant', 'ai-chatmate' ),
 			__( 'Content Indexing', 'ai-chatmate' ),
 			'manage_options',
 			self::MENU_SLUG . '-indexing',
@@ -87,7 +87,7 @@ class AICM_Admin {
 
 		add_submenu_page(
 			self::MENU_SLUG,
-			__( 'Schema — Conciera', 'ai-chatmate' ),
+			__( 'Schema — Attendant', 'ai-chatmate' ),
 			__( 'Schema', 'ai-chatmate' ),
 			'manage_options',
 			self::MENU_SLUG . '-schema',
@@ -96,7 +96,7 @@ class AICM_Admin {
 
 		add_submenu_page(
 			self::MENU_SLUG,
-			__( 'Q&A Manager — Conciera', 'ai-chatmate' ),
+			__( 'Q&A Manager — Attendant', 'ai-chatmate' ),
 			__( 'Q&amp;A Manager', 'ai-chatmate' ),
 			'manage_options',
 			self::MENU_SLUG . '-qa',
@@ -105,7 +105,7 @@ class AICM_Admin {
 
 		add_submenu_page(
 			self::MENU_SLUG,
-			__( 'Analytics — Conciera', 'ai-chatmate' ),
+			__( 'Analytics — Attendant', 'ai-chatmate' ),
 			__( 'Analytics', 'ai-chatmate' ),
 			'manage_options',
 			self::MENU_SLUG . '-analytics',
@@ -117,7 +117,7 @@ class AICM_Admin {
 		// lands on Settings (and the setup wizard on first run).
 		add_submenu_page(
 			self::MENU_SLUG,
-			__( 'Settings — Conciera', 'ai-chatmate' ),
+			__( 'Settings — Attendant', 'ai-chatmate' ),
 			__( 'Settings', 'ai-chatmate' ),
 			'manage_options',
 			self::MENU_SLUG,
@@ -418,7 +418,7 @@ class AICM_Admin {
 
 		nocache_headers();
 		header( 'Content-Type: text/plain; charset=utf-8' );
-		header( 'Content-Disposition: attachment; filename="conciera-chat-' . basename( $path ) . '"' );
+		header( 'Content-Disposition: attachment; filename="attendant-chat-' . basename( $path ) . '"' );
 		// Content-Length lies (truncates the download) when zlib output
 		// compression rewrites the body — only send it when that is off.
 		if ( ! ini_get( 'zlib.output_compression' ) ) {

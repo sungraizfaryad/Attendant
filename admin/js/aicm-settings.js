@@ -1,5 +1,5 @@
 /**
- * Conciera — Settings page handler.
+ * Attendant — Settings page handler.
  *
  * Enqueued by AICM_Admin::enqueue_assets() on the top-level settings page.
  * Depends on the global `aicmAdmin` object (REST URL, nonce, i18n) that is

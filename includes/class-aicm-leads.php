@@ -156,7 +156,7 @@ class AICM_Leads {
 			$lines[] = __( 'They were looking for:', 'ai-chatmate' ) . ' ' . $topic;
 		}
 		$lines[] = '';
-		$lines[] = __( 'Sent automatically by Conciera. Reply to this email to contact the visitor directly.', 'ai-chatmate' );
+		$lines[] = __( 'Sent automatically by Attendant. Reply to this email to contact the visitor directly.', 'ai-chatmate' );
 
 		// Reply-To is the VALIDATED visitor email — is_email() passed above,
 		// so header injection via line breaks is impossible.

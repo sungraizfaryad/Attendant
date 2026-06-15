@@ -1,5 +1,5 @@
 /**
- * Conciera — Schema page handler (Rescan button).
+ * Attendant — Schema page handler (Rescan button).
  *
  * Enqueued by AICM_Admin::enqueue_assets() on the Schema page.
  * Depends on the global `aicmAdmin` (REST URL + nonce) and on `aicmSchema.i18n`
