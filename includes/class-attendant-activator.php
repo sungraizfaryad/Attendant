@@ -93,7 +93,12 @@ class ATTENDANT_Activator {
 			$old_d  = $upload['basedir'] . '/aicm-logs-' . $log_key;
 			$new_d  = $upload['basedir'] . '/attendant-logs-' . $log_key;
 			if ( is_dir( $old_d ) && ! is_dir( $new_d ) ) {
-				rename( $old_d, $new_d );
+				require_once ABSPATH . 'wp-admin/includes/file.php';
+				global $wp_filesystem;
+				if ( empty( $wp_filesystem ) ) {
+					WP_Filesystem();
+				}
+				$wp_filesystem->move( $old_d, $new_d );
 			}
 		}
 

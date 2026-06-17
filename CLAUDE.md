@@ -127,16 +127,16 @@ HID the operator bug.
 ## Build & ship
 
 ```sh
-SRC="/Users/sungraizfaryad/Local Sites/media-usage-inspector/app/public/wp-content/plugins/ai-chatmate"
+SRC="/Users/sungraizfaryad/Local Sites/media-usage-inspector/app/public/wp-content/plugins/attendant"
 BUILD=/tmp/attendant-build
 ZIP="$HOME/Desktop/attendant-2.0.0.zip"
-rm -rf "$BUILD" && mkdir -p "$BUILD/ai-chatmate"
-cp -R "$SRC"/. "$BUILD/ai-chatmate"/
-( cd "$BUILD/ai-chatmate" && rm -rf .git .github .gitignore .distignore \
+rm -rf "$BUILD" && mkdir -p "$BUILD/attendant"
+cp -R "$SRC"/. "$BUILD/attendant"/
+( cd "$BUILD/attendant" && rm -rf .git .github .gitignore .distignore \
     composer.json composer.lock phpunit.xml.dist phpcs.xml phpcs.xml.dist \
     vendor tests node_modules .phpunit.result.cache docs )
 find "$BUILD" \( -name '.DS_Store' -o -name '.playwright-mcp' \) -exec rm -rf {} +
-( cd "$BUILD" && zip -rqX "$ZIP" ai-chatmate )
+( cd "$BUILD" && zip -rqX "$ZIP" attendant )
 ```
 
 Verify with `wp plugin check` on the unzipped copy.
