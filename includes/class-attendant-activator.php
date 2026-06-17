@@ -26,6 +26,7 @@ class ATTENDANT_Activator {
 	 * Called by register_activation_hook() in the main plugin file.
 	 */
 	public static function activate(): void {
+		self::migrate_from_aicm();
 		self::create_tables();
 		self::set_default_options();
 		self::schedule_cron_events();
@@ -35,6 +36,70 @@ class ATTENDANT_Activator {
 
 		// Flush rewrite rules in case future phases register custom endpoints.
 		flush_rewrite_rules();
+	}
+
+	private static function migrate_from_aicm(): void {
+		global $wpdb;
+
+		if ( get_option( 'attendant_migrated_from_aicm' ) ) {
+			return;
+		}
+
+		$option_map = array(
+			'aicm_settings'          => 'attendant_settings',
+			'aicm_api_key_openai'    => 'attendant_api_key_openai',
+			'aicm_api_key_anthropic' => 'attendant_api_key_anthropic',
+			'aicm_api_key_google'    => 'attendant_api_key_google',
+			'aicm_index_status'      => 'attendant_index_status',
+			'aicm_db_version'        => 'attendant_db_version',
+			'aicm_monthly_usage'     => 'attendant_monthly_usage',
+			'aicm_log_dir_key'       => 'attendant_log_dir_key',
+			'aicm_field_config'      => 'attendant_field_config',
+			'aicm_onboarded'         => 'attendant_onboarded',
+			'aicm_index_activity'    => 'attendant_index_activity',
+			'aicm_index_lock'        => 'attendant_index_lock',
+			'aicm_process_key'       => 'attendant_process_key',
+			'aicm_daily_usage'       => 'attendant_daily_usage',
+		);
+
+		foreach ( $option_map as $old => $new ) {
+			$val = get_option( $old );
+			if ( false !== $val ) {
+				update_option( $new, $val );
+				delete_option( $old );
+			}
+		}
+
+		$table_map = array(
+			$wpdb->prefix . 'aicm_chunks' => $wpdb->prefix . 'attendant_chunks',
+			$wpdb->prefix . 'aicm_qa'     => $wpdb->prefix . 'attendant_qa',
+			$wpdb->prefix . 'aicm_logs'   => $wpdb->prefix . 'attendant_logs',
+			$wpdb->prefix . 'aicm_queue'  => $wpdb->prefix . 'attendant_queue',
+		);
+
+		foreach ( $table_map as $old_tbl => $new_tbl ) {
+			$old_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $old_tbl ) );
+			$new_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $new_tbl ) );
+			if ( $old_exists && ! $new_exists ) {
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$wpdb->query( "RENAME TABLE `{$old_tbl}` TO `{$new_tbl}`" );
+			}
+		}
+
+		$log_key = get_option( 'attendant_log_dir_key' );
+		if ( $log_key ) {
+			$upload = wp_upload_dir();
+			$old_d  = $upload['basedir'] . '/aicm-logs-' . $log_key;
+			$new_d  = $upload['basedir'] . '/attendant-logs-' . $log_key;
+			if ( is_dir( $old_d ) && ! is_dir( $new_d ) ) {
+				rename( $old_d, $new_d );
+			}
+		}
+
+		wp_clear_scheduled_hook( 'aicm_weekly_schema_scan' );
+		wp_clear_scheduled_hook( 'aicm_process_index_queue' );
+
+		update_option( 'attendant_migrated_from_aicm', true );
 	}
 
 	// -------------------------------------------------------------------------
