@@ -60,6 +60,7 @@ class ATTENDANT_Activator {
 			'aicm_index_lock'        => 'attendant_index_lock',
 			'aicm_process_key'       => 'attendant_process_key',
 			'aicm_daily_usage'       => 'attendant_daily_usage',
+			'aicm_schema'            => 'attendant_schema',
 		);
 
 		foreach ( $option_map as $old => $new ) {
