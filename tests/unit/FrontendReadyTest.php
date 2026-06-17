@@ -21,7 +21,7 @@ final class FrontendReadyTest extends TestCase {
 		parent::setUp();
 		Monkey\setUp();
 
-		AI_ChatMate::$test_settings = array();
+		Attendant_Plugin::$test_settings = array();
 		$this->options              = array();
 
 		Functions\when( 'get_option' )->alias(
@@ -35,13 +35,13 @@ final class FrontendReadyTest extends TestCase {
 	}
 
 	public function test_not_ready_without_api_key(): void {
-		AI_ChatMate::$test_settings = array( 'active_provider' => 'openai' );
+		Attendant_Plugin::$test_settings = array( 'active_provider' => 'openai' );
 
 		$this->assertFalse( ATTENDANT_Frontend::is_ready() );
 	}
 
 	public function test_ready_with_key_when_semantic_mode_off(): void {
-		AI_ChatMate::$test_settings        = array(
+		Attendant_Plugin::$test_settings        = array(
 			'active_provider' => 'openai',
 			'semantic_mode'   => false,
 		);
@@ -52,7 +52,7 @@ final class FrontendReadyTest extends TestCase {
 	}
 
 	public function test_not_ready_when_semantic_mode_on_and_index_empty(): void {
-		AI_ChatMate::$test_settings        = array(
+		Attendant_Plugin::$test_settings        = array(
 			'active_provider' => 'openai',
 			'semantic_mode'   => true,
 		);
@@ -64,7 +64,7 @@ final class FrontendReadyTest extends TestCase {
 	}
 
 	public function test_ready_when_semantic_mode_on_and_index_complete(): void {
-		AI_ChatMate::$test_settings        = array(
+		Attendant_Plugin::$test_settings        = array(
 			'active_provider' => 'openai',
 			'semantic_mode'   => true,
 		);
@@ -80,7 +80,7 @@ final class FrontendReadyTest extends TestCase {
 	public function test_not_ready_while_first_indexing_run_incomplete(): void {
 		// The user's product rule: a half-built first index must never serve
 		// visitors. Widget stays hidden until the initial run completes.
-		AI_ChatMate::$test_settings        = array(
+		Attendant_Plugin::$test_settings        = array(
 			'active_provider' => 'openai',
 			'semantic_mode'   => false,
 		);
@@ -99,7 +99,7 @@ final class FrontendReadyTest extends TestCase {
 	public function test_ready_during_reindex_after_initial_complete(): void {
 		// Re-indexing later must NOT re-hide the widget — only the first
 		// build gates visibility.
-		AI_ChatMate::$test_settings        = array(
+		Attendant_Plugin::$test_settings        = array(
 			'active_provider' => 'openai',
 			'semantic_mode'   => false,
 		);
@@ -117,7 +117,7 @@ final class FrontendReadyTest extends TestCase {
 	public function test_ready_when_indexing_never_started(): void {
 		// Structured-search-only sites that never run indexing get the
 		// widget as soon as a key is saved.
-		AI_ChatMate::$test_settings        = array(
+		Attendant_Plugin::$test_settings        = array(
 			'active_provider' => 'openai',
 			'semantic_mode'   => false,
 		);

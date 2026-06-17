@@ -88,7 +88,7 @@ class ATTENDANT_Billing {
 	 * @return bool True when the kill-switch should fire.
 	 */
 	public static function daily_budget_reached(): bool {
-		$budget = (float) AI_ChatMate::get_setting( 'daily_budget', 0 );
+		$budget = (float) Attendant_Plugin::get_setting( 'daily_budget', 0 );
 		return self::over_budget( self::today_spend(), $budget );
 	}
 }

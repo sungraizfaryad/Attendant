@@ -148,7 +148,7 @@ class ATTENDANT_Admin {
 		wp_add_inline_script(
 			'wp-api',  // wp-api is always loaded on admin pages — safe to depend on it.
 			sprintf(
-				'var aicmAdmin = %s;',
+				'var attendantAdmin = %s;',
 				wp_json_encode(
 					array(
 						'restUrl' => esc_url_raw( rest_url( 'attendant/v1' ) ),
@@ -184,7 +184,7 @@ class ATTENDANT_Admin {
 			);
 			wp_add_inline_script(
 				'wp-api',
-				sprintf( 'aicmAdmin.settingsUrl = %s;', wp_json_encode( admin_url( 'admin.php?page=' . self::MENU_SLUG ) ) ),
+				sprintf( 'attendantAdmin.settingsUrl = %s;', wp_json_encode( admin_url( 'admin.php?page=' . self::MENU_SLUG ) ) ),
 				'after'
 			);
 		}
@@ -224,10 +224,10 @@ class ATTENDANT_Admin {
 			$index_status = get_option( 'attendant_index_status', array() );
 			wp_localize_script(
 				'attendant-indexing',
-				'aicmIndexing',
+				'attendantIndexing',
 				array(
 					'isRunning' => ! empty( $index_status['is_running'] ),
-					'mode'      => (string) AI_ChatMate::get_setting( 'indexing_mode', 'frontend' ),
+					'mode'      => (string) Attendant_Plugin::get_setting( 'indexing_mode', 'frontend' ),
 					'i18n'      => array(
 						'inProgress'        => __( 'Indexing in progress…', 'attendant' ),
 						'complete'          => __( 'Indexing complete', 'attendant' ),
@@ -265,7 +265,7 @@ class ATTENDANT_Admin {
 			);
 			wp_localize_script(
 				'attendant-schema',
-				'aicmSchema',
+				'attendantSchema',
 				array(
 					'i18n' => array(
 						'scanning'      => __( 'Scanning…', 'attendant' ),
@@ -294,7 +294,7 @@ class ATTENDANT_Admin {
 			);
 			wp_localize_script(
 				'attendant-qa',
-				'aicmQA',
+				'attendantQA',
 				array(
 					'i18n' => array(
 						'editPair'      => __( 'Edit Q&A Pair', 'attendant' ),

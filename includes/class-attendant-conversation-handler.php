@@ -130,7 +130,7 @@ class ATTENDANT_Conversation_Handler {
 				'role'    => 'assistant',
 				'content' => $qa_match['answer'],
 			);
-			$history   = self::trim_history_to_budget( $history, (int) AI_ChatMate::get_setting( 'session_token_cap', 5000 ) );
+			$history   = self::trim_history_to_budget( $history, (int) Attendant_Plugin::get_setting( 'session_token_cap', 5000 ) );
 			self::save_history( $session_id, $history );
 
 			return array(
@@ -153,7 +153,7 @@ class ATTENDANT_Conversation_Handler {
 		$rag_context = '';
 		$source_ids  = array();
 
-		if ( (bool) AI_ChatMate::get_setting( 'semantic_mode', false ) ) {
+		if ( (bool) Attendant_Plugin::get_setting( 'semantic_mode', false ) ) {
 			$rag_chunks  = ATTENDANT_RAG_Retriever::find_similar( $provider, $user_message, self::RAG_TOP_K );
 			$rag_context = self::build_rag_context( $rag_chunks );
 			$source_ids  = array_values( array_unique( array_column( $rag_chunks, 'post_id' ) ) );
@@ -165,7 +165,7 @@ class ATTENDANT_Conversation_Handler {
 		$functions     = self::get_function_definitions();
 
 		// Determine how many output tokens we can afford.
-		$token_cap       = (int) AI_ChatMate::get_setting( 'session_token_cap', 5000 );
+		$token_cap       = (int) Attendant_Plugin::get_setting( 'session_token_cap', 5000 );
 		$estimated_input = self::estimate_message_tokens( $messages );
 		$max_output      = max( 256, min( 1024, $token_cap - $estimated_input ) );
 
@@ -435,7 +435,7 @@ class ATTENDANT_Conversation_Handler {
 	 * @return ATTENDANT_LLM_Provider|null
 	 */
 	private static function get_provider(): ?ATTENDANT_LLM_Provider {
-		$active     = (string) AI_ChatMate::get_setting( 'active_provider', 'openai' );
+		$active     = (string) Attendant_Plugin::get_setting( 'active_provider', 'openai' );
 		$option_key = "attendant_api_key_{$active}";
 
 		if ( '' === (string) get_option( $option_key, '' ) ) {
@@ -541,12 +541,12 @@ class ATTENDANT_Conversation_Handler {
 	 */
 	private static function build_system_prompt( string $rag_context ): string {
 		$site_name   = get_bloginfo( 'name' );
-		$personality = (string) AI_ChatMate::get_setting( 'ai_personality', 'friendly' );
+		$personality = (string) Attendant_Plugin::get_setting( 'ai_personality', 'friendly' );
 
 		$personality_text = match ( $personality ) {
 			'professional' => 'You are a professional, formal, and precise assistant.',
 			'casual'       => 'You are a laid-back, friendly assistant who speaks conversationally.',
-			'custom'       => (string) AI_ChatMate::get_setting(
+			'custom'       => (string) Attendant_Plugin::get_setting(
 				'welcome_message',
 				'You are a helpful assistant.'
 			),
@@ -561,7 +561,7 @@ class ATTENDANT_Conversation_Handler {
 		// "knows" it is a property site vs a blog vs a clinic, and adapts its
 		// questions and tone accordingly.
 		$tagline      = trim( (string) get_bloginfo( 'description' ) );
-		$site_context = trim( (string) AI_ChatMate::get_setting( 'site_context', '' ) );
+		$site_context = trim( (string) Attendant_Plugin::get_setting( 'site_context', '' ) );
 
 		if ( '' !== $tagline || '' !== $site_context ) {
 			$prompt .= "## About this website\n\n";
@@ -578,7 +578,7 @@ class ATTENDANT_Conversation_Handler {
 		// post types, taxonomy slugs, and meta keys instead of guessing.
 		$schema  = ATTENDANT_Schema_Cache::get();
 		$schema  = is_array( $schema ) ? ATTENDANT_Field_Config::apply( $schema ) : $schema;
-		$types   = (array) AI_ChatMate::get_setting( 'index_post_types', array( 'post', 'page' ) );
+		$types   = (array) Attendant_Plugin::get_setting( 'index_post_types', array( 'post', 'page' ) );
 		$catalog = is_array( $schema ) ? ATTENDANT_Schema_Catalog::build_prompt_block( $schema, $types ) : '';
 
 		if ( '' !== $catalog ) {
@@ -828,7 +828,7 @@ class ATTENDANT_Conversation_Handler {
 	 * @return array[] Function definition objects in OpenAI tools format.
 	 */
 	private static function get_function_definitions(): array {
-		$configured_types = (array) AI_ChatMate::get_setting(
+		$configured_types = (array) Attendant_Plugin::get_setting(
 			'index_post_types',
 			array( 'post', 'page' )
 		);

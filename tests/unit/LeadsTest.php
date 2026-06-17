@@ -31,7 +31,7 @@ final class LeadsTest extends TestCase {
 		$this->mails      = array();
 		$this->mail_ok    = true;
 
-		AI_ChatMate::$test_settings = array(
+		Attendant_Plugin::$test_settings = array(
 			'lead_capture' => true,
 			'lead_email'   => 'owner@example.com',
 		);
@@ -66,7 +66,7 @@ final class LeadsTest extends TestCase {
 	}
 
 	public function test_disabled_feature_rejects_capture(): void {
-		AI_ChatMate::$test_settings['lead_capture'] = false;
+		Attendant_Plugin::$test_settings['lead_capture'] = false;
 
 		$r = ATTENDANT_Leads::capture( array( 'email' => 'visitor@example.com' ), 'sess1' );
 
@@ -140,7 +140,7 @@ final class LeadsTest extends TestCase {
 	}
 
 	public function test_falls_back_to_admin_email_when_unconfigured(): void {
-		AI_ChatMate::$test_settings['lead_email'] = '';
+		Attendant_Plugin::$test_settings['lead_email'] = '';
 
 		ATTENDANT_Leads::capture( array( 'email' => 'visitor@example.com' ), 'sess1' );
 

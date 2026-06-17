@@ -47,7 +47,7 @@ $max_cost = ! empty( $usage_display )
 	: 0.0;
 
 // ── Budget ────────────────────────────────────────────────────────────────
-$monthly_budget = (float) AI_ChatMate::get_setting( 'monthly_budget', 0.0 );
+$monthly_budget = (float) Attendant_Plugin::get_setting( 'monthly_budget', 0.0 );
 $budget_set     = $monthly_budget > 0.0;
 $budget_pct     = ( $budget_set && $monthly_budget > 0 )
 	? min( 100, round( ( $this_month_cost / $monthly_budget ) * 100, 1 ) )
@@ -81,7 +81,7 @@ $last_indexed_human = $last_indexed
 	: null;
 
 // ── Conversation log stats (only when logging is enabled) ──────────────────
-$logging_enabled = (bool) AI_ChatMate::get_setting( 'logging_enabled', false );
+$logging_enabled = (bool) Attendant_Plugin::get_setting( 'logging_enabled', false );
 $log_stats       = array(
 	'sessions_this_month' => 0,
 	'messages_this_month' => 0,

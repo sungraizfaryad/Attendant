@@ -113,21 +113,21 @@ if ( ! attendant_requirements_met() ) {
  * Responsible only for bootstrapping: loading dependencies and registering
  * top-level WordPress hooks. Business logic lives in dedicated classes.
  */
-final class AI_ChatMate {
+final class Attendant_Plugin {
 
 	/**
 	 * Single instance of this class.
 	 *
-	 * @var AI_ChatMate|null
+	 * @var Attendant_Plugin|null
 	 */
-	private static ?AI_ChatMate $instance = null;
+	private static ?Attendant_Plugin $instance = null;
 
 	/**
 	 * Get or create the singleton instance.
 	 *
-	 * @return AI_ChatMate
+	 * @return Attendant_Plugin
 	 */
-	public static function instance(): AI_ChatMate {
+	public static function instance(): Attendant_Plugin {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
 		}
@@ -339,14 +339,14 @@ final class AI_ChatMate {
 /**
  * Global helper — returns the single plugin instance.
  *
- * Allows other code to call aicm() without using statics directly.
+ * Allows other code to call attendant() without using statics directly.
  *
- * @return AI_ChatMate
+ * @return Attendant_Plugin
  */
-function aicm(): AI_ChatMate {
-	return AI_ChatMate::instance();
+function attendant(): Attendant_Plugin {
+	return Attendant_Plugin::instance();
 }
 
 // Boot the plugin on `plugins_loaded` so that all plugins are available and
 // WordPress is in a consistent state before we do anything.
-add_action( 'plugins_loaded', 'aicm' );
+add_action( 'plugins_loaded', 'attendant' );

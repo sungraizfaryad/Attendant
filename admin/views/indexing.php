@@ -45,7 +45,7 @@ $last_indexed  = $index_status['last_indexed'] ?? null;
 
 // Processing mode (frontend = this page drives the queue; background = the
 // server drives itself via loopback requests + WP-Cron).
-$indexing_mode = (string) AI_ChatMate::get_setting( 'indexing_mode', 'frontend' );
+$indexing_mode = (string) Attendant_Plugin::get_setting( 'indexing_mode', 'frontend' );
 
 // Initial activity log entries (JS refreshes these live).
 $initial_activity = ATTENDANT_Index_Manager::get_activity();
@@ -57,7 +57,7 @@ $failed_count = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabas
 );
 
 // Count the total posts across all configured post types (for context).
-$configured_types = (array) AI_ChatMate::get_setting( 'index_post_types', array( 'post', 'page' ) );
+$configured_types = (array) Attendant_Plugin::get_setting( 'index_post_types', array( 'post', 'page' ) );
 $total_posts      = 0;
 foreach ( $configured_types as $pt ) {
 	$total_posts += ATTENDANT_Content_Fetcher::count_published( sanitize_key( (string) $pt ) );

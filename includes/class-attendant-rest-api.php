@@ -55,7 +55,7 @@ class ATTENDANT_REST_API {
 	/**
 	 * Register all REST routes.
 	 *
-	 * Called from AI_ChatMate::init_rest_api() on the `rest_api_init` hook.
+	 * Called from Attendant_Plugin::init_rest_api() on the `rest_api_init` hook.
 	 */
 	public function register_routes(): void {
 		// Public: chat endpoint.
@@ -343,7 +343,7 @@ class ATTENDANT_REST_API {
 		// Opt-in gate: the public chat is OFF until the admin explicitly enables
 		// the widget. This is what stops an anonymous visitor from spending the
 		// site owner's API budget the moment the plugin is active.
-		if ( ! (bool) AI_ChatMate::get_setting( 'widget_enabled', false ) ) {
+		if ( ! (bool) Attendant_Plugin::get_setting( 'widget_enabled', false ) ) {
 			return new WP_Error(
 				'attendant_chat_disabled',
 				__( 'The chat assistant is not enabled on this site.', 'attendant' ),
@@ -453,7 +453,7 @@ class ATTENDANT_REST_API {
 	 * @return WP_REST_Response
 	 */
 	public function get_settings(): WP_REST_Response {
-		$settings = AI_ChatMate::get_setting();
+		$settings = Attendant_Plugin::get_setting();
 
 		return new WP_REST_Response(
 			array(
@@ -515,7 +515,7 @@ class ATTENDANT_REST_API {
 		// -----------------------------------------------------------
 		// Sanitize and save general settings.
 		// -----------------------------------------------------------
-		$current  = AI_ChatMate::get_setting();
+		$current  = Attendant_Plugin::get_setting();
 		$defaults = array(
 			'active_provider'   => 'openai',
 			'chat_model'        => 'gpt-4o-mini',
@@ -783,7 +783,7 @@ class ATTENDANT_REST_API {
 		// Rolling log of recently processed items (newest first) so the admin
 		// UI can show which posts are being indexed right now.
 		$status['activity'] = ATTENDANT_Index_Manager::get_activity();
-		$status['mode']     = (string) AI_ChatMate::get_setting( 'indexing_mode', 'frontend' );
+		$status['mode']     = (string) Attendant_Plugin::get_setting( 'indexing_mode', 'frontend' );
 
 		return new WP_REST_Response( $status, 200 );
 	}
@@ -817,7 +817,7 @@ class ATTENDANT_REST_API {
 
 		// Background mode: kick off the self-driving loopback chain so the
 		// queue processes without the admin tab staying open.
-		$mode = (string) AI_ChatMate::get_setting( 'indexing_mode', 'frontend' );
+		$mode = (string) Attendant_Plugin::get_setting( 'indexing_mode', 'frontend' );
 		if ( 'background' === $mode && $pending > 0 ) {
 			ATTENDANT_Index_Manager::dispatch_async();
 		}
@@ -919,7 +919,7 @@ class ATTENDANT_REST_API {
 		// the admin page detects no progress it POSTs here — we process a
 		// batch synchronously (above) and re-arm the chain (below). The
 		// transient lock inside process_queue_batch makes double-arming safe.
-		$mode = (string) AI_ChatMate::get_setting( 'indexing_mode', 'frontend' );
+		$mode = (string) Attendant_Plugin::get_setting( 'indexing_mode', 'frontend' );
 		if ( 'background' === $mode && (int) ( $status['pending'] ?? 0 ) > 0 ) {
 			ATTENDANT_Index_Manager::dispatch_async();
 		}
@@ -1046,7 +1046,7 @@ class ATTENDANT_REST_API {
 
 		// Persist the chosen searchable post types (reuses existing setting).
 		if ( isset( $params['index_post_types'] ) && is_array( $params['index_post_types'] ) ) {
-			AI_ChatMate::update_setting(
+			Attendant_Plugin::update_setting(
 				'index_post_types',
 				array_map( 'sanitize_key', $params['index_post_types'] )
 			);
@@ -1197,7 +1197,7 @@ class ATTENDANT_REST_API {
 	 * @return true|WP_Error True if within limit, WP_Error if exceeded.
 	 */
 	private function check_rate_limit(): true|WP_Error {
-		$limit = (int) AI_ChatMate::get_setting( 'rate_limit_msgs', 20 );
+		$limit = (int) Attendant_Plugin::get_setting( 'rate_limit_msgs', 20 );
 
 		// Rate limiting disabled when limit is 0.
 		if ( 0 === $limit ) {
@@ -1240,7 +1240,7 @@ class ATTENDANT_REST_API {
 	 * @return true|WP_Error True if within the cap, WP_Error if exceeded.
 	 */
 	private function check_daily_cap(): true|WP_Error {
-		$cap = (int) AI_ChatMate::get_setting( 'daily_msg_cap', 0 );
+		$cap = (int) Attendant_Plugin::get_setting( 'daily_msg_cap', 0 );
 
 		if ( $cap <= 0 ) {
 			return true;

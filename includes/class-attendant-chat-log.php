@@ -49,7 +49,7 @@ class ATTENDANT_Chat_Log {
 	 * @return bool
 	 */
 	public static function is_enabled(): bool {
-		return (bool) AI_ChatMate::get_setting( 'file_logging', false );
+		return (bool) Attendant_Plugin::get_setting( 'file_logging', false );
 	}
 
 	/**

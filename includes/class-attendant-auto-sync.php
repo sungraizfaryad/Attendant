@@ -45,7 +45,7 @@ class ATTENDANT_Auto_Sync {
 	/**
 	 * Register all WordPress post-lifecycle hooks.
 	 *
-	 * Called from AI_ChatMate::register_hooks() — fires on every request
+	 * Called from Attendant_Plugin::register_hooks() — fires on every request
 	 * (frontend, admin, REST, WP-Cron) so hooks are available wherever
 	 * WordPress performs post state changes.
 	 *
@@ -127,7 +127,7 @@ class ATTENDANT_Auto_Sync {
 		}
 
 		// Only handle post types we actually index; skip all others silently.
-		$configured_types = (array) AI_ChatMate::get_setting(
+		$configured_types = (array) Attendant_Plugin::get_setting(
 			'index_post_types',
 			array( 'post', 'page' )
 		);
@@ -157,7 +157,7 @@ class ATTENDANT_Auto_Sync {
 			return;
 		}
 
-		$configured_types = (array) AI_ChatMate::get_setting(
+		$configured_types = (array) Attendant_Plugin::get_setting(
 			'index_post_types',
 			array( 'post', 'page' )
 		);
@@ -217,11 +217,11 @@ class ATTENDANT_Auto_Sync {
 	 * @return bool
 	 */
 	private static function is_auto_sync_active( string $post_type ): bool {
-		if ( ! (bool) AI_ChatMate::get_setting( 'auto_sync', true ) ) {
+		if ( ! (bool) Attendant_Plugin::get_setting( 'auto_sync', true ) ) {
 			return false;
 		}
 
-		$configured_types = (array) AI_ChatMate::get_setting(
+		$configured_types = (array) Attendant_Plugin::get_setting(
 			'index_post_types',
 			array( 'post', 'page' )
 		);

@@ -10,7 +10,7 @@ final class QueryBuilderTest extends TestCase {
 	protected function setUp(): void {
 		parent::setUp();
 		Monkey\setUp();
-		AI_ChatMate::$test_settings = array( 'index_post_types' => array( 'post', 'page', 'listing' ) );
+		Attendant_Plugin::$test_settings = array( 'index_post_types' => array( 'post', 'page', 'listing' ) );
 
 		// Sanitizers / unslash used by build(). sanitize_text_field must mimic
 		// the real WP behaviour of eating '<…' as a partial HTML tag — the old

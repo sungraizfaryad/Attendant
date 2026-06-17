@@ -97,7 +97,7 @@ class ATTENDANT_Query_Builder {
 	 * @return array WP_Query args array, ready to pass to new WP_Query().
 	 */
 	public static function build( array $args ): array {
-		$configured_types = (array) AI_ChatMate::get_setting(
+		$configured_types = (array) Attendant_Plugin::get_setting(
 			'index_post_types',
 			array( 'post', 'page' )
 		);

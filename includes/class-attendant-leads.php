@@ -44,7 +44,7 @@ class ATTENDANT_Leads {
 	 * @return bool
 	 */
 	public static function is_enabled(): bool {
-		return (bool) AI_ChatMate::get_setting( 'lead_capture', false );
+		return (bool) Attendant_Plugin::get_setting( 'lead_capture', false );
 	}
 
 	/**
@@ -53,7 +53,7 @@ class ATTENDANT_Leads {
 	 * @return string Valid email address ('' disables sending).
 	 */
 	public static function recipient(): string {
-		$configured = sanitize_email( (string) AI_ChatMate::get_setting( 'lead_email', '' ) );
+		$configured = sanitize_email( (string) Attendant_Plugin::get_setting( 'lead_email', '' ) );
 
 		if ( '' !== $configured && is_email( $configured ) ) {
 			return $configured;

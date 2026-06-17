@@ -128,7 +128,7 @@ class ATTENDANT_Content_Fetcher {
 		}
 
 		// Respect the admin's post type selection.
-		$configured_types = (array) AI_ChatMate::get_setting(
+		$configured_types = (array) Attendant_Plugin::get_setting(
 			'index_post_types',
 			array( 'post', 'page' )
 		);

@@ -1,5 +1,5 @@
 <?php
-// Minimal WordPress class stubs + an AI_ChatMate test double for unit tests.
+// Minimal WordPress class stubs + an Attendant_Plugin test double for unit tests.
 // Real classes are never loaded in unit tests (they need a running WordPress).
 
 if ( ! class_exists( 'WP_Term' ) ) {
@@ -35,9 +35,9 @@ if ( ! class_exists( 'WP_Error' ) ) {
 	}
 }
 
-if ( ! class_exists( 'AI_ChatMate' ) ) {
-	// Test double: tests set AI_ChatMate::$test_settings before calling code under test.
-	class AI_ChatMate {
+if ( ! class_exists( 'Attendant_Plugin' ) ) {
+	// Test double: tests set Attendant_Plugin::$test_settings before calling code under test.
+	class Attendant_Plugin {
 		public static array $test_settings = array();
 		public static function get_setting( ?string $key = null, $default = null ) {
 			if ( null === $key ) {

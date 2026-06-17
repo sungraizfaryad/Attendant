@@ -24,7 +24,7 @@ if ( ! current_user_can( 'manage_options' ) ) {
 }
 
 // Load current settings for pre-filling the form.
-$settings = AI_ChatMate::get_setting();
+$settings = Attendant_Plugin::get_setting();
 
 // Determine whether each API key is stored (without decrypting it).
 $has_openai    = '' !== (string) get_option( 'attendant_api_key_openai', '' );
@@ -101,7 +101,7 @@ $logging         = ! empty( $settings['logging_enabled'] );
 
 		<?php
 		// WordPress best practice: include a nonce field even though this form
-		// submits via REST + JS. The nonce is read from aicmAdmin.nonce in JS.
+		// submits via REST + JS. The nonce is read from attendantAdmin.nonce in JS.
 		wp_nonce_field( 'wp_rest', '_wpnonce_display', false );
 		?>
 

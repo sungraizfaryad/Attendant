@@ -96,7 +96,7 @@ class ATTENDANT_Index_Manager {
 		$now         = current_time( 'mysql' );
 		$total       = 0;
 
-		$configured_types = (array) AI_ChatMate::get_setting(
+		$configured_types = (array) Attendant_Plugin::get_setting(
 			'index_post_types',
 			array( 'post', 'page' )
 		);
@@ -265,7 +265,7 @@ class ATTENDANT_Index_Manager {
 
 		// Respect admin's batch_size setting, capped at 50 per cron run
 		// regardless of the setting — guards against excessive API usage.
-		$batch_size = max( 1, min( 50, (int) AI_ChatMate::get_setting( 'batch_size', 10 ) ) );
+		$batch_size = max( 1, min( 50, (int) Attendant_Plugin::get_setting( 'batch_size', 10 ) ) );
 
 		// ── Step 2: reset stale 'processing' rows ─────────────────────────
 		// Rows stuck in 'processing' longer than STALE_MINUTES are from a
@@ -483,7 +483,7 @@ class ATTENDANT_Index_Manager {
 	 * @return ATTENDANT_LLM_Provider|null
 	 */
 	private static function get_provider(): ?ATTENDANT_LLM_Provider {
-		$active     = (string) AI_ChatMate::get_setting( 'active_provider', 'openai' );
+		$active     = (string) Attendant_Plugin::get_setting( 'active_provider', 'openai' );
 		$option_key = "attendant_api_key_{$active}";
 
 		// No key stored — bail immediately.
@@ -724,7 +724,7 @@ class ATTENDANT_Index_Manager {
 		// Chain the next batch while pending work remains and the admin has
 		// Background mode selected. The stop button deletes pending rows, so
 		// stopping naturally breaks the chain.
-		$mode   = (string) AI_ChatMate::get_setting( 'indexing_mode', 'frontend' );
+		$mode   = (string) Attendant_Plugin::get_setting( 'indexing_mode', 'frontend' );
 		$status = (array) get_option( 'attendant_index_status', array() );
 
 		if ( 'background' === $mode && (int) ( $status['pending'] ?? 0 ) > 0 ) {

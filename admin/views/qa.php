@@ -4,7 +4,7 @@
  *
  * Provides a CRUD interface for admin-managed Q&A pairs stored in attendant_qa.
  * All read/write operations are performed via the REST API using inline JS;
- * the aicmAdmin object (restUrl, nonce) is injected by ATTENDANT_Admin::enqueue_assets().
+ * the attendantAdmin object (restUrl, nonce) is injected by ATTENDANT_Admin::enqueue_assets().
  *
  * ── What this page does ──────────────────────────────────────────────────────
  *  - Lists all Q&A pairs (question, answer preview, priority, status, match count).

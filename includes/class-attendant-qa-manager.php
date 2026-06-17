@@ -375,7 +375,7 @@ class ATTENDANT_QA_Manager {
 	 * @return ATTENDANT_LLM_Provider|null
 	 */
 	private static function get_provider(): ?ATTENDANT_LLM_Provider {
-		$active     = (string) AI_ChatMate::get_setting( 'active_provider', 'openai' );
+		$active     = (string) Attendant_Plugin::get_setting( 'active_provider', 'openai' );
 		$option_key = "attendant_api_key_{$active}";
 
 		if ( '' === (string) get_option( $option_key, '' ) ) {

@@ -4,7 +4,7 @@
  *
  * Rendered by ATTENDANT_Admin for the top-level page when onboarding is incomplete
  * (or when ?onboarding=1). Pure markup; attendant-wizard.js drives the steps and
- * fills detected data. aicmAdmin (restUrl/nonce/i18n) is localized by ATTENDANT_Admin.
+ * fills detected data. attendantAdmin (restUrl/nonce/i18n) is localized by ATTENDANT_Admin.
  *
  * @package Attendant
  */

@@ -14,7 +14,7 @@
  *    in the footer, so the shortcode itself outputs nothing).
  *
  * ── Nonce ─────────────────────────────────────────────────────────────────
- * wp_create_nonce('attendant_chat_nonce') is passed to JS as aicmChat.nonce.
+ * wp_create_nonce('attendant_chat_nonce') is passed to JS as attendantChat.nonce.
  * The JS widget sends it as the 'X-Attendant-Nonce' request header, which the
  * REST permission callback verifies with wp_verify_nonce( $nonce, 'attendant_chat_nonce' ).
  *
@@ -87,7 +87,7 @@ class ATTENDANT_Frontend {
 	 * @return bool
 	 */
 	private static function is_enabled(): bool {
-		return (bool) AI_ChatMate::get_setting( 'widget_enabled', false );
+		return (bool) Attendant_Plugin::get_setting( 'widget_enabled', false );
 	}
 
 	/**
@@ -123,7 +123,7 @@ class ATTENDANT_Frontend {
 	 *               reason is '' when ready, otherwise 'no_key' or 'index_empty'.
 	 */
 	public static function status(): array {
-		$enabled = (bool) AI_ChatMate::get_setting( 'widget_enabled', false );
+		$enabled = (bool) Attendant_Plugin::get_setting( 'widget_enabled', false );
 		$ready   = true;
 		$reason  = '';
 
@@ -135,7 +135,7 @@ class ATTENDANT_Frontend {
 			|| (int) ( $index['total_chunks'] ?? 0 ) > 0;
 
 		// An API key for the active provider is always required.
-		$active = (string) AI_ChatMate::get_setting( 'active_provider', 'openai' );
+		$active = (string) Attendant_Plugin::get_setting( 'active_provider', 'openai' );
 		if ( '' === (string) get_option( "attendant_api_key_{$active}", '' ) ) {
 			$ready  = false;
 			$reason = 'no_key';
@@ -146,7 +146,7 @@ class ATTENDANT_Frontend {
 			// and later re-indexes do not re-hide the widget.
 			$ready  = false;
 			$reason = 'indexing';
-		} elseif ( (bool) AI_ChatMate::get_setting( 'semantic_mode', false ) ) {
+		} elseif ( (bool) Attendant_Plugin::get_setting( 'semantic_mode', false ) ) {
 			// Semantic Q&A needs embeddings — require a non-empty index.
 			if ( (int) ( $index['total_chunks'] ?? 0 ) < 1 ) {
 				$ready  = false;
@@ -190,8 +190,8 @@ class ATTENDANT_Frontend {
 		);
 
 		// ── Brand colour + position overrides (inline, appended to sheet) ─
-		$raw_color    = (string) AI_ChatMate::get_setting( 'widget_color', '#0073aa' );
-		$raw_position = (string) AI_ChatMate::get_setting( 'widget_position', 'bottom-right' );
+		$raw_color    = (string) Attendant_Plugin::get_setting( 'widget_color', '#0073aa' );
+		$raw_position = (string) Attendant_Plugin::get_setting( 'widget_position', 'bottom-right' );
 
 		$color    = sanitize_hex_color( $raw_color ) ?: '#0073aa';
 		$position = in_array( $raw_position, array( 'bottom-right', 'bottom-left' ), true )
@@ -223,7 +223,7 @@ class ATTENDANT_Frontend {
 		// ── Inline data for the JS widget ─────────────────────────────────
 		wp_localize_script(
 			'attendant-widget',
-			'aicmChat',
+			'attendantChat',
 			array(
 				// REST base URL — the JS appends /chat, etc.
 				'restUrl'        => esc_url_raw( rest_url( 'attendant/v1' ) ),
@@ -238,7 +238,7 @@ class ATTENDANT_Frontend {
 				// Site name shown in the widget header.
 				'siteName'       => get_bloginfo( 'name' ),
 				// First message displayed when the widget is opened (optional).
-				'welcomeMessage' => (string) AI_ChatMate::get_setting( 'welcome_message', '' ),
+				'welcomeMessage' => (string) Attendant_Plugin::get_setting( 'welcome_message', '' ),
 				// Input placeholder — localised so it can be translated.
 				'placeholder'    => __( 'Ask a question…', 'attendant' ),
 				// Strings used by the chat-history UI.

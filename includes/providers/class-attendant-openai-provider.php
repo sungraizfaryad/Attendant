@@ -88,8 +88,8 @@ class ATTENDANT_OpenAI_Provider implements ATTENDANT_LLM_Provider {
 	public function __construct() {
 		$encrypted_key         = (string) get_option( 'attendant_api_key_openai', '' );
 		$this->api_key         = ATTENDANT_Encryption::decrypt( $encrypted_key );
-		$this->chat_model      = (string) AI_ChatMate::get_setting( 'chat_model', 'gpt-4o-mini' );
-		$this->embedding_model = (string) AI_ChatMate::get_setting( 'embedding_model', 'text-embedding-3-small' );
+		$this->chat_model      = (string) Attendant_Plugin::get_setting( 'chat_model', 'gpt-4o-mini' );
+		$this->embedding_model = (string) Attendant_Plugin::get_setting( 'embedding_model', 'text-embedding-3-small' );
 	}
 
 	// -------------------------------------------------------------------------
