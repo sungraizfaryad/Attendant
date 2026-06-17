@@ -1,91 +1,91 @@
 /*
  * AI ChatMate — Widget Styles
  *
- * All selectors are prefixed .aicm- to avoid collisions with the host theme.
+ * All selectors are prefixed .attendant- to avoid collisions with the host theme.
  * The brand colour is injected at runtime via wp_add_inline_style():
- *   :root { --aicm-color: #xxxxxx; }
+ *   :root { --attendant-color: #xxxxxx; }
  * This file provides the fallback value (#0073aa — WordPress blue).
  *
  * Structure:
- *  .aicm-launcher          — floating action button (always visible)
- *  .aicm-widget            — chat panel (hidden until .is-open added by JS)
- *  .aicm-widget__header    — coloured title bar + close button
- *  .aicm-widget__messages  — scrollable messages list
- *  .aicm-msg               — single message row (--user | --bot)
- *  .aicm-msg__bubble       — text bubble
- *  .aicm-msg__sources      — source link chips below a bot message
- *  .aicm-widget__footer    — textarea + send button
+ *  .attendant-launcher          — floating action button (always visible)
+ *  .attendant-widget            — chat panel (hidden until .is-open added by JS)
+ *  .attendant-widget__header    — coloured title bar + close button
+ *  .attendant-widget__messages  — scrollable messages list
+ *  .attendant-msg               — single message row (--user | --bot)
+ *  .attendant-msg__bubble       — text bubble
+ *  .attendant-msg__sources      — source link chips below a bot message
+ *  .attendant-widget__footer    — textarea + send button
  */
 
 /* ── CSS custom properties ───────────────────────────────────────────────── */
 :root {
-	--aicm-color:         #0073aa; /* brand colour — overridden inline */
-	--aicm-bg:            #ffffff;
-	--aicm-border:        #dcdcde;
-	--aicm-user-bubble:   var(--aicm-color);
-	--aicm-user-text:     #ffffff;
-	--aicm-bot-bubble:    #f0f0f1;
-	--aicm-bot-text:      #1d2327;
-	--aicm-header-text:   #ffffff;
-	--aicm-radius-lg:     16px;
-	--aicm-radius-sm:     8px;
-	--aicm-shadow:        0 8px 32px rgba(0, 0, 0, 0.22);
-	--aicm-z:             999999;
-	--aicm-launcher-size: 56px;
-	--aicm-panel-width:   360px;
-	--aicm-panel-height:  520px;
+	--attendant-color:         #0073aa; /* brand colour — overridden inline */
+	--attendant-bg:            #ffffff;
+	--attendant-border:        #dcdcde;
+	--attendant-user-bubble:   var(--attendant-color);
+	--attendant-user-text:     #ffffff;
+	--attendant-bot-bubble:    #f0f0f1;
+	--attendant-bot-text:      #1d2327;
+	--attendant-header-text:   #ffffff;
+	--attendant-radius-lg:     16px;
+	--attendant-radius-sm:     8px;
+	--attendant-shadow:        0 8px 32px rgba(0, 0, 0, 0.22);
+	--attendant-z:             999999;
+	--attendant-launcher-size: 56px;
+	--attendant-panel-width:   360px;
+	--attendant-panel-height:  520px;
 }
 
 /* ── Launcher button ─────────────────────────────────────────────────────── */
-.aicm-launcher {
+.attendant-launcher {
 	position:        fixed;
 	bottom:          24px;
 	right:           24px;
-	z-index:         var(--aicm-z);
-	width:           var(--aicm-launcher-size);
-	height:          var(--aicm-launcher-size);
+	z-index:         var(--attendant-z);
+	width:           var(--attendant-launcher-size);
+	height:          var(--attendant-launcher-size);
 	border-radius:   50%;
-	background:      var(--aicm-color);
-	color:           var(--aicm-header-text);
+	background:      var(--attendant-color);
+	color:           var(--attendant-header-text);
 	border:          none;
 	cursor:          pointer;
 	display:         flex;
 	align-items:     center;
 	justify-content: center;
-	box-shadow:      var(--aicm-shadow);
+	box-shadow:      var(--attendant-shadow);
 	transition:      filter 0.2s, transform 0.15s;
 	/* Ensure the button always floats above page content. */
 	-webkit-tap-highlight-color: transparent;
 }
 
-.aicm-launcher:hover {
+.attendant-launcher:hover {
 	filter:    brightness(0.87);
 	transform: scale(1.06);
 }
 
-.aicm-launcher:active {
+.attendant-launcher:active {
 	transform: scale(0.97);
 }
 
-.aicm-launcher:focus-visible {
-	outline:        2px solid var(--aicm-color);
+.attendant-launcher:focus-visible {
+	outline:        2px solid var(--attendant-color);
 	outline-offset: 3px;
 }
 
 /* ── Widget panel ────────────────────────────────────────────────────────── */
-.aicm-widget {
+.attendant-widget {
 	position:       fixed;
-	bottom:         calc(var(--aicm-launcher-size) + 16px);
+	bottom:         calc(var(--attendant-launcher-size) + 16px);
 	right:          24px;
-	z-index:        var(--aicm-z);
-	width:          var(--aicm-panel-width);
+	z-index:        var(--attendant-z);
+	width:          var(--attendant-panel-width);
 	max-width:      calc(100vw - 32px);
-	height:         var(--aicm-panel-height);
+	height:         var(--attendant-panel-height);
 	max-height:     calc(100vh - 110px);
-	border-radius:  var(--aicm-radius-lg);
-	background:     var(--aicm-bg);
-	box-shadow:     var(--aicm-shadow);
-	border:         1px solid var(--aicm-border);
+	border-radius:  var(--attendant-radius-lg);
+	background:     var(--attendant-bg);
+	box-shadow:     var(--attendant-shadow);
+	border:         1px solid var(--attendant-border);
 	/* Hidden by default — JS adds .is-open */
 	display:        none;
 	flex-direction: column;
@@ -93,29 +93,29 @@
 	transform-origin: bottom right;
 }
 
-.aicm-widget.is-open {
+.attendant-widget.is-open {
 	display:   flex;
-	animation: aicm-slide-up 0.2s ease-out both;
+	animation: attendant-slide-up 0.2s ease-out both;
 }
 
-@keyframes aicm-slide-up {
+@keyframes attendant-slide-up {
 	from { opacity: 0; transform: translateY(10px) scale(0.97); }
 	to   { opacity: 1; transform: translateY(0)    scale(1);    }
 }
 
 /* ── Header ──────────────────────────────────────────────────────────────── */
-.aicm-widget__header {
+.attendant-widget__header {
 	display:         flex;
 	align-items:     center;
 	justify-content: space-between;
 	padding:         13px 16px;
-	background:      var(--aicm-color);
-	color:           var(--aicm-header-text);
+	background:      var(--attendant-color);
+	color:           var(--attendant-header-text);
 	flex-shrink:     0;
 	gap:             8px;
 }
 
-.aicm-widget__title {
+.attendant-widget__title {
 	font-weight:   600;
 	font-size:     15px;
 	white-space:   nowrap;
@@ -124,30 +124,30 @@
 	flex:          1;
 }
 
-.aicm-widget__close {
+.attendant-widget__close {
 	background:    transparent;
 	border:        none;
 	cursor:        pointer;
 	color:         inherit;
 	padding:       4px;
 	line-height:   1;
-	border-radius: var(--aicm-radius-sm);
+	border-radius: var(--attendant-radius-sm);
 	display:       flex;
 	flex-shrink:   0;
 	opacity:       0.85;
 	transition:    opacity 0.15s;
 }
 
-.aicm-widget__close:hover {
+.attendant-widget__close:hover {
 	opacity: 1;
 }
 
-.aicm-widget__close:focus-visible {
+.attendant-widget__close:focus-visible {
 	outline: 2px solid rgba(255, 255, 255, 0.75);
 }
 
 /* ── Messages area ───────────────────────────────────────────────────────── */
-.aicm-widget__messages {
+.attendant-widget__messages {
 	flex:            1;
 	overflow-y:      auto;
 	padding:         14px 12px;
@@ -158,98 +158,98 @@
 }
 
 /* Thin scrollbar — Webkit */
-.aicm-widget__messages::-webkit-scrollbar       { width: 4px; }
-.aicm-widget__messages::-webkit-scrollbar-track  { background: transparent; }
-.aicm-widget__messages::-webkit-scrollbar-thumb  {
-	background:    var(--aicm-border);
+.attendant-widget__messages::-webkit-scrollbar       { width: 4px; }
+.attendant-widget__messages::-webkit-scrollbar-track  { background: transparent; }
+.attendant-widget__messages::-webkit-scrollbar-thumb  {
+	background:    var(--attendant-border);
 	border-radius: 2px;
 }
 
 /* ── Message rows ────────────────────────────────────────────────────────── */
-.aicm-msg {
+.attendant-msg {
 	display:        flex;
 	flex-direction: column;
 	max-width:      85%;
 	/* Animation for each incoming message */
-	animation:      aicm-msg-in 0.18s ease-out both;
+	animation:      attendant-msg-in 0.18s ease-out both;
 }
 
-@keyframes aicm-msg-in {
+@keyframes attendant-msg-in {
 	from { opacity: 0; transform: translateY(6px); }
 	to   { opacity: 1; transform: translateY(0);   }
 }
 
-.aicm-msg--user {
+.attendant-msg--user {
 	align-self:  flex-end;
 	align-items: flex-end;
 }
 
-.aicm-msg--bot {
+.attendant-msg--bot {
 	align-self:  flex-start;
 	align-items: flex-start;
 }
 
 /* ── Message bubbles ─────────────────────────────────────────────────────── */
-.aicm-msg__bubble {
+.attendant-msg__bubble {
 	padding:       10px 13px;
-	border-radius: var(--aicm-radius-lg);
+	border-radius: var(--attendant-radius-lg);
 	font-size:     14px;
 	line-height:   1.55;
 	word-break:    break-word;
 }
 
-.aicm-msg--user .aicm-msg__bubble {
-	background:                var(--aicm-user-bubble);
-	color:                     var(--aicm-user-text);
+.attendant-msg--user .attendant-msg__bubble {
+	background:                var(--attendant-user-bubble);
+	color:                     var(--attendant-user-text);
 	border-bottom-right-radius: 4px;
 }
 
-.aicm-msg--bot .aicm-msg__bubble {
-	background:               var(--aicm-bot-bubble);
-	color:                    var(--aicm-bot-text);
+.attendant-msg--bot .attendant-msg__bubble {
+	background:               var(--attendant-bot-bubble);
+	color:                    var(--attendant-bot-text);
 	border-bottom-left-radius: 4px;
 }
 
 /* Inline formatting rendered by JS formatText() */
-.aicm-msg__bubble strong { font-weight: 600; }
-.aicm-msg__bubble br     { display: block; margin-bottom: 2px; }
+.attendant-msg__bubble strong { font-weight: 600; }
+.attendant-msg__bubble br     { display: block; margin-bottom: 2px; }
 
 /* ── Typing indicator ────────────────────────────────────────────────────── */
-.aicm-msg--typing .aicm-msg__bubble {
+.attendant-msg--typing .attendant-msg__bubble {
 	padding: 12px 14px;
 }
 
-.aicm-msg--typing .aicm-msg__bubble span {
+.attendant-msg--typing .attendant-msg__bubble span {
 	display:       inline-block;
 	width:         7px;
 	height:        7px;
 	border-radius: 50%;
-	background:    var(--aicm-color);
+	background:    var(--attendant-color);
 	margin:        0 2px;
-	animation:     aicm-bounce 1.3s infinite ease-in-out;
+	animation:     attendant-bounce 1.3s infinite ease-in-out;
 	vertical-align: middle;
 	opacity:       0.7;
 }
 
-.aicm-msg--typing .aicm-msg__bubble span:nth-child(2) { animation-delay: 0.22s; }
-.aicm-msg--typing .aicm-msg__bubble span:nth-child(3) { animation-delay: 0.44s; }
+.attendant-msg--typing .attendant-msg__bubble span:nth-child(2) { animation-delay: 0.22s; }
+.attendant-msg--typing .attendant-msg__bubble span:nth-child(3) { animation-delay: 0.44s; }
 
-@keyframes aicm-bounce {
+@keyframes attendant-bounce {
 	0%, 80%, 100% { transform: scale(0.65); opacity: 0.45; }
 	40%           { transform: scale(1);    opacity: 1;    }
 }
 
 /* ── Source link chips ───────────────────────────────────────────────────── */
-.aicm-msg__sources {
+.attendant-msg__sources {
 	margin-top: 6px;
 	display:    flex;
 	flex-wrap:  wrap;
 	gap:        5px;
 }
 
-.aicm-msg__sources a {
+.attendant-msg__sources a {
 	font-size:       11px;
-	color:           var(--aicm-color);
+	color:           var(--attendant-color);
 	text-decoration: none;
 	background:      rgba(0, 115, 170, 0.07);
 	padding:         3px 8px;
@@ -262,27 +262,27 @@
 	transition:      background 0.15s;
 }
 
-.aicm-msg__sources a:hover {
+.attendant-msg__sources a:hover {
 	background:      rgba(0, 115, 170, 0.14);
 	text-decoration: underline;
 }
 
 /* ── Footer / Input row ──────────────────────────────────────────────────── */
-.aicm-widget__footer {
+.attendant-widget__footer {
 	display:      flex;
 	align-items:  flex-end;
 	gap:          8px;
 	padding:      10px 12px;
-	border-top:   1px solid var(--aicm-border);
+	border-top:   1px solid var(--attendant-border);
 	flex-shrink:  0;
-	background:   var(--aicm-bg);
+	background:   var(--attendant-bg);
 }
 
-.aicm-widget__input {
+.attendant-widget__input {
 	flex:          1;
 	resize:        none;
-	border:        1px solid var(--aicm-border);
-	border-radius: var(--aicm-radius-sm);
+	border:        1px solid var(--attendant-border);
+	border-radius: var(--attendant-radius-sm);
 	padding:       8px 10px;
 	font-size:     14px;
 	font-family:   inherit;
@@ -291,27 +291,27 @@
 	max-height:    120px;
 	overflow-y:    auto;
 	outline:       none;
-	color:         var(--aicm-bot-text);
-	background:    var(--aicm-bg);
+	color:         var(--attendant-bot-text);
+	background:    var(--attendant-bg);
 	transition:    border-color 0.15s;
 }
 
-.aicm-widget__input:focus {
-	border-color: var(--aicm-color);
+.attendant-widget__input:focus {
+	border-color: var(--attendant-color);
 }
 
-.aicm-widget__input::placeholder {
+.attendant-widget__input::placeholder {
 	color:   #8c8f94;
 	opacity: 1;
 }
 
-.aicm-widget__send {
+.attendant-widget__send {
 	width:           36px;
 	height:          36px;
 	flex-shrink:     0;
 	border-radius:   50%;
-	background:      var(--aicm-color);
-	color:           var(--aicm-header-text);
+	background:      var(--attendant-color);
+	color:           var(--attendant-header-text);
 	border:          none;
 	cursor:          pointer;
 	display:         flex;
@@ -320,23 +320,23 @@
 	transition:      filter 0.15s, opacity 0.15s;
 }
 
-.aicm-widget__send:hover:not(:disabled) {
+.attendant-widget__send:hover:not(:disabled) {
 	filter: brightness(0.87);
 }
 
-.aicm-widget__send:disabled {
+.attendant-widget__send:disabled {
 	opacity: 0.45;
 	cursor:  not-allowed;
 }
 
-.aicm-widget__send:focus-visible {
-	outline:        2px solid var(--aicm-color);
+.attendant-widget__send:focus-visible {
+	outline:        2px solid var(--attendant-color);
 	outline-offset: 2px;
 }
 
 /* ── Responsive: small screens (≤ 480 px) ───────────────────────────────── */
 @media (max-width: 480px) {
-	.aicm-widget {
+	.attendant-widget {
 		width:         100%;
 		max-width:     100%;
 		height:        74svh; /* svh falls back to vh on older browsers */
@@ -344,86 +344,86 @@
 		bottom:        0;
 		right:         0;
 		left:          0;
-		border-radius: var(--aicm-radius-lg) var(--aicm-radius-lg) 0 0;
+		border-radius: var(--attendant-radius-lg) var(--attendant-radius-lg) 0 0;
 		border-left:   none;
 		border-right:  none;
 		border-bottom: none;
 		transform-origin: bottom center;
 	}
 
-	.aicm-launcher {
+	.attendant-launcher {
 		bottom: 16px;
 		right:  16px;
 	}
 }
 
 /* ── Header action buttons (history / new chat) ─────────────────────────── */
-.aicm-widget__hbtn {
+.attendant-widget__hbtn {
 	background:    transparent;
 	border:        none;
 	cursor:        pointer;
 	color:         inherit;
 	padding:       4px;
 	line-height:   1;
-	border-radius: var(--aicm-radius-sm);
+	border-radius: var(--attendant-radius-sm);
 	display:       flex;
 	flex-shrink:   0;
 	opacity:       0.85;
 	transition:    opacity 0.15s;
 }
 
-.aicm-widget__hbtn:hover {
+.attendant-widget__hbtn:hover {
 	opacity: 1;
 }
 
-.aicm-widget__hbtn:focus-visible {
+.attendant-widget__hbtn:focus-visible {
 	outline: 2px solid rgba(255, 255, 255, 0.75);
 }
 
 /* ── Chat history panel ──────────────────────────────────────────────────── */
 /* Hidden by default; .is-history on the widget swaps the conversation view
    for the history list (no absolute positioning — plain flex swap). */
-.aicm-widget__history {
+.attendant-widget__history {
 	display:    none;
 	flex:       1;
 	overflow-y: auto;
-	background: var(--aicm-bg);
+	background: var(--attendant-bg);
 }
 
-.aicm-widget.is-history .aicm-widget__history {
+.attendant-widget.is-history .attendant-widget__history {
 	display: block;
 }
 
-.aicm-widget.is-history .aicm-widget__messages,
-.aicm-widget.is-history .aicm-widget__footer {
+.attendant-widget.is-history .attendant-widget__messages,
+.attendant-widget.is-history .attendant-widget__footer {
 	display: none;
 }
 
-.aicm-widget__history-head {
+.attendant-widget__history-head {
 	padding:       12px 16px 8px;
 	font-weight:   600;
 	font-size:     13px;
-	color:         var(--aicm-bot-text);
-	border-bottom: 1px solid var(--aicm-border);
+	color:         var(--attendant-bot-text);
+	border-bottom: 1px solid var(--attendant-border);
 }
 
-.aicm-widget__history-list {
+.attendant-widget__history-list {
 	list-style: none;
 	margin:     0;
 	padding:    4px 0;
 }
 
-.aicm-widget__history-list li {
+.attendant-widget__history-list li {
 	margin: 0;
 }
 
-.aicm-history-empty {
+.attendant-history-empty {
 	padding:   16px;
 	color:     #646970;
 	font-size: 13px;
 }
 
-.aicm-history-item {
+.attendant-history-item {
 	display:    block;
 	width:      100%;
 	text-align: left;
@@ -431,20 +431,20 @@
 	border:     none;
 	cursor:     pointer;
 	padding:    10px 16px;
-	border-bottom: 1px solid var(--aicm-border);
+	border-bottom: 1px solid var(--attendant-border);
 	font:       inherit;
-	color:      var(--aicm-bot-text);
+	color:      var(--attendant-bot-text);
 }
 
-.aicm-history-item:hover {
-	background: var(--aicm-bot-bubble);
+.attendant-history-item:hover {
+	background: var(--attendant-bot-bubble);
 }
 
-.aicm-history-item.is-current {
-	background: var(--aicm-bot-bubble);
+.attendant-history-item.is-current {
+	background: var(--attendant-bot-bubble);
 }
 
-.aicm-history-item__label {
+.attendant-history-item__label {
 	display:       block;
 	font-size:     13.5px;
 	overflow:      hidden;
@@ -452,7 +452,7 @@
 	white-space:   nowrap;
 }
 
-.aicm-history-item__meta {
+.attendant-history-item__meta {
 	display:   block;
 	font-size: 11.5px;
 	color:     #8c8f94;
@@ -460,10 +460,10 @@
 }
 
 /* ── Quick-reply chips ───────────────────────────────────────────────────── */
-/* .aicm-chips sits directly inside .aicm-widget__messages (same flex column
-   as .aicm-msg rows). Bot message rows use align-self:flex-start with no
+/* .attendant-chips sits directly inside .attendant-widget__messages (same flex column
+   as .attendant-msg rows). Bot message rows use align-self:flex-start with no
    left margin, so chips use the same alignment — no extra padding-left. */
-.aicm-chips {
+.attendant-chips {
 	display:   flex;
 	flex-wrap: wrap;
 	gap:       8px;
@@ -471,10 +471,10 @@
 	align-self: flex-start;
 }
 
-.aicm-chip {
-	background:    var(--aicm-bg);
-	border:        1px solid var(--aicm-color);
-	color:         var(--aicm-color);
+.attendant-chip {
+	background:    var(--attendant-bg);
+	border:        1px solid var(--attendant-color);
+	color:         var(--attendant-color);
 	border-radius: 999px;
 	padding:       6px 14px;
 	font-size:     13px;
@@ -483,14 +483,14 @@
 	transition:    background 0.15s, color 0.15s;
 }
 
-.aicm-chip:hover {
-	background: var(--aicm-color);
-	color:      var(--aicm-header-text);
+.attendant-chip:hover {
+	background: var(--attendant-color);
+	color:      var(--attendant-header-text);
 }
 
-.aicm-chip:focus-visible {
-	background: var(--aicm-color);
-	color:      var(--aicm-header-text);
-	outline:    2px solid var(--aicm-color);
+.attendant-chip:focus-visible {
+	background: var(--attendant-color);
+	color:      var(--attendant-header-text);
+	outline:    2px solid var(--attendant-color);
 	outline-offset: 2px;
 }
