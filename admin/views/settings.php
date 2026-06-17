@@ -2,34 +2,34 @@
 /**
  * Admin Settings Page View
  *
- * Rendered by AICM_Admin::render_settings_page().
+ * Rendered by ATTENDANT_Admin::render_settings_page().
  *
  * This is a pure HTML/PHP view file — no business logic.
  * All dynamic data is escaped at the point of output.
  *
  * The form does NOT use wp_options directly on submit. Settings are saved
- * via the REST API (POST aicm/v1/settings) called by admin JS. This keeps
+ * via the REST API (POST attendant/v1/settings) called by admin JS. This keeps
  * validation in one place and allows inline save feedback without a page reload.
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// Capability check — defence in depth (already checked by AICM_Admin).
+// Capability check — defence in depth (already checked by ATTENDANT_Admin).
 if ( ! current_user_can( 'manage_options' ) ) {
-	wp_die( esc_html__( 'Access denied.', 'ai-chatmate' ) );
+	wp_die( esc_html__( 'Access denied.', 'attendant' ) );
 }
 
 // Load current settings for pre-filling the form.
 $settings = AI_ChatMate::get_setting();
 
 // Determine whether each API key is stored (without decrypting it).
-$has_openai    = '' !== (string) get_option( 'aicm_api_key_openai', '' );
-$has_anthropic = '' !== (string) get_option( 'aicm_api_key_anthropic', '' );
-$has_google    = '' !== (string) get_option( 'aicm_api_key_google', '' );
+$has_openai    = '' !== (string) get_option( 'attendant_api_key_openai', '' );
+$has_anthropic = '' !== (string) get_option( 'attendant_api_key_anthropic', '' );
+$has_google    = '' !== (string) get_option( 'attendant_api_key_google', '' );
 
 $active_provider = esc_attr( $settings['active_provider'] ?? 'openai' );
 $chat_model      = esc_attr( $settings['chat_model'] ?? 'gpt-4o-mini' );
@@ -43,61 +43,61 @@ $token_cap       = (int) ( $settings['session_token_cap'] ?? 5000 );
 $budget          = (float) ( $settings['monthly_budget'] ?? 0 );
 $logging         = ! empty( $settings['logging_enabled'] );
 ?>
-<div class="wrap" id="aicm-settings-page">
+<div class="wrap" id="attendant-settings-page">
 
-	<h1><?php echo esc_html__( 'Attendant — Settings', 'ai-chatmate' ); ?></h1>
+	<h1><?php echo esc_html__( 'Attendant — Settings', 'attendant' ); ?></h1>
 
 	<p>
-		<a href="<?php echo esc_url( admin_url( 'admin.php?page=ai-chatmate&onboarding=1' ) ); ?>" class="button">
-			<?php echo esc_html__( 'Re-run setup wizard', 'ai-chatmate' ); ?>
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=attendant&onboarding=1' ) ); ?>" class="button">
+			<?php echo esc_html__( 'Re-run setup wizard', 'attendant' ); ?>
 		</a>
 	</p>
 
 	<?php
 	// Widget visibility status — the admin must always know whether the chat
 	// widget is actually showing on the frontend, and if not, exactly why.
-	require_once AICM_PLUGIN_DIR . 'public/class-aicm-frontend.php';
-	$aicm_widget_status = AICM_Frontend::status();
+	require_once ATTENDANT_PLUGIN_DIR . 'public/class-attendant-frontend.php';
+	$attendant_widget_status = ATTENDANT_Frontend::status();
 
-	if ( $aicm_widget_status['enabled'] && ! $aicm_widget_status['ready'] ) :
+	if ( $attendant_widget_status['enabled'] && ! $attendant_widget_status['ready'] ) :
 		?>
 		<div class="notice notice-warning inline" style="margin:0 0 16px;">
 			<p>
-				<strong><?php echo esc_html__( 'The chat widget will NOT display on your site yet.', 'ai-chatmate' ); ?></strong>
-				<?php if ( 'indexing' === $aicm_widget_status['reason'] ) : ?>
-					<?php echo esc_html__( 'The first content indexing run has not finished — the widget stays hidden until it completes, so visitors never get answers from a half-built index.', 'ai-chatmate' ); ?>
-					<a href="<?php echo esc_url( admin_url( 'admin.php?page=ai-chatmate-indexing' ) ); ?>">
-						<?php echo esc_html__( 'Check indexing progress', 'ai-chatmate' ); ?>
+				<strong><?php echo esc_html__( 'The chat widget will NOT display on your site yet.', 'attendant' ); ?></strong>
+				<?php if ( 'indexing' === $attendant_widget_status['reason'] ) : ?>
+					<?php echo esc_html__( 'The first content indexing run has not finished — the widget stays hidden until it completes, so visitors never get answers from a half-built index.', 'attendant' ); ?>
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=attendant-indexing' ) ); ?>">
+						<?php echo esc_html__( 'Check indexing progress', 'attendant' ); ?>
 					</a>
-				<?php elseif ( 'index_empty' === $aicm_widget_status['reason'] ) : ?>
-					<?php echo esc_html__( 'Semantic Q&A is enabled and the content index is still empty. The widget appears automatically once indexing is complete.', 'ai-chatmate' ); ?>
-					<a href="<?php echo esc_url( admin_url( 'admin.php?page=ai-chatmate-indexing' ) ); ?>">
-						<?php echo esc_html__( 'Run Content Indexing now', 'ai-chatmate' ); ?>
+				<?php elseif ( 'index_empty' === $attendant_widget_status['reason'] ) : ?>
+					<?php echo esc_html__( 'Semantic Q&A is enabled and the content index is still empty. The widget appears automatically once indexing is complete.', 'attendant' ); ?>
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=attendant-indexing' ) ); ?>">
+						<?php echo esc_html__( 'Run Content Indexing now', 'attendant' ); ?>
 					</a>
 				<?php else : ?>
-					<?php echo esc_html__( 'No API key is saved for the active AI provider. Add your API key below — the widget appears automatically once it is saved.', 'ai-chatmate' ); ?>
+					<?php echo esc_html__( 'No API key is saved for the active AI provider. Add your API key below — the widget appears automatically once it is saved.', 'attendant' ); ?>
 				<?php endif; ?>
 			</p>
 		</div>
-	<?php elseif ( $aicm_widget_status['enabled'] && $aicm_widget_status['ready'] ) : ?>
+	<?php elseif ( $attendant_widget_status['enabled'] && $attendant_widget_status['ready'] ) : ?>
 		<div class="notice notice-success inline" style="margin:0 0 16px;">
-			<p><?php echo esc_html__( 'The chat widget is live on your site.', 'ai-chatmate' ); ?></p>
+			<p><?php echo esc_html__( 'The chat widget is live on your site.', 'attendant' ); ?></p>
 		</div>
 	<?php endif; ?>
 
-	<div id="aicm-notice" class="notice" style="display:none;"></div>
+	<div id="attendant-notice" class="notice" style="display:none;"></div>
 
 	<!-- ── Settings tabs ─────────────────────────────────────────────────── -->
-	<h2 class="nav-tab-wrapper aicm-tabs">
-		<a href="#provider" class="nav-tab nav-tab-active" data-tab="provider"><?php echo esc_html__( 'AI Provider', 'ai-chatmate' ); ?></a>
-		<a href="#behaviour" class="nav-tab" data-tab="behaviour"><?php echo esc_html__( 'AI Behaviour', 'ai-chatmate' ); ?></a>
-		<a href="#widget" class="nav-tab" data-tab="widget"><?php echo esc_html__( 'Chat Widget', 'ai-chatmate' ); ?></a>
-		<a href="#limits" class="nav-tab" data-tab="limits"><?php echo esc_html__( 'Limits & Budget', 'ai-chatmate' ); ?></a>
-		<a href="#indexing" class="nav-tab" data-tab="indexing"><?php echo esc_html__( 'Indexing', 'ai-chatmate' ); ?></a>
-		<a href="#privacy" class="nav-tab" data-tab="privacy"><?php echo esc_html__( 'Privacy', 'ai-chatmate' ); ?></a>
+	<h2 class="nav-tab-wrapper attendant-tabs">
+		<a href="#provider" class="nav-tab nav-tab-active" data-tab="provider"><?php echo esc_html__( 'AI Provider', 'attendant' ); ?></a>
+		<a href="#behaviour" class="nav-tab" data-tab="behaviour"><?php echo esc_html__( 'AI Behaviour', 'attendant' ); ?></a>
+		<a href="#widget" class="nav-tab" data-tab="widget"><?php echo esc_html__( 'Chat Widget', 'attendant' ); ?></a>
+		<a href="#limits" class="nav-tab" data-tab="limits"><?php echo esc_html__( 'Limits & Budget', 'attendant' ); ?></a>
+		<a href="#indexing" class="nav-tab" data-tab="indexing"><?php echo esc_html__( 'Indexing', 'attendant' ); ?></a>
+		<a href="#privacy" class="nav-tab" data-tab="privacy"><?php echo esc_html__( 'Privacy', 'attendant' ); ?></a>
 	</h2>
 
-	<form id="aicm-settings-form" novalidate>
+	<form id="attendant-settings-form" novalidate>
 
 		<?php
 		// WordPress best practice: include a nonce field even though this form
@@ -108,13 +108,13 @@ $logging         = ! empty( $settings['logging_enabled'] );
 		<!-- ================================================================ -->
 		<!-- Section 1: AI Provider & API Keys                                -->
 		<!-- ================================================================ -->
-		<div class="aicm-tab-panel is-active" data-tab="provider">
-		<h2 class="title"><?php echo esc_html__( 'AI Provider & API Keys', 'ai-chatmate' ); ?></h2>
+		<div class="attendant-tab-panel is-active" data-tab="provider">
+		<h2 class="title"><?php echo esc_html__( 'AI Provider & API Keys', 'attendant' ); ?></h2>
 		<p class="description">
 			<?php
 			echo esc_html__(
 				'Your API key is encrypted before being saved and is never exposed to the browser or included in API responses.',
-				'ai-chatmate'
+				'attendant'
 			);
 			?>
 		</p>
@@ -123,14 +123,14 @@ $logging         = ! empty( $settings['logging_enabled'] );
 
 			<tr>
 				<th scope="row">
-					<label for="aicm-active-provider">
-						<?php echo esc_html__( 'Active Provider', 'ai-chatmate' ); ?>
+					<label for="attendant-active-provider">
+						<?php echo esc_html__( 'Active Provider', 'attendant' ); ?>
 					</label>
 				</th>
 				<td>
-					<select id="aicm-active-provider" name="active_provider">
+					<select id="attendant-active-provider" name="active_provider">
 						<option value="openai" <?php selected( $active_provider, 'openai' ); ?>>
-							<?php echo esc_html__( 'OpenAI', 'ai-chatmate' ); ?>
+							<?php echo esc_html__( 'OpenAI', 'attendant' ); ?>
 						</option>
 					</select>
 				</td>
@@ -138,31 +138,31 @@ $logging         = ! empty( $settings['logging_enabled'] );
 
 			<tr>
 				<th scope="row">
-					<label for="aicm-api-key-openai">
-						<?php echo esc_html__( 'OpenAI API Key', 'ai-chatmate' ); ?>
+					<label for="attendant-api-key-openai">
+						<?php echo esc_html__( 'OpenAI API Key', 'attendant' ); ?>
 					</label>
 				</th>
 				<td>
 					<input
 						type="password"
-						id="aicm-api-key-openai"
+						id="attendant-api-key-openai"
 						name="api_key_openai"
 						class="regular-text"
 						autocomplete="new-password"
-						placeholder="<?php echo $has_openai ? esc_attr__( '••••••••  (key stored)', 'ai-chatmate' ) : esc_attr__( 'sk-...', 'ai-chatmate' ); ?>"
+						placeholder="<?php echo $has_openai ? esc_attr__( '••••••••  (key stored)', 'attendant' ) : esc_attr__( 'sk-...', 'attendant' ); ?>"
 						value=""
 					>
 					<?php if ( $has_openai ) : ?>
-						<button type="button" id="aicm-test-openai" class="button aicm-test-btn" data-provider="openai">
-							<?php echo esc_html__( 'Test Connection', 'ai-chatmate' ); ?>
+						<button type="button" id="attendant-test-openai" class="button attendant-test-btn" data-provider="openai">
+							<?php echo esc_html__( 'Test Connection', 'attendant' ); ?>
 						</button>
-						<span id="aicm-test-openai-result" class="aicm-test-result"></span>
+						<span id="attendant-test-openai-result" class="attendant-test-result"></span>
 					<?php endif; ?>
 					<p class="description">
 						<?php
 						printf(
 							/* translators: %s: link to OpenAI API keys page */
-							esc_html__( 'Get your API key from %s', 'ai-chatmate' ),
+							esc_html__( 'Get your API key from %s', 'attendant' ),
 							'<a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">platform.openai.com/api-keys</a>'
 						);
 						?>
@@ -172,38 +172,38 @@ $logging         = ! empty( $settings['logging_enabled'] );
 
 			<tr>
 				<th scope="row">
-					<label for="aicm-chat-model">
-						<?php echo esc_html__( 'Chat Model', 'ai-chatmate' ); ?>
+					<label for="attendant-chat-model">
+						<?php echo esc_html__( 'Chat Model', 'attendant' ); ?>
 					</label>
 				</th>
 				<td>
-					<select id="aicm-chat-model" name="chat_model">
+					<select id="attendant-chat-model" name="chat_model">
 						<option value="gpt-4o-mini" <?php selected( $chat_model, 'gpt-4o-mini' ); ?>>
-							<?php echo esc_html__( 'gpt-4o-mini — Recommended ($0.15 / 1M input tokens)', 'ai-chatmate' ); ?>
+							<?php echo esc_html__( 'gpt-4o-mini — Recommended ($0.15 / 1M input tokens)', 'attendant' ); ?>
 						</option>
 						<option value="gpt-4o" <?php selected( $chat_model, 'gpt-4o' ); ?>>
-							<?php echo esc_html__( 'gpt-4o — More capable ($2.50 / 1M input tokens)', 'ai-chatmate' ); ?>
+							<?php echo esc_html__( 'gpt-4o — More capable ($2.50 / 1M input tokens)', 'attendant' ); ?>
 						</option>
 					</select>
 					<p class="description">
-						<?php echo esc_html__( 'gpt-4o-mini is the best cost/quality choice for most sites.', 'ai-chatmate' ); ?>
+						<?php echo esc_html__( 'gpt-4o-mini is the best cost/quality choice for most sites.', 'attendant' ); ?>
 					</p>
 				</td>
 			</tr>
 
 			<tr>
 				<th scope="row">
-					<label for="aicm-embed-model">
-						<?php echo esc_html__( 'Embedding Model', 'ai-chatmate' ); ?>
+					<label for="attendant-embed-model">
+						<?php echo esc_html__( 'Embedding Model', 'attendant' ); ?>
 					</label>
 				</th>
 				<td>
-					<select id="aicm-embed-model" name="embedding_model">
+					<select id="attendant-embed-model" name="embedding_model">
 						<option value="text-embedding-3-small" <?php selected( $embed_model, 'text-embedding-3-small' ); ?>>
-							<?php echo esc_html__( 'text-embedding-3-small — Recommended ($0.02 / 1M tokens)', 'ai-chatmate' ); ?>
+							<?php echo esc_html__( 'text-embedding-3-small — Recommended ($0.02 / 1M tokens)', 'attendant' ); ?>
 						</option>
 						<option value="text-embedding-3-large" <?php selected( $embed_model, 'text-embedding-3-large' ); ?>>
-							<?php echo esc_html__( 'text-embedding-3-large — Higher accuracy ($0.13 / 1M tokens)', 'ai-chatmate' ); ?>
+							<?php echo esc_html__( 'text-embedding-3-large — Higher accuracy ($0.13 / 1M tokens)', 'attendant' ); ?>
 						</option>
 					</select>
 				</td>
@@ -218,27 +218,27 @@ $logging         = ! empty( $settings['logging_enabled'] );
 		<!-- ================================================================ -->
 		<!-- Section 2: AI Behaviour                                          -->
 		<!-- ================================================================ -->
-		<div class="aicm-tab-panel" data-tab="behaviour">
-		<h2 class="title"><?php echo esc_html__( 'AI Behaviour', 'ai-chatmate' ); ?></h2>
+		<div class="attendant-tab-panel" data-tab="behaviour">
+		<h2 class="title"><?php echo esc_html__( 'AI Behaviour', 'attendant' ); ?></h2>
 
 		<table class="form-table" role="presentation">
 
 			<tr>
 				<th scope="row">
-					<label for="aicm-personality">
-						<?php echo esc_html__( 'Personality', 'ai-chatmate' ); ?>
+					<label for="attendant-personality">
+						<?php echo esc_html__( 'Personality', 'attendant' ); ?>
 					</label>
 				</th>
 				<td>
-					<select id="aicm-personality" name="ai_personality">
+					<select id="attendant-personality" name="ai_personality">
 						<option value="friendly"     <?php selected( $personality, 'friendly' ); ?>>
-							<?php echo esc_html__( 'Friendly — Warm and conversational', 'ai-chatmate' ); ?>
+							<?php echo esc_html__( 'Friendly — Warm and conversational', 'attendant' ); ?>
 						</option>
 						<option value="professional" <?php selected( $personality, 'professional' ); ?>>
-							<?php echo esc_html__( 'Professional — Formal and concise', 'ai-chatmate' ); ?>
+							<?php echo esc_html__( 'Professional — Formal and concise', 'attendant' ); ?>
 						</option>
 						<option value="casual"       <?php selected( $personality, 'casual' ); ?>>
-							<?php echo esc_html__( 'Casual — Relaxed and informal', 'ai-chatmate' ); ?>
+							<?php echo esc_html__( 'Casual — Relaxed and informal', 'attendant' ); ?>
 						</option>
 					</select>
 				</td>
@@ -246,21 +246,21 @@ $logging         = ! empty( $settings['logging_enabled'] );
 
 			<tr>
 				<th scope="row">
-					<label for="aicm-site-context">
-						<?php echo esc_html__( 'About this website', 'ai-chatmate' ); ?>
+					<label for="attendant-site-context">
+						<?php echo esc_html__( 'About this website', 'attendant' ); ?>
 					</label>
 				</th>
 				<td>
 					<textarea
-						id="aicm-site-context"
+						id="attendant-site-context"
 						name="site_context"
 						class="large-text"
 						rows="5"
 						maxlength="2000"
-						placeholder="<?php echo esc_attr__( 'e.g. We are a luxury real-estate agency selling villas and apartments in Portugal and Spain. Visitors usually search by location, budget, bedrooms, and property type.', 'ai-chatmate' ); ?>"
+						placeholder="<?php echo esc_attr__( 'e.g. We are a luxury real-estate agency selling villas and apartments in Portugal and Spain. Visitors usually search by location, budget, bedrooms, and property type.', 'attendant' ); ?>"
 					><?php echo esc_textarea( (string) ( $settings['site_context'] ?? '' ) ); ?></textarea>
 					<p class="description">
-						<?php echo esc_html__( 'Optional but highly recommended. Tell the assistant what this website is about, what you offer, and what visitors usually look for. This is given to the AI as background context, so its answers and follow-up questions match your business.', 'ai-chatmate' ); ?>
+						<?php echo esc_html__( 'Optional but highly recommended. Tell the assistant what this website is about, what you offer, and what visitors usually look for. This is given to the AI as background context, so its answers and follow-up questions match your business.', 'attendant' ); ?>
 					</p>
 				</td>
 			</tr>
@@ -274,84 +274,84 @@ $logging         = ! empty( $settings['logging_enabled'] );
 		<!-- ================================================================ -->
 		<!-- Section 3: Chat Widget                                           -->
 		<!-- ================================================================ -->
-		<div class="aicm-tab-panel" data-tab="widget">
-		<h2 class="title"><?php echo esc_html__( 'Chat Widget', 'ai-chatmate' ); ?></h2>
+		<div class="attendant-tab-panel" data-tab="widget">
+		<h2 class="title"><?php echo esc_html__( 'Chat Widget', 'attendant' ); ?></h2>
 
 		<table class="form-table" role="presentation">
 
 			<tr>
 				<th scope="row">
-					<label for="aicm-welcome-msg">
-						<?php echo esc_html__( 'Welcome Message', 'ai-chatmate' ); ?>
+					<label for="attendant-welcome-msg">
+						<?php echo esc_html__( 'Welcome Message', 'attendant' ); ?>
 					</label>
 				</th>
 				<td>
 					<input
 						type="text"
-						id="aicm-welcome-msg"
+						id="attendant-welcome-msg"
 						name="welcome_message"
 						class="large-text"
 						value="<?php echo esc_attr( $welcome_msg ); ?>"
 						maxlength="200"
 					>
 					<p class="description">
-						<?php echo esc_html__( 'The first message shown when a visitor opens the chat.', 'ai-chatmate' ); ?>
+						<?php echo esc_html__( 'The first message shown when a visitor opens the chat.', 'attendant' ); ?>
 					</p>
 				</td>
 			</tr>
 
 			<tr>
 				<th scope="row">
-					<?php echo esc_html__( 'Lead Capture', 'ai-chatmate' ); ?>
+					<?php echo esc_html__( 'Lead Capture', 'attendant' ); ?>
 				</th>
 				<td>
-					<label for="aicm-lead-capture">
+					<label for="attendant-lead-capture">
 						<input
 							type="checkbox"
-							id="aicm-lead-capture"
+							id="attendant-lead-capture"
 							name="lead_capture"
 							value="1"
 							<?php checked( ! empty( $settings['lead_capture'] ?? false ) ); ?>
 						>
-						<?php echo esc_html__( 'Offer a callback when the assistant cannot help', 'ai-chatmate' ); ?>
+						<?php echo esc_html__( 'Offer a callback when the assistant cannot help', 'attendant' ); ?>
 					</label>
 					<p class="description">
-						<?php echo esc_html__( 'When the assistant cannot find what a visitor needs, it politely offers to arrange a callback: it collects their email (required), phone and preferred time, then emails the request to the address below. Limits: one request per conversation, 20 per day.', 'ai-chatmate' ); ?>
+						<?php echo esc_html__( 'When the assistant cannot find what a visitor needs, it politely offers to arrange a callback: it collects their email (required), phone and preferred time, then emails the request to the address below. Limits: one request per conversation, 20 per day.', 'attendant' ); ?>
 					</p>
 				</td>
 			</tr>
 
 			<tr>
 				<th scope="row">
-					<label for="aicm-lead-email">
-						<?php echo esc_html__( 'Send Callback Requests To', 'ai-chatmate' ); ?>
+					<label for="attendant-lead-email">
+						<?php echo esc_html__( 'Send Callback Requests To', 'attendant' ); ?>
 					</label>
 				</th>
 				<td>
 					<input
 						type="email"
-						id="aicm-lead-email"
+						id="attendant-lead-email"
 						name="lead_email"
 						class="regular-text"
 						value="<?php echo esc_attr( (string) ( $settings['lead_email'] ?? '' ) ); ?>"
 						placeholder="<?php echo esc_attr( (string) get_option( 'admin_email', '' ) ); ?>"
 					>
 					<p class="description">
-						<?php echo esc_html__( 'Leave empty to use the site admin email. Replying to a callback email goes directly to the visitor.', 'ai-chatmate' ); ?>
+						<?php echo esc_html__( 'Leave empty to use the site admin email. Replying to a callback email goes directly to the visitor.', 'attendant' ); ?>
 					</p>
 				</td>
 			</tr>
 
 			<tr>
 				<th scope="row">
-					<label for="aicm-widget-color">
-						<?php echo esc_html__( 'Brand Colour', 'ai-chatmate' ); ?>
+					<label for="attendant-widget-color">
+						<?php echo esc_html__( 'Brand Colour', 'attendant' ); ?>
 					</label>
 				</th>
 				<td>
 					<input
 						type="color"
-						id="aicm-widget-color"
+						id="attendant-widget-color"
 						name="widget_color"
 						value="<?php echo esc_attr( $widget_color ); ?>"
 					>
@@ -360,17 +360,17 @@ $logging         = ! empty( $settings['logging_enabled'] );
 
 			<tr>
 				<th scope="row">
-					<label for="aicm-widget-pos">
-						<?php echo esc_html__( 'Widget Position', 'ai-chatmate' ); ?>
+					<label for="attendant-widget-pos">
+						<?php echo esc_html__( 'Widget Position', 'attendant' ); ?>
 					</label>
 				</th>
 				<td>
-					<select id="aicm-widget-pos" name="widget_position">
+					<select id="attendant-widget-pos" name="widget_position">
 						<option value="bottom-right" <?php selected( $widget_pos, 'bottom-right' ); ?>>
-							<?php echo esc_html__( 'Bottom Right', 'ai-chatmate' ); ?>
+							<?php echo esc_html__( 'Bottom Right', 'attendant' ); ?>
 						</option>
 						<option value="bottom-left"  <?php selected( $widget_pos, 'bottom-left' ); ?>>
-							<?php echo esc_html__( 'Bottom Left', 'ai-chatmate' ); ?>
+							<?php echo esc_html__( 'Bottom Left', 'attendant' ); ?>
 						</option>
 					</select>
 				</td>
@@ -385,21 +385,21 @@ $logging         = ! empty( $settings['logging_enabled'] );
 		<!-- ================================================================ -->
 		<!-- Section 4: Rate Limiting & Budget                                -->
 		<!-- ================================================================ -->
-		<div class="aicm-tab-panel" data-tab="limits">
-		<h2 class="title"><?php echo esc_html__( 'Rate Limiting & Budget', 'ai-chatmate' ); ?></h2>
+		<div class="attendant-tab-panel" data-tab="limits">
+		<h2 class="title"><?php echo esc_html__( 'Rate Limiting & Budget', 'attendant' ); ?></h2>
 
 		<table class="form-table" role="presentation">
 
 			<tr>
 				<th scope="row">
-					<label for="aicm-rate-limit">
-						<?php echo esc_html__( 'Max Messages / Minute (per visitor)', 'ai-chatmate' ); ?>
+					<label for="attendant-rate-limit">
+						<?php echo esc_html__( 'Max Messages / Minute (per visitor)', 'attendant' ); ?>
 					</label>
 				</th>
 				<td>
 					<input
 						type="number"
-						id="aicm-rate-limit"
+						id="attendant-rate-limit"
 						name="rate_limit_msgs"
 						class="small-text"
 						value="<?php echo esc_attr( $rate_limit ); ?>"
@@ -407,21 +407,21 @@ $logging         = ! empty( $settings['logging_enabled'] );
 						max="100"
 					>
 					<p class="description">
-						<?php echo esc_html__( 'Set to 0 to disable rate limiting. Default: 20.', 'ai-chatmate' ); ?>
+						<?php echo esc_html__( 'Set to 0 to disable rate limiting. Default: 20.', 'attendant' ); ?>
 					</p>
 				</td>
 			</tr>
 
 			<tr>
 				<th scope="row">
-					<label for="aicm-token-cap">
-						<?php echo esc_html__( 'Max Tokens per Session', 'ai-chatmate' ); ?>
+					<label for="attendant-token-cap">
+						<?php echo esc_html__( 'Max Tokens per Session', 'attendant' ); ?>
 					</label>
 				</th>
 				<td>
 					<input
 						type="number"
-						id="aicm-token-cap"
+						id="attendant-token-cap"
 						name="session_token_cap"
 						class="small-text"
 						value="<?php echo esc_attr( $token_cap ); ?>"
@@ -429,21 +429,21 @@ $logging         = ! empty( $settings['logging_enabled'] );
 						max="32000"
 					>
 					<p class="description">
-						<?php echo esc_html__( 'Conversation history is trimmed when this limit is reached. Default: 5000.', 'ai-chatmate' ); ?>
+						<?php echo esc_html__( 'Conversation history is trimmed when this limit is reached. Default: 5000.', 'attendant' ); ?>
 					</p>
 				</td>
 			</tr>
 
 			<tr>
 				<th scope="row">
-					<label for="aicm-budget">
-						<?php echo esc_html__( 'Monthly Budget (USD)', 'ai-chatmate' ); ?>
+					<label for="attendant-budget">
+						<?php echo esc_html__( 'Monthly Budget (USD)', 'attendant' ); ?>
 					</label>
 				</th>
 				<td>
 					<input
 						type="number"
-						id="aicm-budget"
+						id="attendant-budget"
 						name="monthly_budget"
 						class="small-text"
 						value="<?php echo esc_attr( $budget ); ?>"
@@ -451,21 +451,21 @@ $logging         = ! empty( $settings['logging_enabled'] );
 						step="0.01"
 					>
 					<p class="description">
-						<?php echo esc_html__( 'Long-term monthly spend tracking shown on the Analytics page.', 'ai-chatmate' ); ?>
+						<?php echo esc_html__( 'Long-term monthly spend tracking shown on the Analytics page.', 'attendant' ); ?>
 					</p>
 				</td>
 			</tr>
 
 			<tr>
 				<th scope="row">
-					<label for="aicm-daily-budget">
-						<?php echo esc_html__( 'Daily Budget (USD)', 'ai-chatmate' ); ?>
+					<label for="attendant-daily-budget">
+						<?php echo esc_html__( 'Daily Budget (USD)', 'attendant' ); ?>
 					</label>
 				</th>
 				<td>
 					<input
 						type="number"
-						id="aicm-daily-budget"
+						id="attendant-daily-budget"
 						name="daily_budget"
 						class="small-text"
 						value="<?php echo esc_attr( (float) ( $settings['daily_budget'] ?? 0 ) ); ?>"
@@ -473,28 +473,28 @@ $logging         = ! empty( $settings['logging_enabled'] );
 						step="0.01"
 					>
 					<p class="description">
-						<?php echo esc_html__( 'Hard kill-switch: when today\'s API spend reaches this amount, the public chat pauses until tomorrow. Set to 0 for unlimited.', 'ai-chatmate' ); ?>
+						<?php echo esc_html__( 'Hard kill-switch: when today\'s API spend reaches this amount, the public chat pauses until tomorrow. Set to 0 for unlimited.', 'attendant' ); ?>
 					</p>
 				</td>
 			</tr>
 
 			<tr>
 				<th scope="row">
-					<label for="aicm-daily-cap">
-						<?php echo esc_html__( 'Max Messages / Day (per visitor)', 'ai-chatmate' ); ?>
+					<label for="attendant-daily-cap">
+						<?php echo esc_html__( 'Max Messages / Day (per visitor)', 'attendant' ); ?>
 					</label>
 				</th>
 				<td>
 					<input
 						type="number"
-						id="aicm-daily-cap"
+						id="attendant-daily-cap"
 						name="daily_msg_cap"
 						class="small-text"
 						value="<?php echo esc_attr( (int) ( $settings['daily_msg_cap'] ?? 0 ) ); ?>"
 						min="0"
 					>
 					<p class="description">
-						<?php echo esc_html__( 'Hard per-visitor daily ceiling. Set to 0 for unlimited.', 'ai-chatmate' ); ?>
+						<?php echo esc_html__( 'Hard per-visitor daily ceiling. Set to 0 for unlimited.', 'attendant' ); ?>
 					</p>
 				</td>
 			</tr>
@@ -508,41 +508,41 @@ $logging         = ! empty( $settings['logging_enabled'] );
 		<!-- ================================================================ -->
 		<!-- Section 5: Indexing                                              -->
 		<!-- ================================================================ -->
-		<div class="aicm-tab-panel" data-tab="indexing">
-		<h2 class="title"><?php echo esc_html__( 'Content Indexing', 'ai-chatmate' ); ?></h2>
+		<div class="attendant-tab-panel" data-tab="indexing">
+		<h2 class="title"><?php echo esc_html__( 'Content Indexing', 'attendant' ); ?></h2>
 		<p class="description">
-			<?php echo esc_html__( 'These options control how the content indexing queue is processed. Choose them here, then start a run from the Content Indexing page — options are locked while a run is in progress.', 'ai-chatmate' ); ?>
+			<?php echo esc_html__( 'These options control how the content indexing queue is processed. Choose them here, then start a run from the Content Indexing page — options are locked while a run is in progress.', 'attendant' ); ?>
 		</p>
 
 		<table class="form-table" role="presentation">
 			<tr>
-				<th scope="row"><?php echo esc_html__( 'Processing mode', 'ai-chatmate' ); ?></th>
+				<th scope="row"><?php echo esc_html__( 'Processing mode', 'attendant' ); ?></th>
 				<td>
-					<?php $aicm_idx_mode = (string) ( $settings['indexing_mode'] ?? 'frontend' ); ?>
+					<?php $attendant_idx_mode = (string) ( $settings['indexing_mode'] ?? 'frontend' ); ?>
 					<label style="display:block;margin:4px 0;">
-						<input type="radio" name="indexing_mode" value="frontend" <?php checked( $aicm_idx_mode, 'frontend' ); ?>>
-						<?php echo esc_html__( 'While the Indexing page is open (recommended)', 'ai-chatmate' ); ?>
+						<input type="radio" name="indexing_mode" value="frontend" <?php checked( $attendant_idx_mode, 'frontend' ); ?>>
+						<?php echo esc_html__( 'While the Indexing page is open (recommended)', 'attendant' ); ?>
 					</label>
 					<p class="description" style="margin:2px 0 10px 24px;">
-						<?php echo esc_html__( 'The Content Indexing page drives the queue itself, batch after batch. Works on every server — keep that tab open until it finishes.', 'ai-chatmate' ); ?>
+						<?php echo esc_html__( 'The Content Indexing page drives the queue itself, batch after batch. Works on every server — keep that tab open until it finishes.', 'attendant' ); ?>
 					</p>
 					<label style="display:block;margin:4px 0;">
-						<input type="radio" name="indexing_mode" value="background" <?php checked( $aicm_idx_mode, 'background' ); ?>>
-						<?php echo esc_html__( 'In the background (page can be closed)', 'ai-chatmate' ); ?>
+						<input type="radio" name="indexing_mode" value="background" <?php checked( $attendant_idx_mode, 'background' ); ?>>
+						<?php echo esc_html__( 'In the background (page can be closed)', 'attendant' ); ?>
 					</label>
 					<p class="description" style="margin:2px 0 0 24px;">
-						<?php echo esc_html__( 'The server keeps processing on its own using loopback requests, with WP-Cron as a safety net. If your host blocks loopback requests, progress may pause until the site gets a visit — switch back to the first option if it stalls.', 'ai-chatmate' ); ?>
+						<?php echo esc_html__( 'The server keeps processing on its own using loopback requests, with WP-Cron as a safety net. If your host blocks loopback requests, progress may pause until the site gets a visit — switch back to the first option if it stalls.', 'attendant' ); ?>
 					</p>
 				</td>
 			</tr>
 			<tr>
 				<th scope="row">
-					<label for="aicm-batch-size"><?php echo esc_html__( 'Batch size', 'ai-chatmate' ); ?></label>
+					<label for="attendant-batch-size"><?php echo esc_html__( 'Batch size', 'attendant' ); ?></label>
 				</th>
 				<td>
 					<input
 						type="number"
-						id="aicm-batch-size"
+						id="attendant-batch-size"
 						name="batch_size"
 						min="10"
 						max="200"
@@ -550,12 +550,12 @@ $logging         = ! empty( $settings['logging_enabled'] );
 						class="small-text"
 					>
 					<p class="description">
-						<?php echo esc_html__( 'Posts processed per batch (10–200). Higher is faster but uses more memory and longer requests per batch.', 'ai-chatmate' ); ?>
+						<?php echo esc_html__( 'Posts processed per batch (10–200). Higher is faster but uses more memory and longer requests per batch.', 'attendant' ); ?>
 					</p>
 				</td>
 			</tr>
 			<tr>
-				<th scope="row"><?php echo esc_html__( 'Auto-sync', 'ai-chatmate' ); ?></th>
+				<th scope="row"><?php echo esc_html__( 'Auto-sync', 'attendant' ); ?></th>
 				<td>
 					<label>
 						<input
@@ -564,10 +564,10 @@ $logging         = ! empty( $settings['logging_enabled'] );
 							value="1"
 							<?php checked( ! empty( $settings['auto_sync'] ?? true ) ); ?>
 						>
-						<?php echo esc_html__( 'Automatically re-index posts when they are published, updated, or deleted', 'ai-chatmate' ); ?>
+						<?php echo esc_html__( 'Automatically re-index posts when they are published, updated, or deleted', 'attendant' ); ?>
 					</label>
 					<p class="description">
-						<?php echo esc_html__( 'Keeps the index current without manual scans. Recommended: on.', 'ai-chatmate' ); ?>
+						<?php echo esc_html__( 'Keeps the index current without manual scans. Recommended: on.', 'attendant' ); ?>
 					</p>
 				</td>
 			</tr>
@@ -577,31 +577,31 @@ $logging         = ! empty( $settings['logging_enabled'] );
 		<!-- ================================================================ -->
 		<!-- Section 6: Privacy / GDPR                                        -->
 		<!-- ================================================================ -->
-		<div class="aicm-tab-panel" data-tab="privacy">
-		<h2 class="title"><?php echo esc_html__( 'Privacy & GDPR', 'ai-chatmate' ); ?></h2>
+		<div class="attendant-tab-panel" data-tab="privacy">
+		<h2 class="title"><?php echo esc_html__( 'Privacy & GDPR', 'attendant' ); ?></h2>
 
 		<table class="form-table" role="presentation">
 
 			<tr>
 				<th scope="row">
-					<?php echo esc_html__( 'Conversation Logging', 'ai-chatmate' ); ?>
+					<?php echo esc_html__( 'Conversation Logging', 'attendant' ); ?>
 				</th>
 				<td>
-					<label for="aicm-logging">
+					<label for="attendant-logging">
 						<input
 							type="checkbox"
-							id="aicm-logging"
+							id="attendant-logging"
 							name="logging_enabled"
 							value="1"
 							<?php checked( $logging ); ?>
 						>
-						<?php echo esc_html__( 'Enable conversation logging', 'ai-chatmate' ); ?>
+						<?php echo esc_html__( 'Enable conversation logging', 'attendant' ); ?>
 					</label>
 					<p class="description">
 						<?php
 						echo esc_html__(
 							'Disabled by default. When enabled, conversation turns are saved to the database to power the Analytics dashboard. IP addresses are never logged — only a one-way hash.',
-							'ai-chatmate'
+							'attendant'
 						);
 						?>
 					</p>
@@ -610,24 +610,24 @@ $logging         = ! empty( $settings['logging_enabled'] );
 
 			<tr>
 				<th scope="row">
-					<?php echo esc_html__( 'Downloadable Chat Logs', 'ai-chatmate' ); ?>
+					<?php echo esc_html__( 'Downloadable Chat Logs', 'attendant' ); ?>
 				</th>
 				<td>
-					<label for="aicm-file-logging">
+					<label for="attendant-file-logging">
 						<input
 							type="checkbox"
-							id="aicm-file-logging"
+							id="attendant-file-logging"
 							name="file_logging"
 							value="1"
 							<?php checked( ! empty( $settings['file_logging'] ?? false ) ); ?>
 						>
-						<?php echo esc_html__( 'Write each chat exchange to a downloadable daily log file', 'ai-chatmate' ); ?>
+						<?php echo esc_html__( 'Write each chat exchange to a downloadable daily log file', 'attendant' ); ?>
 					</label>
 					<p class="description">
 						<?php
 						echo esc_html__(
 							'Disabled by default. Logs are stored as one file per day in a protected, non-public folder inside wp-content/uploads (never in the plugin folder, so they survive plugin updates). Files older than 30 days are deleted automatically. Download them from the Analytics page. IP addresses are never logged.',
-							'ai-chatmate'
+							'attendant'
 						);
 						?>
 					</p>
@@ -639,12 +639,12 @@ $logging         = ! empty( $settings['logging_enabled'] );
 		</div><!-- /privacy panel -->
 
 		<p class="submit">
-			<button type="submit" id="aicm-save-settings" class="button button-primary">
-				<?php echo esc_html__( 'Save Settings', 'ai-chatmate' ); ?>
+			<button type="submit" id="attendant-save-settings" class="button button-primary">
+				<?php echo esc_html__( 'Save Settings', 'attendant' ); ?>
 			</button>
-			<span id="aicm-save-status" class="aicm-save-status" aria-live="polite"></span>
+			<span id="attendant-save-status" class="attendant-save-status" aria-live="polite"></span>
 		</p>
 
-	</form><!-- #aicm-settings-form -->
+	</form><!-- #attendant-settings-form -->
 
 </div><!-- .wrap -->

@@ -40,7 +40,9 @@ manual indexing controls, file-based chat logs, and email lead capture.
 - **Never trust the model to write a choice list as text**. gpt-4o-mini ignores
   the "use suggest_choices" instruction maybe 30% of the time. The fix is
   belt-and-braces: forced `tool_choice` on zero-result round 2 + deterministic
-  bullet→chips fallback in `extract_text_choices()`.
+  bullet→chips fallback in `extract_text_choices()`. The lead-flow phone step
+  gets a third net — a single "Skip" chip injected server-side when the reply
+  offers to skip the phone/number step but the model produced no chips.
 - **Enqueue assets with `filemtime()`, not `AICM_VERSION`**. Visitors aggressively
   cache `aicm-widget.js`; releasing a new feature without filemtime versioning
   silently dropped chips/history for returning visitors.

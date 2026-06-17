@@ -14,7 +14,7 @@
  * Consuming third-party filters and functions requires phpcs:ignore
  * comments per WordPress Plugin Standards (WORDPRESS-PLUGIN-STANDARDS.md §2).
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -22,9 +22,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AICM_Field_Detector
+ * Class ATTENDANT_Field_Detector
  */
-class AICM_Field_Detector {
+class ATTENDANT_Field_Detector {
 
 	// -------------------------------------------------------------------------
 	// ACF — Advanced Custom Fields
@@ -219,32 +219,32 @@ class AICM_Field_Detector {
 		// Standard WooCommerce product meta fields.
 		$fields = array(
 			'_price'         => array(
-				'label'  => __( 'Price', 'ai-chatmate' ),
+				'label'  => __( 'Price', 'attendant' ),
 				'type'   => 'numeric',
 				'source' => 'woocommerce',
 			),
 			'_regular_price' => array(
-				'label'  => __( 'Regular Price', 'ai-chatmate' ),
+				'label'  => __( 'Regular Price', 'attendant' ),
 				'type'   => 'numeric',
 				'source' => 'woocommerce',
 			),
 			'_sale_price'    => array(
-				'label'  => __( 'Sale Price', 'ai-chatmate' ),
+				'label'  => __( 'Sale Price', 'attendant' ),
 				'type'   => 'numeric',
 				'source' => 'woocommerce',
 			),
 			'_sku'           => array(
-				'label'  => __( 'SKU', 'ai-chatmate' ),
+				'label'  => __( 'SKU', 'attendant' ),
 				'type'   => 'text',
 				'source' => 'woocommerce',
 			),
 			'_stock'         => array(
-				'label'  => __( 'Stock Quantity', 'ai-chatmate' ),
+				'label'  => __( 'Stock Quantity', 'attendant' ),
 				'type'   => 'numeric',
 				'source' => 'woocommerce',
 			),
 			'_stock_status'  => array(
-				'label'   => __( 'Stock Status', 'ai-chatmate' ),
+				'label'   => __( 'Stock Status', 'attendant' ),
 				'type'    => 'text',
 				'choices' => array( 'instock', 'outofstock', 'onbackorder' ),
 				'source'  => 'woocommerce',

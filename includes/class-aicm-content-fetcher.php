@@ -14,7 +14,7 @@
  *  - Meta values that are serialized (arrays/objects) are excluded because
  *    they are not human-readable and pollute the embedding content.
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -22,9 +22,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AICM_Content_Fetcher
+ * Class ATTENDANT_Content_Fetcher
  */
-class AICM_Content_Fetcher {
+class ATTENDANT_Content_Fetcher {
 
 	// -------------------------------------------------------------------------
 	// Post ID retrieval

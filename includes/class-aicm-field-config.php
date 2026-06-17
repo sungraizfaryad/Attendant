@@ -8,7 +8,7 @@
  * label overrides; the chat catalog calls it so the AI only ever sees the
  * fields the admin chose to expose.
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -16,12 +16,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AICM_Field_Config
+ * Class ATTENDANT_Field_Config
  */
-class AICM_Field_Config {
+class ATTENDANT_Field_Config {
 
 	/** wp_options key. */
-	private const OPTION_KEY = 'aicm_field_config';
+	private const OPTION_KEY = 'attendant_field_config';
 
 	/**
 	 * Sanitize a raw config payload (from REST) into the stored shape.
@@ -102,7 +102,7 @@ class AICM_Field_Config {
 	 * taxonomies/meta and apply label overrides. Post types with no config
 	 * entry are returned unchanged (default include).
 	 *
-	 * @param array      $schema Discovered schema (AICM_Schema_Cache::get()).
+	 * @param array      $schema Discovered schema (ATTENDANT_Schema_Cache::get()).
 	 * @param array|null $config Config to apply, or null to load the stored one.
 	 * @return array Filtered schema.
 	 */

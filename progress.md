@@ -1,39 +1,37 @@
 # Attendant — Progress
 
-_Last updated: 2026-06-12 (Fable 5 session)._
+_Last updated: 2026-06-15 (Opus 4.8 session)._
 _Rolling status only. Detail lives in `CLAUDE.md` and the cloud memory entries._
 
 ## Done (v2.0.0, on GitHub `main`)
 
-- WP.org rejection fixes: rename → Attendant, exclusivity claim removed, inline scripts enqueued.
-- Search correctness: `<=` operator bug, number normaliser ("2 million" → 2000000, European commas), underscore-meta rejection, zero-result enrichment.
-- Indexing: manual runs, background loopback chain, 45s stall watchdog, cron self-repair, post-type activity feed, incremental vs full scope.
-- Widget gated until first index completes. Asset URLs versioned by `filemtime`.
-- Chat history: localStorage (10 chats × 80 msgs), server `session_id` per chat, New / Previous UI.
-- Quick-reply chips: `suggest_choices` AI fn, forced `tool_choice` on zero-results, deterministic bullet→chips fallback.
-- Lead capture: opt-in, `is_email`, 1/session + 20/day caps, Reply-To = visitor.
-- File chat logs: protected uploads dir (random key, salt-rotation-proof), 30-day rotation, admin download.
-- Settings: 6 tabs, submenu last, site-context textarea (also in wizard).
-- 48 tests / 126 assertions. Plugin Check 0 errors. Build at `~/Desktop/attendant-2.0.0.zip` (158K).
-- Pushed 7 logical commits to `github.com/sungraizfaryad/AI-ChatMate`.
+- Display name Conciera → **Attendant** (trademark: "Conciera" was used by a same-field doc-finder). Picked via 4 rounds of live-search vetting: no plugin-slug clash, no live software TM, only Cisco "Attendant Console" (telephony, different field). Folder/slug/text-domain/`aicm_` prefix unchanged. Log dir made brand-neutral `aicm-logs-`.
+- Search correctness: `<=` operator bug, number normaliser, underscore-meta rejection, zero-result enrichment.
+- Indexing: manual + background loopback, 45s stall watchdog, cron self-repair, activity feed, incremental vs full.
+- Widget gated until first index. Assets versioned by `filemtime`.
+- Chat history: localStorage (10×80), per-chat server session id, New / Previous UI.
+- Quick-reply chips: `suggest_choices` fn, forced `tool_choice` on zero-results, bullet→chips fallback, + phone-step Skip-chip net.
+- Lead capture: opt-in, `is_email`, 1/session + 20/day, Reply-To = visitor.
+- File chat logs: protected `uploads/aicm-logs-<key>/`, 30-day rotation, admin download.
+- readme.txt rewritten to current features + a Privacy section (history / logging / lead-capture disclosure).
+- 48 tests / 126 assertions. Plugin Check 0 errors. Build `~/Desktop/attendant-2.0.0.zip` (159K).
+- Full real-time FLP browser test PASSED: search + source buttons, zero-result + lead capture (email fired), history cross-page/refresh, admin pages, 0 console errors.
 
 ## Decisions
 
-- Folder / slug / text-domain / `aicm_` prefix stay despite the display rename — preserves WP.org reservation and stored API keys.
-- Chat history lives in localStorage, not on the server (Sungraiz's call, correct one).
-- File chat logs live in `wp-content/uploads/aicm-logs-<random>/`, NOT in the plugin dir (plugin dir is wiped on update + publicly readable).
-- Round 2 after a search passes only `suggest_choices` to the model so it cannot chain another search.
+- Folder / slug / text-domain / `aicm_` prefix stay despite display rename — preserves slug + stored API keys.
+- Chat history in localStorage, not server. File logs in uploads (random key), not plugin dir.
+- Log dir name brand-neutral (`aicm-logs-`) so a future rename never churns it.
+- Round 2 after a search passes only `suggest_choices` (no search chaining).
 
 ## Next steps
 
-1. Sungraiz currently testing on FLP — wait for feedback.
-2. Update `readme.txt`: document new features + privacy disclosure for lead capture and file logging before WP.org resubmission.
-3. Send the drafted reviewer reply email after readme update.
-4. (Deferred) `aicm_` / `ai_` PHP prefix rename (to a branded prefix). Owner explicitly postponed.
+1. Send the drafted reviewer reply email (new name = Attendant) to plugins@wordpress.org, then resubmit the zip.
+2. (Deferred) `aicm_` / `ai_` PHP prefix rename. Owner postponed.
 
 ## Key files
 
-- `includes/class-aicm-conversation-handler.php` — prompt + function-call orchestrator.
+- `includes/class-aicm-conversation-handler.php` — prompt + function-call orchestrator, chips fallbacks.
 - `includes/class-aicm-query-builder.php` — operator whitelist, numeric normaliser, zero-result help.
 - `includes/class-aicm-index-manager.php` — manual + background indexing + self-repair.
 - `includes/class-aicm-leads.php` — callback capture.

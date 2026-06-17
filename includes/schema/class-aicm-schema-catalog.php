@@ -8,7 +8,7 @@
  * calls — so the model is always handed real slugs, term slugs, and meta keys
  * instead of guessing values that silently match nothing.
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -16,9 +16,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AICM_Schema_Catalog
+ * Class ATTENDANT_Schema_Catalog
  */
-class AICM_Schema_Catalog {
+class ATTENDANT_Schema_Catalog {
 
 	/** Maximum term slugs listed per taxonomy (most-used first). */
 	private const MAX_TERMS_PER_TAX = 25;
@@ -32,7 +32,7 @@ class AICM_Schema_Catalog {
 	/**
 	 * Build the human-readable catalog block injected into the system prompt.
 	 *
-	 * @param array    $schema Cached schema (AICM_Schema_Cache::get()).
+	 * @param array    $schema Cached schema (ATTENDANT_Schema_Cache::get()).
 	 * @param string[] $types  Admin-configured post types to expose.
 	 * @return string Catalog text, or '' when nothing to expose.
 	 */

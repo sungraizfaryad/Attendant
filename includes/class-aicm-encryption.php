@@ -21,7 +21,7 @@
  *
  * REQUIRES: PHP OpenSSL extension (enabled by default in PHP 8.0+).
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -29,9 +29,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AICM_Encryption
+ * Class ATTENDANT_Encryption
  */
-class AICM_Encryption {
+class ATTENDANT_Encryption {
 
 	/**
 	 * Cipher algorithm.

@@ -2,7 +2,7 @@
 /**
  * Q&A Manager
  *
- * CRUD and semantic-matching for the admin-managed Q&A pairs stored in aicm_qa.
+ * CRUD and semantic-matching for the admin-managed Q&A pairs stored in attendant_qa.
  *
  * ── When matching fires ──────────────────────────────────────────────────────
  * The conversation handler calls find_match() at the very start of each turn,
@@ -27,10 +27,10 @@
  * did not configure a specific answer for.
  *
  * ── Embedding storage format ─────────────────────────────────────────────────
- * Same as aicm_chunks.embedding: pack('f*', ...$floats) packed binary stored
+ * Same as attendant_chunks.embedding: pack('f*', ...$floats) packed binary stored
  * in LONGBLOB. Retrieved with array_values(unpack('f*', $blob)) for 0-indexing.
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -38,9 +38,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AICM_QA_Manager
+ * Class ATTENDANT_QA_Manager
  */
-class AICM_QA_Manager {
+class ATTENDANT_QA_Manager {
 
 	/**
 	 * Cosine similarity threshold for Q&A matching.
@@ -61,7 +61,7 @@ class AICM_QA_Manager {
 	public static function get_all(): array {
 		global $wpdb;
 
-		$table = $wpdb->prefix . 'aicm_qa';
+		$table = $wpdb->prefix . 'attendant_qa';
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$rows = $wpdb->get_results(
@@ -83,7 +83,7 @@ class AICM_QA_Manager {
 	public static function get( int $id ): ?array {
 		global $wpdb;
 
-		$table = $wpdb->prefix . 'aicm_qa';
+		$table = $wpdb->prefix . 'attendant_qa';
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$row = $wpdb->get_row(
@@ -122,7 +122,7 @@ class AICM_QA_Manager {
 	public static function save( array $data ): int|WP_Error {
 		global $wpdb;
 
-		$table = $wpdb->prefix . 'aicm_qa';
+		$table = $wpdb->prefix . 'attendant_qa';
 
 		$question  = sanitize_text_field( wp_unslash( (string) ( $data['question'] ?? '' ) ) );
 		$answer    = sanitize_textarea_field( wp_unslash( (string) ( $data['answer'] ?? '' ) ) );
@@ -131,8 +131,8 @@ class AICM_QA_Manager {
 
 		if ( '' === $question || '' === $answer ) {
 			return new WP_Error(
-				'aicm_qa_invalid',
-				__( 'Question and answer are required.', 'ai-chatmate' )
+				'attendant_qa_invalid',
+				__( 'Question and answer are required.', 'attendant' )
 			);
 		}
 
@@ -146,8 +146,8 @@ class AICM_QA_Manager {
 
 			if ( null === $existing ) {
 				return new WP_Error(
-					'aicm_qa_not_found',
-					__( 'Q&A entry not found.', 'ai-chatmate' )
+					'attendant_qa_not_found',
+					__( 'Q&A entry not found.', 'attendant' )
 				);
 			}
 
@@ -171,8 +171,8 @@ class AICM_QA_Manager {
 
 			if ( false === $ok ) {
 				return new WP_Error(
-					'aicm_qa_db_error',
-					__( 'Failed to update Q&A entry.', 'ai-chatmate' )
+					'attendant_qa_db_error',
+					__( 'Failed to update Q&A entry.', 'attendant' )
 				);
 			}
 		} else {
@@ -194,8 +194,8 @@ class AICM_QA_Manager {
 
 			if ( false === $ok ) {
 				return new WP_Error(
-					'aicm_qa_db_error',
-					__( 'Failed to insert Q&A entry.', 'ai-chatmate' )
+					'attendant_qa_db_error',
+					__( 'Failed to insert Q&A entry.', 'attendant' )
 				);
 			}
 
@@ -234,7 +234,7 @@ class AICM_QA_Manager {
 	public static function delete( int $id ): bool {
 		global $wpdb;
 
-		$table = $wpdb->prefix . 'aicm_qa';
+		$table = $wpdb->prefix . 'attendant_qa';
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 		$deleted = $wpdb->delete(
@@ -259,20 +259,20 @@ class AICM_QA_Manager {
 	 * Side effect: increments match_count on the returned row (non-critical;
 	 * a DB error here does not affect the return value).
 	 *
-	 * @param AICM_LLM_Provider $provider  Configured LLM provider (embeds the query).
+	 * @param ATTENDANT_LLM_Provider $provider  Configured LLM provider (embeds the query).
 	 * @param string            $query     The user's message.
 	 * @param float             $threshold Cosine similarity threshold (0–1).
 	 *                                     Defaults to QA_MATCH_THRESHOLD (0.92).
 	 * @return array|null { id, question, answer, priority } on match; null otherwise.
 	 */
 	public static function find_match(
-		AICM_LLM_Provider $provider,
+		ATTENDANT_LLM_Provider $provider,
 		string $query,
 		float $threshold = self::QA_MATCH_THRESHOLD
 	): ?array {
 		global $wpdb;
 
-		$table = $wpdb->prefix . 'aicm_qa';
+		$table = $wpdb->prefix . 'attendant_qa';
 
 		// Fetch all active rows that have a stored embedding.
 		// ORDER BY priority ASC so the highest-priority (lowest number) pair
@@ -354,7 +354,7 @@ class AICM_QA_Manager {
 	public static function increment_match_count( int $id ): void {
 		global $wpdb;
 
-		$table = $wpdb->prefix . 'aicm_qa';
+		$table = $wpdb->prefix . 'attendant_qa';
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 		$wpdb->query(
@@ -372,19 +372,19 @@ class AICM_QA_Manager {
 	 *
 	 * Returns null when no API key is stored (embedding would fail anyway).
 	 *
-	 * @return AICM_LLM_Provider|null
+	 * @return ATTENDANT_LLM_Provider|null
 	 */
-	private static function get_provider(): ?AICM_LLM_Provider {
+	private static function get_provider(): ?ATTENDANT_LLM_Provider {
 		$active     = (string) AI_ChatMate::get_setting( 'active_provider', 'openai' );
-		$option_key = "aicm_api_key_{$active}";
+		$option_key = "attendant_api_key_{$active}";
 
 		if ( '' === (string) get_option( $option_key, '' ) ) {
 			return null;
 		}
 
 		if ( 'openai' === $active ) {
-			require_once AICM_PLUGIN_DIR . 'includes/providers/class-aicm-openai-provider.php';
-			return new AICM_OpenAI_Provider();
+			require_once ATTENDANT_PLUGIN_DIR . 'includes/providers/class-attendant-openai-provider.php';
+			return new ATTENDANT_OpenAI_Provider();
 		}
 
 		return null;
@@ -395,11 +395,11 @@ class AICM_QA_Manager {
 	/**
 	 * Generate an embedding for a text string and return it as a packed binary blob.
 	 *
-	 * @param AICM_LLM_Provider $provider Provider instance.
+	 * @param ATTENDANT_LLM_Provider $provider Provider instance.
 	 * @param string            $text     Text to embed.
 	 * @return string|null Binary blob (pack('f*', ...)) on success, null on failure.
 	 */
-	private static function make_embedding_blob( AICM_LLM_Provider $provider, string $text ): ?string {
+	private static function make_embedding_blob( ATTENDANT_LLM_Provider $provider, string $text ): ?string {
 		$floats = $provider->generate_embedding( $text );
 
 		if ( empty( $floats ) ) {

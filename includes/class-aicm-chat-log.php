@@ -22,7 +22,7 @@
  * message and the assistant reply. IP addresses are never stored; session ids
  * are stored as short one-way hashes, only to group a conversation.
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -30,15 +30,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AICM_Chat_Log
+ * Class ATTENDANT_Chat_Log
  */
-class AICM_Chat_Log {
+class ATTENDANT_Chat_Log {
 
 	/** Days of log files kept before rotation deletes them. */
 	private const KEEP_DAYS = 30;
 
 	/** Option holding the random directory-name secret. */
-	private const DIR_KEY_OPTION = 'aicm_log_dir_key';
+	private const DIR_KEY_OPTION = 'attendant_log_dir_key';
 
 	/** Filename pattern for daily logs (also the download whitelist). */
 	private const FILE_PATTERN = '/^\d{4}-\d{2}-\d{2}\.jsonl$/';
@@ -80,7 +80,7 @@ class AICM_Chat_Log {
 			update_option( self::DIR_KEY_OPTION, $key, false );
 		}
 
-		$dir = trailingslashit( $uploads['basedir'] ) . 'aicm-logs-' . $key . '/';
+		$dir = trailingslashit( $uploads['basedir'] ) . 'attendant-logs-' . $key . '/';
 
 		if ( ! is_dir( $dir ) ) {
 			if ( ! $create || ! wp_mkdir_p( $dir ) ) {

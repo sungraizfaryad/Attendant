@@ -6,9 +6,9 @@
  *  - Public post types (with post count)
  *  - Taxonomies per post type (with available terms)
  *  - Custom meta fields per post type (with inferred data type + range)
- *  - ACF fields (via AICM_Field_Detector)
- *  - MetaBox fields (via AICM_Field_Detector)
- *  - WooCommerce product fields (via AICM_Field_Detector)
+ *  - ACF fields (via ATTENDANT_Field_Detector)
+ *  - MetaBox fields (via ATTENDANT_Field_Detector)
+ *  - WooCommerce product fields (via ATTENDANT_Field_Detector)
  *
  * Performance design:
  *  - Meta key detection samples the most recent 50 published posts per type.
@@ -21,7 +21,7 @@
  *  - This class should NEVER be instantiated on a regular page request.
  *    It is called by: activation, weekly cron, or admin "Rescan" button only.
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -29,13 +29,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Load dependencies (safe to load multiple times — PHP guards).
-require_once AICM_PLUGIN_DIR . 'includes/schema/class-aicm-schema-cache.php';
-require_once AICM_PLUGIN_DIR . 'includes/schema/class-aicm-field-detector.php';
+require_once ATTENDANT_PLUGIN_DIR . 'includes/schema/class-attendant-schema-cache.php';
+require_once ATTENDANT_PLUGIN_DIR . 'includes/schema/class-attendant-field-detector.php';
 
 /**
- * Class AICM_Schema_Discovery
+ * Class ATTENDANT_Schema_Discovery
  */
-class AICM_Schema_Discovery {
+class ATTENDANT_Schema_Discovery {
 
 	/**
 	 * Post types excluded from scanning regardless of their public status.
@@ -74,7 +74,7 @@ class AICM_Schema_Discovery {
 		'_menu_item_',
 		'_oembed_',
 		'_transient_',
-		// WooCommerce internal flags (we capture the useful WC fields via AICM_Field_Detector).
+		// WooCommerce internal flags (we capture the useful WC fields via ATTENDANT_Field_Detector).
 		'_wc_',
 		'_download_',
 		'_sold_individually',
@@ -119,9 +119,9 @@ class AICM_Schema_Discovery {
 			'site_url'             => home_url(),
 			'generated_at'         => current_time( 'mysql' ),
 			'post_types'           => array(),
-			'has_woocommerce'      => AICM_Field_Detector::has_woocommerce(),
-			'has_acf'              => AICM_Field_Detector::has_acf(),
-			'has_metabox'          => AICM_Field_Detector::has_metabox(),
+			'has_woocommerce'      => ATTENDANT_Field_Detector::has_woocommerce(),
+			'has_acf'              => ATTENDANT_Field_Detector::has_acf(),
+			'has_metabox'          => ATTENDANT_Field_Detector::has_metabox(),
 			// Filled in at the end after all post types are scanned.
 			'search_enabled_types' => array(),
 			'rag_enabled_types'    => array(),
@@ -155,7 +155,7 @@ class AICM_Schema_Discovery {
 		// Preview mode (wizard "Detect") returns the schema without persisting,
 		// so a Rescan never silently changes the live config mid-wizard.
 		if ( $persist ) {
-			AICM_Schema_Cache::set( $schema );
+			ATTENDANT_Schema_Cache::set( $schema );
 		}
 
 		/**
@@ -163,7 +163,7 @@ class AICM_Schema_Discovery {
 		 *
 		 * @param array $schema The full schema array.
 		 */
-		do_action( 'aicm_schema_discovered', $schema );
+		do_action( 'attendant_schema_discovered', $schema );
 
 		return $schema;
 	}
@@ -278,13 +278,13 @@ class AICM_Schema_Discovery {
 		$fields = array();
 
 		// --- ACF fields (most structured, highest priority).
-		$acf_fields = AICM_Field_Detector::get_acf_fields( $pt_name );
+		$acf_fields = ATTENDANT_Field_Detector::get_acf_fields( $pt_name );
 		foreach ( $acf_fields as $key => $info ) {
 			$fields[ $key ] = $info;
 		}
 
 		// --- MetaBox fields.
-		$mb_fields = AICM_Field_Detector::get_metabox_fields( $pt_name );
+		$mb_fields = ATTENDANT_Field_Detector::get_metabox_fields( $pt_name );
 		foreach ( $mb_fields as $key => $info ) {
 			if ( ! isset( $fields[ $key ] ) ) { // ACF takes precedence.
 				$fields[ $key ] = $info;
@@ -292,7 +292,7 @@ class AICM_Schema_Discovery {
 		}
 
 		// --- WooCommerce product fields.
-		$wc_fields = AICM_Field_Detector::get_woocommerce_fields( $pt_name );
+		$wc_fields = ATTENDANT_Field_Detector::get_woocommerce_fields( $pt_name );
 		foreach ( $wc_fields as $key => $info ) {
 			if ( ! isset( $fields[ $key ] ) ) {
 				$fields[ $key ] = $info;

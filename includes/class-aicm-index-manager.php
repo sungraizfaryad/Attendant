@@ -5,11 +5,11 @@
  * Orchestrates the full content indexing pipeline.
  *
  * ── Data flow ────────────────────────────────────────────────────────────
- *   Admin request  → enqueue_full_reindex()  → seeds aicm_queue
+ *   Admin request  → enqueue_full_reindex()  → seeds attendant_queue
  *   Auto-sync      → enqueue_post()          → adds single post to queue
  *   WP-Cron (5min) → process_queue_batch()  → runs the pipeline per item:
- *                      AICM_Content_Fetcher → AICM_Text_Extractor
- *                      → AICM_Chunker → AICM_Embedder
+ *                      ATTENDANT_Content_Fetcher → ATTENDANT_Text_Extractor
+ *                      → ATTENDANT_Chunker → ATTENDANT_Embedder
  *
  * ── Queue states ──────────────────────────────────────────────────────────
  *   pending    → waiting to be processed
@@ -27,7 +27,7 @@
  * posts that already have a pending or processing queue row. This is done
  * in one SQL statement per post type — far more efficient than looping in PHP.
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -35,12 +35,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AICM_Index_Manager
+ * Class ATTENDANT_Index_Manager
  */
-class AICM_Index_Manager {
+class ATTENDANT_Index_Manager {
 
 	/** Transient key for the concurrency lock. */
-	private const LOCK_TRANSIENT = 'aicm_index_lock';
+	private const LOCK_TRANSIENT = 'attendant_index_lock';
 
 	/**
 	 * Lock expiry in seconds.
@@ -91,7 +91,7 @@ class AICM_Index_Manager {
 	public static function enqueue_full_reindex( bool $only_new = true ): int {
 		global $wpdb;
 
-		$table       = $wpdb->prefix . 'aicm_queue';
+		$table       = $wpdb->prefix . 'attendant_queue';
 		$posts_table = $wpdb->prefix . 'posts';
 		$now         = current_time( 'mysql' );
 		$total       = 0;
@@ -113,7 +113,7 @@ class AICM_Index_Manager {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->query( "DELETE FROM `{$table}` WHERE status = 'failed'" );
 
-		$chunks_table = $wpdb->prefix . 'aicm_chunks';
+		$chunks_table = $wpdb->prefix . 'attendant_chunks';
 
 		// "Only new" mode: skip posts that already have chunks in the index.
 		// The chunks table is the source of truth for what has been indexed —
@@ -172,7 +172,7 @@ class AICM_Index_Manager {
 	public static function enqueue_post( int $post_id, string $action = 'index' ): void {
 		global $wpdb;
 
-		$table = $wpdb->prefix . 'aicm_queue';
+		$table = $wpdb->prefix . 'attendant_queue';
 		$now   = current_time( 'mysql' );
 
 		// Remove stale pending/failed rows to prevent duplicates.
@@ -213,7 +213,7 @@ class AICM_Index_Manager {
 	public static function remove_post_from_index( int $post_id ): void {
 		global $wpdb;
 
-		$table = $wpdb->prefix . 'aicm_queue';
+		$table = $wpdb->prefix . 'attendant_queue';
 
 		// Cancel pending/failed queue entries.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -225,7 +225,7 @@ class AICM_Index_Manager {
 		);
 
 		// Delete the embedding chunks immediately.
-		AICM_Embedder::delete_post_chunks( $post_id );
+		ATTENDANT_Embedder::delete_post_chunks( $post_id );
 
 		self::update_status();
 	}
@@ -233,7 +233,7 @@ class AICM_Index_Manager {
 	/**
 	 * Process a batch of pending queue items.
 	 *
-	 * Called by the `aicm_process_index_queue` WP-Cron action every 5 minutes.
+	 * Called by the `attendant_process_index_queue` WP-Cron action every 5 minutes.
 	 *
 	 * Processing steps:
 	 *  1. Acquire concurrency lock — exit if another cron run is active.
@@ -261,7 +261,7 @@ class AICM_Index_Manager {
 			return;
 		}
 
-		$table = $wpdb->prefix . 'aicm_queue';
+		$table = $wpdb->prefix . 'attendant_queue';
 
 		// Respect admin's batch_size setting, capped at 50 per cron run
 		// regardless of the setting — guards against excessive API usage.
@@ -390,12 +390,12 @@ class AICM_Index_Manager {
 			self::mark_not_running();
 
 			// The first fully-completed indexing run unlocks the frontend
-			// widget (see AICM_Frontend::status()). Later re-indexes do not
+			// widget (see ATTENDANT_Frontend::status()). Later re-indexes do not
 			// re-hide it — only the initial build gates visibility.
-			$status = get_option( 'aicm_index_status', array() );
+			$status = get_option( 'attendant_index_status', array() );
 			if ( empty( $status['initial_complete'] ) ) {
 				$status['initial_complete'] = true;
-				update_option( 'aicm_index_status', $status );
+				update_option( 'attendant_index_status', $status );
 			}
 		}
 
@@ -409,8 +409,8 @@ class AICM_Index_Manager {
 	 * Safe to call often: wp_next_scheduled() is a single option read.
 	 */
 	public static function ensure_cron(): void {
-		if ( ! wp_next_scheduled( 'aicm_process_index_queue' ) ) {
-			wp_schedule_event( time() + MINUTE_IN_SECONDS, 'aicm_five_minutes', 'aicm_process_index_queue' );
+		if ( ! wp_next_scheduled( 'attendant_process_index_queue' ) ) {
+			wp_schedule_event( time() + MINUTE_IN_SECONDS, 'attendant_five_minutes', 'attendant_process_index_queue' );
 		}
 	}
 
@@ -426,17 +426,17 @@ class AICM_Index_Manager {
 	 * chunks are cleaned up and the item is treated as a success
 	 * (nothing to index, but no error either).
 	 *
-	 * @param object                 $row      Row from the aicm_queue table.
-	 * @param AICM_LLM_Provider|null $provider Provider instance; null if not configured.
+	 * @param object                 $row      Row from the attendant_queue table.
+	 * @param ATTENDANT_LLM_Provider|null $provider Provider instance; null if not configured.
 	 * @return bool True = success (delete queue row), false = failure (retry or fail).
 	 */
-	private static function process_queue_item( object $row, ?AICM_LLM_Provider $provider ): bool {
+	private static function process_queue_item( object $row, ?ATTENDANT_LLM_Provider $provider ): bool {
 		$post_id = (int) $row->post_id;
 		$action  = (string) $row->action;
 
 		// ── Delete action ──────────────────────────────────────────────────
 		if ( 'delete' === $action ) {
-			AICM_Embedder::delete_post_chunks( $post_id );
+			ATTENDANT_Embedder::delete_post_chunks( $post_id );
 			return true; // Deletion always succeeds.
 		}
 
@@ -450,22 +450,22 @@ class AICM_Index_Manager {
 
 		// Fetch post data. Returns null when the post no longer exists,
 		// is not published, or its type was removed from index_post_types.
-		$post_data = AICM_Content_Fetcher::get_post_data( $post_id );
+		$post_data = ATTENDANT_Content_Fetcher::get_post_data( $post_id );
 
 		if ( null === $post_data ) {
 			// Nothing to index — clean up any stale chunks and mark success.
-			AICM_Embedder::delete_post_chunks( $post_id );
+			ATTENDANT_Embedder::delete_post_chunks( $post_id );
 			return true;
 		}
 
 		// Extract clean text from post + meta.
-		$text = AICM_Text_Extractor::extract( $post_data['post'], $post_data['meta'] );
+		$text = ATTENDANT_Text_Extractor::extract( $post_data['post'], $post_data['meta'] );
 
 		// Split into chunks.
-		$chunks = AICM_Chunker::chunk( $text );
+		$chunks = ATTENDANT_Chunker::chunk( $text );
 
-		// Generate embeddings and write to aicm_chunks.
-		return AICM_Embedder::embed_post(
+		// Generate embeddings and write to attendant_chunks.
+		return ATTENDANT_Embedder::embed_post(
 			$post_id,
 			$post_data['post_type'],
 			$post_data['post']->post_title,
@@ -480,11 +480,11 @@ class AICM_Index_Manager {
 	 * Returns null when no API key is stored for the active provider —
 	 * prevents wasted instantiation when the plugin is not yet configured.
 	 *
-	 * @return AICM_LLM_Provider|null
+	 * @return ATTENDANT_LLM_Provider|null
 	 */
-	private static function get_provider(): ?AICM_LLM_Provider {
+	private static function get_provider(): ?ATTENDANT_LLM_Provider {
 		$active     = (string) AI_ChatMate::get_setting( 'active_provider', 'openai' );
-		$option_key = "aicm_api_key_{$active}";
+		$option_key = "attendant_api_key_{$active}";
 
 		// No key stored — bail immediately.
 		if ( '' === (string) get_option( $option_key, '' ) ) {
@@ -492,8 +492,8 @@ class AICM_Index_Manager {
 		}
 
 		if ( 'openai' === $active ) {
-			require_once AICM_PLUGIN_DIR . 'includes/providers/class-aicm-openai-provider.php';
-			return new AICM_OpenAI_Provider();
+			require_once ATTENDANT_PLUGIN_DIR . 'includes/providers/class-attendant-openai-provider.php';
+			return new ATTENDANT_OpenAI_Provider();
 		}
 
 		// Anthropic and Google providers will be added in future phases.
@@ -501,7 +501,7 @@ class AICM_Index_Manager {
 	}
 
 	/**
-	 * Recount chunks and pending items; write results to aicm_index_status.
+	 * Recount chunks and pending items; write results to attendant_index_status.
 	 *
 	 * Called after every batch and after enqueue/remove operations to keep
 	 * the admin UI accurate.
@@ -509,8 +509,8 @@ class AICM_Index_Manager {
 	private static function update_status(): void {
 		global $wpdb;
 
-		$chunks_table = $wpdb->prefix . 'aicm_chunks';
-		$queue_table  = $wpdb->prefix . 'aicm_queue';
+		$chunks_table = $wpdb->prefix . 'attendant_chunks';
+		$queue_table  = $wpdb->prefix . 'attendant_queue';
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$total_chunks = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `{$chunks_table}`" );
@@ -523,31 +523,31 @@ class AICM_Index_Manager {
 			"SELECT COUNT(*) FROM `{$queue_table}` WHERE status IN ('pending', 'processing')"
 		);
 
-		$status                  = get_option( 'aicm_index_status', array() );
+		$status                  = get_option( 'attendant_index_status', array() );
 		$status['total_chunks']  = $total_chunks;
 		$status['indexed_posts'] = $indexed_posts;
 		$status['pending']       = $pending_count;
 
-		update_option( 'aicm_index_status', $status );
+		update_option( 'attendant_index_status', $status );
 	}
 
 	/**
-	 * Set the is_running flag in aicm_index_status (for admin UI feedback).
+	 * Set the is_running flag in attendant_index_status (for admin UI feedback).
 	 */
 	private static function mark_running(): void {
-		$status               = get_option( 'aicm_index_status', array() );
+		$status               = get_option( 'attendant_index_status', array() );
 		$status['is_running'] = true;
-		update_option( 'aicm_index_status', $status );
+		update_option( 'attendant_index_status', $status );
 	}
 
 	/**
 	 * Clear the is_running flag and record the completion timestamp.
 	 */
 	private static function mark_not_running(): void {
-		$status                 = get_option( 'aicm_index_status', array() );
+		$status                 = get_option( 'attendant_index_status', array() );
 		$status['is_running']   = false;
 		$status['last_indexed'] = current_time( 'mysql' );
-		update_option( 'aicm_index_status', $status );
+		update_option( 'attendant_index_status', $status );
 	}
 
 	/**
@@ -579,7 +579,7 @@ class AICM_Index_Manager {
 	// ── Activity log ─────────────────────────────────────────────────────────
 
 	/** Option name for the rolling indexing activity log. */
-	private const ACTIVITY_OPTION = 'aicm_index_activity';
+	private const ACTIVITY_OPTION = 'attendant_index_activity';
 
 	/** Maximum number of entries kept in the activity log. */
 	private const ACTIVITY_MAX = 30;
@@ -653,7 +653,7 @@ class AICM_Index_Manager {
 	// The 5-minute WP-Cron job remains as a safety net for both modes.
 
 	/** Option name for the loopback secret key. */
-	private const PROCESS_KEY_OPTION = 'aicm_process_key';
+	private const PROCESS_KEY_OPTION = 'attendant_process_key';
 
 	/**
 	 * Get (or lazily create) the secret key that authenticates loopback requests.
@@ -680,7 +680,7 @@ class AICM_Index_Manager {
 	public static function dispatch_async(): void {
 		$url = add_query_arg(
 			array(
-				'action' => 'aicm_async_index',
+				'action' => 'attendant_async_index',
 				'key'    => rawurlencode( self::get_process_key() ),
 			),
 			admin_url( 'admin-ajax.php' )
@@ -702,7 +702,7 @@ class AICM_Index_Manager {
 	 * Handle a loopback request: process one batch, then re-dispatch while
 	 * work remains.
 	 *
-	 * Registered on wp_ajax_aicm_async_index AND wp_ajax_nopriv_aicm_async_index
+	 * Registered on wp_ajax_attendant_async_index AND wp_ajax_nopriv_attendant_async_index
 	 * — the loopback request carries no cookies, so it always arrives
 	 * unauthenticated. Authentication is the stored secret key, compared with
 	 * hash_equals (same approach as WP background-processing libraries).
@@ -725,7 +725,7 @@ class AICM_Index_Manager {
 		// Background mode selected. The stop button deletes pending rows, so
 		// stopping naturally breaks the chain.
 		$mode   = (string) AI_ChatMate::get_setting( 'indexing_mode', 'frontend' );
-		$status = (array) get_option( 'aicm_index_status', array() );
+		$status = (array) get_option( 'attendant_index_status', array() );
 
 		if ( 'background' === $mode && (int) ( $status['pending'] ?? 0 ) > 0 ) {
 			usleep( 500000 ); // 0.5 s breather between batches.

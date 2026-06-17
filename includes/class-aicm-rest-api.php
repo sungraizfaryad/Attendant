@@ -4,7 +4,7 @@
  *
  * Registers all REST endpoints for AI ChatMate.
  *
- * Namespace: aicm/v1
+ * Namespace: attendant/v1
  *
  * Security model:
  *  ┌──────────────────────────────────────────────────────────────┐
@@ -28,10 +28,10 @@
  * Phase 1 implements settings and test-connection endpoints fully.
  * Phase 2 implements the schema endpoints (GET /schema, POST /schema/rescan).
  * Phase 3 implements the indexing endpoints (GET /index/status, POST /index/start, /index/stop).
- * Phase 4 implements the chat endpoint (POST /chat) via AICM_Conversation_Handler.
+ * Phase 4 implements the chat endpoint (POST /chat) via ATTENDANT_Conversation_Handler.
  * Phase 7 implements Q&A CRUD endpoints (GET /qa, POST /qa, PUT /qa/{id}, DELETE /qa/{id}).
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -39,14 +39,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AICM_REST_API
+ * Class ATTENDANT_REST_API
  */
-class AICM_REST_API {
+class ATTENDANT_REST_API {
 
 	/**
 	 * REST namespace — matches plugin slug convention.
 	 */
-	private const NAMESPACE = 'aicm/v1';
+	private const NAMESPACE = 'attendant/v1';
 
 	// -------------------------------------------------------------------------
 	// Route registration
@@ -345,8 +345,8 @@ class AICM_REST_API {
 		// site owner's API budget the moment the plugin is active.
 		if ( ! (bool) AI_ChatMate::get_setting( 'widget_enabled', false ) ) {
 			return new WP_Error(
-				'aicm_chat_disabled',
-				__( 'The chat assistant is not enabled on this site.', 'ai-chatmate' ),
+				'attendant_chat_disabled',
+				__( 'The chat assistant is not enabled on this site.', 'attendant' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -356,31 +356,31 @@ class AICM_REST_API {
 		// too so direct REST calls cannot spend budget while setup is
 		// incomplete. Guarded with class_exists because the frontend class is
 		// only loaded on non-admin requests.
-		if ( class_exists( 'AICM_Frontend' ) && ! AICM_Frontend::is_ready() ) {
+		if ( class_exists( 'ATTENDANT_Frontend' ) && ! ATTENDANT_Frontend::is_ready() ) {
 			return new WP_Error(
-				'aicm_not_ready',
-				__( 'The chat assistant is still being set up. Please try again later.', 'ai-chatmate' ),
+				'attendant_not_ready',
+				__( 'The chat assistant is still being set up. Please try again later.', 'attendant' ),
 				array( 'status' => 503 )
 			);
 		}
 
 		// Verify the nonce that the chat widget JS sends with every request.
-		$nonce = sanitize_text_field( wp_unslash( $request->get_header( 'X-AICM-Nonce' ) ?? '' ) );
+		$nonce = sanitize_text_field( wp_unslash( $request->get_header( 'X-Attendant-Nonce' ) ?? '' ) );
 
-		if ( ! wp_verify_nonce( $nonce, 'aicm_chat_nonce' ) ) {
+		if ( ! wp_verify_nonce( $nonce, 'attendant_chat_nonce' ) ) {
 			return new WP_Error(
-				'aicm_invalid_nonce',
-				__( 'Security check failed.', 'ai-chatmate' ),
+				'attendant_invalid_nonce',
+				__( 'Security check failed.', 'attendant' ),
 				array( 'status' => 403 )
 			);
 		}
 
 		// Daily budget kill-switch: once today's API spend reaches the configured
 		// daily budget, the bot pauses until tomorrow. Protects against bill shock.
-		if ( AICM_Billing::daily_budget_reached() ) {
+		if ( ATTENDANT_Billing::daily_budget_reached() ) {
 			return new WP_Error(
-				'aicm_budget_reached',
-				__( 'The chat assistant is temporarily unavailable. Please try again later.', 'ai-chatmate' ),
+				'attendant_budget_reached',
+				__( 'The chat assistant is temporarily unavailable. Please try again later.', 'attendant' ),
 				array( 'status' => 503 )
 			);
 		}
@@ -413,8 +413,8 @@ class AICM_REST_API {
 	public function admin_permission_check( WP_REST_Request $request ): bool|WP_Error {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return new WP_Error(
-				'aicm_forbidden',
-				__( 'You do not have permission to access this.', 'ai-chatmate' ),
+				'attendant_forbidden',
+				__( 'You do not have permission to access this.', 'attendant' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -431,8 +431,8 @@ class AICM_REST_API {
 
 		if ( ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
 			return new WP_Error(
-				'aicm_invalid_nonce',
-				__( 'Security check failed.', 'ai-chatmate' ),
+				'attendant_invalid_nonce',
+				__( 'Security check failed.', 'attendant' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -459,9 +459,9 @@ class AICM_REST_API {
 			array(
 				'settings'          => $settings,
 				// Indicate whether a key is stored without revealing it.
-				'has_key_openai'    => '' !== (string) get_option( 'aicm_api_key_openai', '' ),
-				'has_key_anthropic' => '' !== (string) get_option( 'aicm_api_key_anthropic', '' ),
-				'has_key_google'    => '' !== (string) get_option( 'aicm_api_key_google', '' ),
+				'has_key_openai'    => '' !== (string) get_option( 'attendant_api_key_openai', '' ),
+				'has_key_anthropic' => '' !== (string) get_option( 'attendant_api_key_anthropic', '' ),
+				'has_key_google'    => '' !== (string) get_option( 'attendant_api_key_google', '' ),
 			),
 			200
 		);
@@ -481,8 +481,8 @@ class AICM_REST_API {
 
 		if ( ! is_array( $params ) ) {
 			return new WP_Error(
-				'aicm_bad_request',
-				__( 'Invalid request body.', 'ai-chatmate' ),
+				'attendant_bad_request',
+				__( 'Invalid request body.', 'attendant' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -492,9 +492,9 @@ class AICM_REST_API {
 		// options with encryption, never mixed with general settings.
 		// -----------------------------------------------------------
 		$key_map = array(
-			'api_key_openai'    => 'aicm_api_key_openai',
-			'api_key_anthropic' => 'aicm_api_key_anthropic',
-			'api_key_google'    => 'aicm_api_key_google',
+			'api_key_openai'    => 'attendant_api_key_openai',
+			'api_key_anthropic' => 'attendant_api_key_anthropic',
+			'api_key_google'    => 'attendant_api_key_google',
 		);
 
 		foreach ( $key_map as $param_name => $option_name ) {
@@ -504,10 +504,10 @@ class AICM_REST_API {
 				// Non-empty string = new key submitted; encrypt and store.
 				// Empty string = leave existing key unchanged.
 				if ( '' !== $raw_key ) {
-					update_option( $option_name, AICM_Encryption::encrypt( $raw_key ) );
+					update_option( $option_name, ATTENDANT_Encryption::encrypt( $raw_key ) );
 				}
 
-				// Remove from params so it is not saved in aicm_settings.
+				// Remove from params so it is not saved in attendant_settings.
 				unset( $params[ $param_name ] );
 			}
 		}
@@ -653,7 +653,7 @@ class AICM_REST_API {
 			$updated['index_post_types'] = array_map( 'sanitize_key', $params['index_post_types'] );
 		}
 
-		update_option( 'aicm_settings', $updated );
+		update_option( 'attendant_settings', $updated );
 
 		return new WP_REST_Response( array( 'success' => true ), 200 );
 	}
@@ -676,11 +676,11 @@ class AICM_REST_API {
 		// (encrypted) for the duration of this test without saving permanently.
 		// The provider constructor reads from wp_options, so we need to
 		// temporarily set the option, run the test, then restore.
-		$option_name = "aicm_api_key_{$provider}";
+		$option_name = "attendant_api_key_{$provider}";
 		$original    = get_option( $option_name, '' );
 
 		if ( '' !== $raw_key ) {
-			update_option( $option_name, AICM_Encryption::encrypt( $raw_key ) );
+			update_option( $option_name, ATTENDANT_Encryption::encrypt( $raw_key ) );
 		}
 
 		$result = array(
@@ -691,11 +691,11 @@ class AICM_REST_API {
 
 		// Only OpenAI provider is implemented in Phase 1.
 		if ( 'openai' === $provider ) {
-			require_once AICM_PLUGIN_DIR . 'includes/providers/class-aicm-openai-provider.php';
-			$openai_provider = new AICM_OpenAI_Provider();
+			require_once ATTENDANT_PLUGIN_DIR . 'includes/providers/class-attendant-openai-provider.php';
+			$openai_provider = new ATTENDANT_OpenAI_Provider();
 			$result          = $openai_provider->test_connection();
 		} else {
-			$result['message'] = __( 'This provider is not yet implemented.', 'ai-chatmate' );
+			$result['message'] = __( 'This provider is not yet implemented.', 'attendant' );
 		}
 
 		// Restore the original stored key if we temporarily replaced it.
@@ -716,7 +716,7 @@ class AICM_REST_API {
 	/**
 	 * POST /chat
 	 *
-	 * Passes the user message to AICM_Conversation_Handler, which runs the
+	 * Passes the user message to ATTENDANT_Conversation_Handler, which runs the
 	 * full RAG + function-calling pipeline and returns a reply.
 	 *
 	 * Request params (validated by register_routes args):
@@ -730,12 +730,12 @@ class AICM_REST_API {
 		$message    = (string) $request->get_param( 'message' );
 		$session_id = (string) $request->get_param( 'session_id' );
 
-		$result = AICM_Conversation_Handler::handle( $message, $session_id );
+		$result = ATTENDANT_Conversation_Handler::handle( $message, $session_id );
 
 		// Optional file-based usage log (Settings → Privacy; off by default).
 		// Use the RESOLVED session id from the response — the request id is
 		// empty on a conversation's first message and would split the thread.
-		AICM_Chat_Log::record( (string) ( $result['session_id'] ?? $session_id ), $message, $result );
+		ATTENDANT_Chat_Log::record( (string) ( $result['session_id'] ?? $session_id ), $message, $result );
 
 		// Resolve source post IDs into title + URL objects for the frontend.
 		$sources = array();
@@ -770,7 +770,7 @@ class AICM_REST_API {
 	 */
 	public function get_index_status(): WP_REST_Response {
 		$status = get_option(
-			'aicm_index_status',
+			'attendant_index_status',
 			array(
 				'total_chunks'  => 0,
 				'indexed_posts' => 0,
@@ -782,7 +782,7 @@ class AICM_REST_API {
 
 		// Rolling log of recently processed items (newest first) so the admin
 		// UI can show which posts are being indexed right now.
-		$status['activity'] = AICM_Index_Manager::get_activity();
+		$status['activity'] = ATTENDANT_Index_Manager::get_activity();
 		$status['mode']     = (string) AI_ChatMate::get_setting( 'indexing_mode', 'frontend' );
 
 		return new WP_REST_Response( $status, 200 );
@@ -792,7 +792,7 @@ class AICM_REST_API {
 	 * POST /index/start
 	 *
 	 * Enqueues all published posts of the configured post types for a full
-	 * re-index. Posts are added to the aicm_queue table and processed
+	 * re-index. Posts are added to the attendant_queue table and processed
 	 * by the 5-minute WP-Cron job in batches — no API calls happen inline.
 	 *
 	 * Returns immediately with the number of posts queued so the admin UI
@@ -807,27 +807,27 @@ class AICM_REST_API {
 		$scope    = sanitize_key( (string) ( $request->get_param( 'scope' ) ?? 'new' ) );
 		$only_new = ( 'all' !== $scope );
 
-		$queued = AICM_Index_Manager::enqueue_full_reindex( $only_new );
+		$queued = ATTENDANT_Index_Manager::enqueue_full_reindex( $only_new );
 
 		// Pending may exceed $queued: rows can already be waiting from an
 		// earlier run (e.g. the admin closed the tab mid-index). Work exists
 		// whenever pending > 0, regardless of how many rows THIS call added.
-		$index_status = (array) get_option( 'aicm_index_status', array() );
+		$index_status = (array) get_option( 'attendant_index_status', array() );
 		$pending      = (int) ( $index_status['pending'] ?? 0 );
 
 		// Background mode: kick off the self-driving loopback chain so the
 		// queue processes without the admin tab staying open.
 		$mode = (string) AI_ChatMate::get_setting( 'indexing_mode', 'frontend' );
 		if ( 'background' === $mode && $pending > 0 ) {
-			AICM_Index_Manager::dispatch_async();
+			ATTENDANT_Index_Manager::dispatch_async();
 		}
 
 		if ( 0 === $queued && 0 === $pending ) {
 			$message = $only_new
-				? __( 'Nothing new to index — all published content is already in the index.', 'ai-chatmate' )
-				: __( 'Nothing to index — no published content found for the configured post types.', 'ai-chatmate' );
+				? __( 'Nothing new to index — all published content is already in the index.', 'attendant' )
+				: __( 'Nothing to index — no published content found for the configured post types.', 'attendant' );
 		} elseif ( 0 === $queued ) {
-			$message = __( 'Resuming — earlier queued content is still waiting to be processed.', 'ai-chatmate' );
+			$message = __( 'Resuming — earlier queued content is still waiting to be processed.', 'attendant' );
 		} else {
 			$message = sprintf(
 				/* translators: %d: number of posts added to the indexing queue */
@@ -835,7 +835,7 @@ class AICM_REST_API {
 					'%d post has been queued for indexing.',
 					'%d posts have been queued for indexing.',
 					$queued,
-					'ai-chatmate'
+					'attendant'
 				),
 				$queued
 			);
@@ -865,7 +865,7 @@ class AICM_REST_API {
 	public function stop_indexing(): WP_REST_Response {
 		global $wpdb;
 
-		$table = $wpdb->prefix . 'aicm_queue';
+		$table = $wpdb->prefix . 'attendant_queue';
 
 		// Delete all pending rows — removes the remaining work from the queue.
 		// 'processing' rows (current cron batch) are left to complete naturally.
@@ -873,10 +873,10 @@ class AICM_REST_API {
 		$wpdb->query( "DELETE FROM `{$table}` WHERE status = 'pending'" );
 
 		// Update the status option to reflect the stop.
-		$status               = get_option( 'aicm_index_status', array() );
+		$status               = get_option( 'attendant_index_status', array() );
 		$status['is_running'] = false;
 		$status['pending']    = 0;
-		update_option( 'aicm_index_status', $status );
+		update_option( 'attendant_index_status', $status );
 
 		return new WP_REST_Response( array( 'success' => true ), 200 );
 	}
@@ -901,10 +901,10 @@ class AICM_REST_API {
 	 * @return WP_REST_Response
 	 */
 	public function process_indexing(): WP_REST_Response {
-		AICM_Index_Manager::process_queue_batch();
+		ATTENDANT_Index_Manager::process_queue_batch();
 
 		$status = get_option(
-			'aicm_index_status',
+			'attendant_index_status',
 			array(
 				'total_chunks'  => 0,
 				'indexed_posts' => 0,
@@ -921,10 +921,10 @@ class AICM_REST_API {
 		// transient lock inside process_queue_batch makes double-arming safe.
 		$mode = (string) AI_ChatMate::get_setting( 'indexing_mode', 'frontend' );
 		if ( 'background' === $mode && (int) ( $status['pending'] ?? 0 ) > 0 ) {
-			AICM_Index_Manager::dispatch_async();
+			ATTENDANT_Index_Manager::dispatch_async();
 		}
 
-		$status['activity'] = AICM_Index_Manager::get_activity();
+		$status['activity'] = ATTENDANT_Index_Manager::get_activity();
 		$status['mode']     = $mode;
 
 		return new WP_REST_Response(
@@ -940,19 +940,19 @@ class AICM_REST_API {
 	 * GET /schema
 	 *
 	 * Returns the cached site schema, or an empty state if no scan has
-	 * been run yet. The schema is populated by AICM_Schema_Discovery::run()
+	 * been run yet. The schema is populated by ATTENDANT_Schema_Discovery::run()
 	 * which is triggered either via POST /schema/rescan or the weekly cron.
 	 *
 	 * @return WP_REST_Response
 	 */
 	public function get_schema(): WP_REST_Response {
-		$schema = AICM_Schema_Cache::get();
+		$schema = ATTENDANT_Schema_Cache::get();
 
 		return new WP_REST_Response(
 			array(
 				'schema'       => $schema,
 				'discovered'   => null !== $schema,
-				'generated_at' => AICM_Schema_Cache::last_generated_at(),
+				'generated_at' => ATTENDANT_Schema_Cache::last_generated_at(),
 			),
 			200
 		);
@@ -972,7 +972,7 @@ class AICM_REST_API {
 	 * @return WP_REST_Response
 	 */
 	public function rescan_schema(): WP_REST_Response {
-		$schema = AICM_Schema_Discovery::run();
+		$schema = ATTENDANT_Schema_Discovery::run();
 
 		return new WP_REST_Response(
 			array(
@@ -995,7 +995,7 @@ class AICM_REST_API {
 	 * @return WP_REST_Response
 	 */
 	public function onboarding_detect(): WP_REST_Response {
-		$schema = AICM_Schema_Discovery::run( false );
+		$schema = ATTENDANT_Schema_Discovery::run( false );
 		return new WP_REST_Response(
 			array(
 				'schema'     => $schema,
@@ -1011,7 +1011,7 @@ class AICM_REST_API {
 	 * @return WP_REST_Response
 	 */
 	public function get_field_config(): WP_REST_Response {
-		return new WP_REST_Response( array( 'config' => AICM_Field_Config::get() ), 200 );
+		return new WP_REST_Response( array( 'config' => ATTENDANT_Field_Config::get() ), 200 );
 	}
 
 	/**
@@ -1023,9 +1023,9 @@ class AICM_REST_API {
 	public function save_field_config( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		$params = $request->get_json_params();
 		if ( ! is_array( $params ) || ! isset( $params['config'] ) ) {
-			return new WP_Error( 'aicm_bad_request', __( 'Invalid request body.', 'ai-chatmate' ), array( 'status' => 400 ) );
+			return new WP_Error( 'attendant_bad_request', __( 'Invalid request body.', 'attendant' ), array( 'status' => 400 ) );
 		}
-		$saved = AICM_Field_Config::save( $params['config'] );
+		$saved = ATTENDANT_Field_Config::save( $params['config'] );
 		return new WP_REST_Response(
 			array(
 				'success' => true,
@@ -1054,13 +1054,13 @@ class AICM_REST_API {
 
 		// Persist the field config if supplied.
 		if ( isset( $params['config'] ) ) {
-			AICM_Field_Config::save( $params['config'] );
+			ATTENDANT_Field_Config::save( $params['config'] );
 		}
 
 		// Persist the live schema (the wizard previewed it; now make it live).
-		AICM_Schema_Discovery::run( true );
+		ATTENDANT_Schema_Discovery::run( true );
 
-		AICM_Onboarding::mark_complete();
+		ATTENDANT_Onboarding::mark_complete();
 
 		return new WP_REST_Response( array( 'success' => true ), 200 );
 	}
@@ -1077,7 +1077,7 @@ class AICM_REST_API {
 	 * @return WP_REST_Response
 	 */
 	public function list_qa(): WP_REST_Response {
-		$rows = AICM_QA_Manager::get_all();
+		$rows = ATTENDANT_QA_Manager::get_all();
 
 		return new WP_REST_Response( array( 'items' => $rows ), 200 );
 	}
@@ -1091,7 +1091,7 @@ class AICM_REST_API {
 	 * @return WP_REST_Response|WP_Error
 	 */
 	public function create_qa( WP_REST_Request $request ): WP_REST_Response|WP_Error {
-		$result = AICM_QA_Manager::save(
+		$result = ATTENDANT_QA_Manager::save(
 			array(
 				'question'  => (string) $request->get_param( 'question' ),
 				'answer'    => (string) $request->get_param( 'answer' ),
@@ -1128,12 +1128,12 @@ class AICM_REST_API {
 	 */
 	public function update_qa( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		$id      = (int) $request->get_param( 'id' );
-		$current = AICM_QA_Manager::get( $id );
+		$current = ATTENDANT_QA_Manager::get( $id );
 
 		if ( null === $current ) {
 			return new WP_Error(
-				'aicm_qa_not_found',
-				__( 'Q&A entry not found.', 'ai-chatmate' ),
+				'attendant_qa_not_found',
+				__( 'Q&A entry not found.', 'attendant' ),
 				array( 'status' => 404 )
 			);
 		}
@@ -1146,7 +1146,7 @@ class AICM_REST_API {
 			$data[ $key ] = ( null !== $param ) ? $param : $current[ $key ];
 		}
 
-		$result = AICM_QA_Manager::save( $data );
+		$result = ATTENDANT_QA_Manager::save( $data );
 
 		if ( is_wp_error( $result ) ) {
 			return new WP_Error(
@@ -1169,12 +1169,12 @@ class AICM_REST_API {
 	 */
 	public function delete_qa( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		$id      = (int) $request->get_param( 'id' );
-		$deleted = AICM_QA_Manager::delete( $id );
+		$deleted = ATTENDANT_QA_Manager::delete( $id );
 
 		if ( ! $deleted ) {
 			return new WP_Error(
-				'aicm_qa_not_found',
-				__( 'Q&A entry not found or already deleted.', 'ai-chatmate' ),
+				'attendant_qa_not_found',
+				__( 'Q&A entry not found or already deleted.', 'attendant' ),
 				array( 'status' => 404 )
 			);
 		}
@@ -1212,14 +1212,14 @@ class AICM_REST_API {
 
 		// One-way hash — IP is never stored in the database or logs.
 		$ip_hash       = wp_hash( $raw_ip . wp_salt( 'nonce' ) );
-		$transient_key = 'aicm_rl_' . $ip_hash;
+		$transient_key = 'attendant_rl_' . $ip_hash;
 
 		$current = (int) get_transient( $transient_key );
 
 		if ( $current >= $limit ) {
 			return new WP_Error(
-				'aicm_rate_limited',
-				__( 'Too many requests. Please wait a moment before sending another message.', 'ai-chatmate' ),
+				'attendant_rate_limited',
+				__( 'Too many requests. Please wait a moment before sending another message.', 'attendant' ),
 				array( 'status' => 429 )
 			);
 		}
@@ -1251,14 +1251,14 @@ class AICM_REST_API {
 			: 'unknown';
 
 		$ip_hash       = wp_hash( $raw_ip . wp_salt( 'nonce' ) );
-		$transient_key = 'aicm_dc_' . gmdate( 'Ymd' ) . '_' . $ip_hash;
+		$transient_key = 'attendant_dc_' . gmdate( 'Ymd' ) . '_' . $ip_hash;
 
 		$current = (int) get_transient( $transient_key );
 
 		if ( $current >= $cap ) {
 			return new WP_Error(
-				'aicm_daily_cap',
-				__( 'You have reached the daily message limit. Please try again tomorrow.', 'ai-chatmate' ),
+				'attendant_daily_cap',
+				__( 'You have reached the daily message limit. Please try again tomorrow.', 'attendant' ),
 				array( 'status' => 429 )
 			);
 		}

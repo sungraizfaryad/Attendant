@@ -26,7 +26,7 @@
  *  - Values longer than 500 chars — likely a base64/serialized blob.
  *  - Empty / whitespace-only values.
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -34,9 +34,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AICM_Text_Extractor
+ * Class ATTENDANT_Text_Extractor
  */
-class AICM_Text_Extractor {
+class ATTENDANT_Text_Extractor {
 
 	/**
 	 * Private meta keys that are explicitly allowed because they hold
@@ -67,11 +67,11 @@ class AICM_Text_Extractor {
 	 * Extract clean plain text from a post and its meta.
 	 *
 	 * The returned string is UTF-8, HTML-free, and has normalised whitespace.
-	 * It is ready to be passed directly to AICM_Chunker::chunk().
+	 * It is ready to be passed directly to ATTENDANT_Chunker::chunk().
 	 *
 	 * @param WP_Post $post The post object.
 	 * @param array   $meta Flat meta array: key => scalar string value.
-	 *                      Produced by AICM_Content_Fetcher::get_post_data().
+	 *                      Produced by ATTENDANT_Content_Fetcher::get_post_data().
 	 * @return string       Plain text. Empty string if the post has no content.
 	 */
 	public static function extract( WP_Post $post, array $meta = array() ): string {

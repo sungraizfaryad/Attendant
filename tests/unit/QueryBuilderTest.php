@@ -3,7 +3,7 @@ use Brain\Monkey;
 use Brain\Monkey\Functions;
 use PHPUnit\Framework\TestCase;
 
-require_once AICM_PLUGIN_DIR . 'includes/class-aicm-query-builder.php';
+require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-query-builder.php';
 
 final class QueryBuilderTest extends TestCase {
 
@@ -35,7 +35,7 @@ final class QueryBuilderTest extends TestCase {
 				: false
 		);
 
-		$args = AICM_Query_Builder::build( array(
+		$args = ATTENDANT_Query_Builder::build( array(
 			'taxonomy_filters' => array( array( 'taxonomy' => 'location', 'term' => 'lisbon' ) ),
 		) );
 
@@ -49,7 +49,7 @@ final class QueryBuilderTest extends TestCase {
 		// No slug match -> use display name matching.
 		Functions\when( 'get_term_by' )->justReturn( false );
 
-		$args = AICM_Query_Builder::build( array(
+		$args = ATTENDANT_Query_Builder::build( array(
 			'taxonomy_filters' => array( array( 'taxonomy' => 'location', 'term' => 'Greater Lisbon' ) ),
 		) );
 
@@ -59,7 +59,7 @@ final class QueryBuilderTest extends TestCase {
 
 	public function test_per_page_is_capped_at_ten(): void {
 		// Regression: proves the harness exercises the real class.
-		$args = AICM_Query_Builder::build( array( 'per_page' => 999 ) );
+		$args = ATTENDANT_Query_Builder::build( array( 'per_page' => 999 ) );
 		$this->assertSame( 10, $args['posts_per_page'] );
 	}
 
@@ -67,7 +67,7 @@ final class QueryBuilderTest extends TestCase {
 		// Regression: sanitize_text_field() strips '<' as a partial HTML tag,
 		// so '<=' silently became '=' — every "under X" search matched only
 		// the exact value. The operator must bypass that sanitiser.
-		$args = AICM_Query_Builder::build( array(
+		$args = ATTENDANT_Query_Builder::build( array(
 			'meta_filters' => array(
 				array(
 					'key'     => 'price',
@@ -94,7 +94,7 @@ final class QueryBuilderTest extends TestCase {
 		);
 
 		foreach ( $cases as $input => $expected ) {
-			$args = AICM_Query_Builder::build( array(
+			$args = ATTENDANT_Query_Builder::build( array(
 				'meta_filters' => array(
 					array(
 						'key'     => 'price',
@@ -113,7 +113,7 @@ final class QueryBuilderTest extends TestCase {
 	public function test_protected_underscore_meta_keys_are_rejected(): void {
 		// The public /chat endpoint must not be usable as an existence or
 		// range oracle on hidden meta (_edit_lock, plugin internals, …).
-		$args = AICM_Query_Builder::build( array(
+		$args = ATTENDANT_Query_Builder::build( array(
 			'meta_filters' => array(
 				array(
 					'key'     => '_secret_internal',
@@ -126,7 +126,7 @@ final class QueryBuilderTest extends TestCase {
 	}
 
 	public function test_unparseable_value_is_left_alone_without_numeric_type(): void {
-		$args = AICM_Query_Builder::build( array(
+		$args = ATTENDANT_Query_Builder::build( array(
 			'meta_filters' => array(
 				array(
 					'key'     => 'price',

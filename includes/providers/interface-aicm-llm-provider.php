@@ -10,11 +10,11 @@
  * Design notes:
  *  - Methods return structured arrays (not objects) to keep the interface
  *    PHP 7.x-friendly and avoid coupling to any DTO library.
- *  - All methods are expected to throw AICM_Provider_Exception on
+ *  - All methods are expected to throw ATTENDANT_Provider_Exception on
  *    unrecoverable errors (invalid API key, quota exceeded, network failure).
  *    Callers should catch this and display a user-friendly message.
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -22,9 +22,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Interface AICM_LLM_Provider
+ * Interface ATTENDANT_LLM_Provider
  */
-interface AICM_LLM_Provider {
+interface ATTENDANT_LLM_Provider {
 
 	/**
 	 * Send a chat completion request with optional function/tool calling.

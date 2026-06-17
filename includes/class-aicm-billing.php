@@ -6,7 +6,7 @@
  * reached?" so the public chat endpoint can shut itself off before running up
  * the site owner's bill. Daily history is pruned to recent days to stay small.
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -14,15 +14,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AICM_Billing
+ * Class ATTENDANT_Billing
  */
-class AICM_Billing {
+class ATTENDANT_Billing {
 
 	/** wp_options key for the per-day spend map (YYYY-MM-DD => float). */
-	private const DAILY_OPTION = 'aicm_daily_usage';
+	private const DAILY_OPTION = 'attendant_daily_usage';
 
 	/** wp_options key for the per-month spend map (YYYY-MM => float). */
-	private const MONTHLY_OPTION = 'aicm_monthly_usage';
+	private const MONTHLY_OPTION = 'attendant_monthly_usage';
 
 	/** Days of daily history to keep. */
 	private const KEEP_DAYS = 40;

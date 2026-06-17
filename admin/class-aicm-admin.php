@@ -11,7 +11,7 @@
  * current admin screen before enqueueing — zero overhead on pages that
  * have nothing to do with this plugin.
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -19,28 +19,28 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AICM_Admin
+ * Class ATTENDANT_Admin
  */
-class AICM_Admin {
+class ATTENDANT_Admin {
 
 	/**
 	 * Admin menu slug — used to identify our pages.
 	 */
-	private const MENU_SLUG = 'ai-chatmate';
+	private const MENU_SLUG = 'attendant';
 
 	/**
 	 * Single instance of this class.
 	 *
-	 * @var AICM_Admin|null
+	 * @var ATTENDANT_Admin|null
 	 */
-	private static ?AICM_Admin $instance = null;
+	private static ?ATTENDANT_Admin $instance = null;
 
 	/**
 	 * Get or create the singleton instance.
 	 *
-	 * @return AICM_Admin
+	 * @return ATTENDANT_Admin
 	 */
-	public static function instance(): AICM_Admin {
+	public static function instance(): ATTENDANT_Admin {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
 		}
@@ -53,7 +53,7 @@ class AICM_Admin {
 	private function __construct() {
 		add_action( 'admin_menu', array( $this, 'register_menus' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
-		add_action( 'admin_post_aicm_download_log', array( $this, 'download_chat_log' ) );
+		add_action( 'admin_post_attendant_download_log', array( $this, 'download_chat_log' ) );
 	}
 
 	// -------------------------------------------------------------------------
@@ -66,8 +66,8 @@ class AICM_Admin {
 	public function register_menus(): void {
 		// Top-level menu — points to the Dashboard page.
 		add_menu_page(
-			__( 'Attendant', 'ai-chatmate' ),        // Page title (browser tab).
-			__( 'Attendant', 'ai-chatmate' ),        // Menu label.
+			__( 'Attendant', 'attendant' ),        // Page title (browser tab).
+			__( 'Attendant', 'attendant' ),        // Menu label.
 			'manage_options',                           // Capability required.
 			self::MENU_SLUG,                            // Menu slug.
 			array( $this, 'render_settings_page' ),    // Callback — Phase 1 shows settings.
@@ -78,8 +78,8 @@ class AICM_Admin {
 		// Submenu: Content Indexing — fully implemented in Phase 3.
 		add_submenu_page(
 			self::MENU_SLUG,
-			__( 'Content Indexing — Attendant', 'ai-chatmate' ),
-			__( 'Content Indexing', 'ai-chatmate' ),
+			__( 'Content Indexing — Attendant', 'attendant' ),
+			__( 'Content Indexing', 'attendant' ),
 			'manage_options',
 			self::MENU_SLUG . '-indexing',
 			array( $this, 'render_indexing_page' )
@@ -87,8 +87,8 @@ class AICM_Admin {
 
 		add_submenu_page(
 			self::MENU_SLUG,
-			__( 'Schema — Attendant', 'ai-chatmate' ),
-			__( 'Schema', 'ai-chatmate' ),
+			__( 'Schema — Attendant', 'attendant' ),
+			__( 'Schema', 'attendant' ),
 			'manage_options',
 			self::MENU_SLUG . '-schema',
 			array( $this, 'render_schema_page' )
@@ -96,8 +96,8 @@ class AICM_Admin {
 
 		add_submenu_page(
 			self::MENU_SLUG,
-			__( 'Q&A Manager — Attendant', 'ai-chatmate' ),
-			__( 'Q&amp;A Manager', 'ai-chatmate' ),
+			__( 'Q&A Manager — Attendant', 'attendant' ),
+			__( 'Q&amp;A Manager', 'attendant' ),
 			'manage_options',
 			self::MENU_SLUG . '-qa',
 			array( $this, 'render_qa_page' )
@@ -105,8 +105,8 @@ class AICM_Admin {
 
 		add_submenu_page(
 			self::MENU_SLUG,
-			__( 'Analytics — Attendant', 'ai-chatmate' ),
-			__( 'Analytics', 'ai-chatmate' ),
+			__( 'Analytics — Attendant', 'attendant' ),
+			__( 'Analytics', 'attendant' ),
 			'manage_options',
 			self::MENU_SLUG . '-analytics',
 			array( $this, 'render_analytics_page' )
@@ -117,8 +117,8 @@ class AICM_Admin {
 		// lands on Settings (and the setup wizard on first run).
 		add_submenu_page(
 			self::MENU_SLUG,
-			__( 'Settings — Attendant', 'ai-chatmate' ),
-			__( 'Settings', 'ai-chatmate' ),
+			__( 'Settings — Attendant', 'attendant' ),
+			__( 'Settings', 'attendant' ),
 			'manage_options',
 			self::MENU_SLUG,
 			array( $this, 'render_settings_page' )
@@ -151,15 +151,15 @@ class AICM_Admin {
 				'var aicmAdmin = %s;',
 				wp_json_encode(
 					array(
-						'restUrl' => esc_url_raw( rest_url( 'aicm/v1' ) ),
+						'restUrl' => esc_url_raw( rest_url( 'attendant/v1' ) ),
 						'nonce'   => wp_create_nonce( 'wp_rest' ),
-						'version' => AICM_VERSION,
+						'version' => ATTENDANT_VERSION,
 						'i18n'    => array(
-							'saving'    => __( 'Saving…', 'ai-chatmate' ),
-							'saved'     => __( 'Settings saved.', 'ai-chatmate' ),
-							'testing'   => __( 'Testing connection…', 'ai-chatmate' ),
-							'connected' => __( 'Connected!', 'ai-chatmate' ),
-							'error'     => __( 'Something went wrong. Please try again.', 'ai-chatmate' ),
+							'saving'    => __( 'Saving…', 'attendant' ),
+							'saved'     => __( 'Settings saved.', 'attendant' ),
+							'testing'   => __( 'Testing connection…', 'attendant' ),
+							'connected' => __( 'Connected!', 'attendant' ),
+							'error'     => __( 'Something went wrong. Please try again.', 'attendant' ),
 						),
 					)
 				)
@@ -170,16 +170,16 @@ class AICM_Admin {
 		// Wizard assets — only on the top-level page (where the wizard renders).
 		if ( str_contains( $hook_suffix, 'toplevel_page_' . self::MENU_SLUG ) ) {
 			wp_enqueue_style(
-				'aicm-wizard',
-				AICM_PLUGIN_URL . 'admin/css/aicm-wizard.css',
+				'attendant-wizard',
+				ATTENDANT_PLUGIN_URL . 'admin/css/attendant-wizard.css',
 				array(),
-				AICM_VERSION
+				ATTENDANT_VERSION
 			);
 			wp_enqueue_script(
-				'aicm-wizard',
-				AICM_PLUGIN_URL . 'admin/js/aicm-wizard.js',
+				'attendant-wizard',
+				ATTENDANT_PLUGIN_URL . 'admin/js/attendant-wizard.js',
 				array( 'wp-api' ),
-				AICM_VERSION,
+				ATTENDANT_VERSION,
 				true
 			);
 			wp_add_inline_script(
@@ -192,16 +192,16 @@ class AICM_Admin {
 		// ── Settings page (top-level) ─────────────────────────────────────
 		if ( str_contains( $hook_suffix, 'toplevel_page_' . self::MENU_SLUG ) ) {
 			wp_enqueue_style(
-				'aicm-settings',
-				AICM_PLUGIN_URL . 'admin/css/aicm-settings.css',
+				'attendant-settings',
+				ATTENDANT_PLUGIN_URL . 'admin/css/attendant-settings.css',
 				array(),
-				AICM_VERSION
+				ATTENDANT_VERSION
 			);
 			wp_enqueue_script(
-				'aicm-settings',
-				AICM_PLUGIN_URL . 'admin/js/aicm-settings.js',
+				'attendant-settings',
+				ATTENDANT_PLUGIN_URL . 'admin/js/attendant-settings.js',
 				array( 'wp-api' ),
-				AICM_VERSION,
+				ATTENDANT_VERSION,
 				true
 			);
 		}
@@ -209,40 +209,40 @@ class AICM_Admin {
 		// ── Content Indexing page ─────────────────────────────────────────
 		if ( str_contains( $hook_suffix, self::MENU_SLUG . '-indexing' ) ) {
 			wp_enqueue_style(
-				'aicm-indexing',
-				AICM_PLUGIN_URL . 'admin/css/aicm-indexing.css',
+				'attendant-indexing',
+				ATTENDANT_PLUGIN_URL . 'admin/css/attendant-indexing.css',
 				array(),
-				AICM_VERSION
+				ATTENDANT_VERSION
 			);
 			wp_enqueue_script(
-				'aicm-indexing',
-				AICM_PLUGIN_URL . 'admin/js/aicm-indexing.js',
+				'attendant-indexing',
+				ATTENDANT_PLUGIN_URL . 'admin/js/attendant-indexing.js',
 				array( 'wp-api' ),
-				AICM_VERSION,
+				ATTENDANT_VERSION,
 				true
 			);
-			$index_status = get_option( 'aicm_index_status', array() );
+			$index_status = get_option( 'attendant_index_status', array() );
 			wp_localize_script(
-				'aicm-indexing',
+				'attendant-indexing',
 				'aicmIndexing',
 				array(
 					'isRunning' => ! empty( $index_status['is_running'] ),
 					'mode'      => (string) AI_ChatMate::get_setting( 'indexing_mode', 'frontend' ),
 					'i18n'      => array(
-						'inProgress'        => __( 'Indexing in progress…', 'ai-chatmate' ),
-						'complete'          => __( 'Indexing complete', 'ai-chatmate' ),
-						'couldNotStart'     => __( 'Could not start indexing. Please try again.', 'ai-chatmate' ),
-						'requestFailed'     => __( 'Request failed. Please check your connection and try again.', 'ai-chatmate' ),
-						'stopped'           => __( 'Indexing stopped. Pending items have been cleared.', 'ai-chatmate' ),
-						'couldNotStop'      => __( 'Could not stop indexing. Please try again.', 'ai-chatmate' ),
-						'finished'          => __( 'Indexing finished. All queued content has been processed.', 'ai-chatmate' ),
-						'startedBackground' => __( 'Indexing started in the background — you can close this page. Progress updates below while you stay.', 'ai-chatmate' ),
-						'actIndexed'        => __( 'Indexed ✓', 'ai-chatmate' ),
-						'actRemoved'        => __( 'Removed', 'ai-chatmate' ),
-						'actFailed'         => __( 'Failed ✕', 'ai-chatmate' ),
-						'stalledKicking'    => __( 'Indexing has not made progress for a while — it may have timed out. Resuming it automatically now…', 'ai-chatmate' ),
-						'resumed'           => __( 'Indexing resumed and is making progress again.', 'ai-chatmate' ),
-						'stalledFailed'     => __( 'Indexing appears stalled and the automatic resume failed. Click "Start Indexing" to resume, or switch the processing mode to "While the Indexing page is open" in Settings → Indexing.', 'ai-chatmate' ),
+						'inProgress'        => __( 'Indexing in progress…', 'attendant' ),
+						'complete'          => __( 'Indexing complete', 'attendant' ),
+						'couldNotStart'     => __( 'Could not start indexing. Please try again.', 'attendant' ),
+						'requestFailed'     => __( 'Request failed. Please check your connection and try again.', 'attendant' ),
+						'stopped'           => __( 'Indexing stopped. Pending items have been cleared.', 'attendant' ),
+						'couldNotStop'      => __( 'Could not stop indexing. Please try again.', 'attendant' ),
+						'finished'          => __( 'Indexing finished. All queued content has been processed.', 'attendant' ),
+						'startedBackground' => __( 'Indexing started in the background — you can close this page. Progress updates below while you stay.', 'attendant' ),
+						'actIndexed'        => __( 'Indexed ✓', 'attendant' ),
+						'actRemoved'        => __( 'Removed', 'attendant' ),
+						'actFailed'         => __( 'Failed ✕', 'attendant' ),
+						'stalledKicking'    => __( 'Indexing has not made progress for a while — it may have timed out. Resuming it automatically now…', 'attendant' ),
+						'resumed'           => __( 'Indexing resumed and is making progress again.', 'attendant' ),
+						'stalledFailed'     => __( 'Indexing appears stalled and the automatic resume failed. Click "Start Indexing" to resume, or switch the processing mode to "While the Indexing page is open" in Settings → Indexing.', 'attendant' ),
 					),
 				)
 			);
@@ -251,27 +251,27 @@ class AICM_Admin {
 		// ── Schema page ───────────────────────────────────────────────────
 		if ( str_contains( $hook_suffix, self::MENU_SLUG . '-schema' ) ) {
 			wp_enqueue_style(
-				'aicm-schema',
-				AICM_PLUGIN_URL . 'admin/css/aicm-schema.css',
+				'attendant-schema',
+				ATTENDANT_PLUGIN_URL . 'admin/css/attendant-schema.css',
 				array(),
-				AICM_VERSION
+				ATTENDANT_VERSION
 			);
 			wp_enqueue_script(
-				'aicm-schema',
-				AICM_PLUGIN_URL . 'admin/js/aicm-schema.js',
+				'attendant-schema',
+				ATTENDANT_PLUGIN_URL . 'admin/js/attendant-schema.js',
 				array( 'wp-api' ),
-				AICM_VERSION,
+				ATTENDANT_VERSION,
 				true
 			);
 			wp_localize_script(
-				'aicm-schema',
+				'attendant-schema',
 				'aicmSchema',
 				array(
 					'i18n' => array(
-						'scanning'      => __( 'Scanning…', 'ai-chatmate' ),
-						'doneReloading' => __( 'Done! Reloading…', 'ai-chatmate' ),
-						'errorRetry'    => __( 'Error. Please try again.', 'ai-chatmate' ),
-						'networkError'  => __( 'Network error. Please try again.', 'ai-chatmate' ),
+						'scanning'      => __( 'Scanning…', 'attendant' ),
+						'doneReloading' => __( 'Done! Reloading…', 'attendant' ),
+						'errorRetry'    => __( 'Error. Please try again.', 'attendant' ),
+						'networkError'  => __( 'Network error. Please try again.', 'attendant' ),
 					),
 				)
 			);
@@ -280,33 +280,33 @@ class AICM_Admin {
 		// ── Q&A Manager page ──────────────────────────────────────────────
 		if ( str_contains( $hook_suffix, self::MENU_SLUG . '-qa' ) ) {
 			wp_enqueue_style(
-				'aicm-qa',
-				AICM_PLUGIN_URL . 'admin/css/aicm-qa.css',
+				'attendant-qa',
+				ATTENDANT_PLUGIN_URL . 'admin/css/attendant-qa.css',
 				array(),
-				AICM_VERSION
+				ATTENDANT_VERSION
 			);
 			wp_enqueue_script(
-				'aicm-qa',
-				AICM_PLUGIN_URL . 'admin/js/aicm-qa.js',
+				'attendant-qa',
+				ATTENDANT_PLUGIN_URL . 'admin/js/attendant-qa.js',
 				array( 'wp-api' ),
-				AICM_VERSION,
+				ATTENDANT_VERSION,
 				true
 			);
 			wp_localize_script(
-				'aicm-qa',
+				'attendant-qa',
 				'aicmQA',
 				array(
 					'i18n' => array(
-						'editPair'      => __( 'Edit Q&A Pair', 'ai-chatmate' ),
-						'addPair'       => __( 'Add New Q&A Pair', 'ai-chatmate' ),
-						'active'        => __( 'Active', 'ai-chatmate' ),
-						'inactive'      => __( 'Inactive', 'ai-chatmate' ),
-						'edit'          => __( 'Edit', 'ai-chatmate' ),
-						'delete'        => __( 'Delete', 'ai-chatmate' ),
-						'confirmDelete' => __( 'Delete this Q&A pair? This cannot be undone.', 'ai-chatmate' ),
-						'required'      => __( 'Question and answer are required.', 'ai-chatmate' ),
-						'saving'        => __( 'Saving…', 'ai-chatmate' ),
-						'saved'         => __( 'Saved.', 'ai-chatmate' ),
+						'editPair'      => __( 'Edit Q&A Pair', 'attendant' ),
+						'addPair'       => __( 'Add New Q&A Pair', 'attendant' ),
+						'active'        => __( 'Active', 'attendant' ),
+						'inactive'      => __( 'Inactive', 'attendant' ),
+						'edit'          => __( 'Edit', 'attendant' ),
+						'delete'        => __( 'Delete', 'attendant' ),
+						'confirmDelete' => __( 'Delete this Q&A pair? This cannot be undone.', 'attendant' ),
+						'required'      => __( 'Question and answer are required.', 'attendant' ),
+						'saving'        => __( 'Saving…', 'attendant' ),
+						'saved'         => __( 'Saved.', 'attendant' ),
 					),
 				)
 			);
@@ -325,18 +325,18 @@ class AICM_Admin {
 	 */
 	public function render_settings_page(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to access this page.', 'ai-chatmate' ) );
+			wp_die( esc_html__( 'You do not have permission to access this page.', 'attendant' ) );
 		}
 
 		// First-run (or ?onboarding=1): show the setup wizard instead of settings.
 		// This is a read-only view toggle, no state change, so no nonce is needed.
 		$force_wizard = isset( $_GET['onboarding'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only view toggle.
-		if ( $force_wizard || ! AICM_Onboarding::is_complete() ) {
-			include AICM_PLUGIN_DIR . 'admin/views/onboarding.php';
+		if ( $force_wizard || ! ATTENDANT_Onboarding::is_complete() ) {
+			include ATTENDANT_PLUGIN_DIR . 'admin/views/onboarding.php';
 			return;
 		}
 
-		include AICM_PLUGIN_DIR . 'admin/views/settings.php';
+		include ATTENDANT_PLUGIN_DIR . 'admin/views/settings.php';
 	}
 
 	/**
@@ -347,10 +347,10 @@ class AICM_Admin {
 	 */
 	public function render_indexing_page(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to access this page.', 'ai-chatmate' ) );
+			wp_die( esc_html__( 'You do not have permission to access this page.', 'attendant' ) );
 		}
 
-		include AICM_PLUGIN_DIR . 'admin/views/indexing.php';
+		include ATTENDANT_PLUGIN_DIR . 'admin/views/indexing.php';
 	}
 
 	/**
@@ -361,10 +361,10 @@ class AICM_Admin {
 	 */
 	public function render_schema_page(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to access this page.', 'ai-chatmate' ) );
+			wp_die( esc_html__( 'You do not have permission to access this page.', 'attendant' ) );
 		}
 
-		include AICM_PLUGIN_DIR . 'admin/views/schema.php';
+		include ATTENDANT_PLUGIN_DIR . 'admin/views/schema.php';
 	}
 
 	/**
@@ -375,10 +375,10 @@ class AICM_Admin {
 	 */
 	public function render_qa_page(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to access this page.', 'ai-chatmate' ) );
+			wp_die( esc_html__( 'You do not have permission to access this page.', 'attendant' ) );
 		}
 
-		include AICM_PLUGIN_DIR . 'admin/views/qa.php';
+		include ATTENDANT_PLUGIN_DIR . 'admin/views/qa.php';
 	}
 
 	/**
@@ -389,31 +389,31 @@ class AICM_Admin {
 	 */
 	public function render_analytics_page(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to access this page.', 'ai-chatmate' ) );
+			wp_die( esc_html__( 'You do not have permission to access this page.', 'attendant' ) );
 		}
 
-		include AICM_PLUGIN_DIR . 'admin/views/analytics.php';
+		include ATTENDANT_PLUGIN_DIR . 'admin/views/analytics.php';
 	}
 
 	/**
 	 * Stream a chat log file to an administrator (admin-post.php endpoint).
 	 *
 	 * Security: manage_options capability + nonce; the filename is validated
-	 * by AICM_Chat_Log::resolve_download() against a strict whitelist pattern,
+	 * by ATTENDANT_Chat_Log::resolve_download() against a strict whitelist pattern,
 	 * so traversal or arbitrary-file reads are impossible.
 	 */
 	public function download_chat_log(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to download logs.', 'ai-chatmate' ), '', array( 'response' => 403 ) );
+			wp_die( esc_html__( 'You do not have permission to download logs.', 'attendant' ), '', array( 'response' => 403 ) );
 		}
 
-		check_admin_referer( 'aicm_download_log' );
+		check_admin_referer( 'attendant_download_log' );
 
 		$file = isset( $_GET['file'] ) ? sanitize_file_name( wp_unslash( (string) $_GET['file'] ) ) : '';
-		$path = AICM_Chat_Log::resolve_download( $file );
+		$path = ATTENDANT_Chat_Log::resolve_download( $file );
 
 		if ( '' === $path ) {
-			wp_die( esc_html__( 'Log file not found.', 'ai-chatmate' ), '', array( 'response' => 404 ) );
+			wp_die( esc_html__( 'Log file not found.', 'attendant' ), '', array( 'response' => 404 ) );
 		}
 
 		nocache_headers();
@@ -442,8 +442,8 @@ class AICM_Admin {
 	 */
 	private function is_plugin_page( string $hook_suffix ): bool {
 		// WordPress generates hook suffixes like:
-		// toplevel_page_ai-chatmate
-		// ai-chatmate_page_ai-chatmate-indexing
+		// toplevel_page_attendant
+		// attendant_page_attendant-indexing
 		// Both contain our menu slug.
 		return str_contains( $hook_suffix, self::MENU_SLUG );
 	}

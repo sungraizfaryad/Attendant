@@ -4,8 +4,8 @@ require_once dirname( __DIR__ ) . '/vendor/autoload.php';
 if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', sys_get_temp_dir() . '/wp/' );
 }
-if ( ! defined( 'AICM_PLUGIN_DIR' ) ) {
-	define( 'AICM_PLUGIN_DIR', dirname( __DIR__ ) . '/' );
+if ( ! defined( 'ATTENDANT_PLUGIN_DIR' ) ) {
+	define( 'ATTENDANT_PLUGIN_DIR', dirname( __DIR__ ) . '/' );
 }
 if ( ! defined( 'MINUTE_IN_SECONDS' ) ) {
 	define( 'MINUTE_IN_SECONDS', 60 );

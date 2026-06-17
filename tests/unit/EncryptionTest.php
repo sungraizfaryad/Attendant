@@ -3,7 +3,7 @@ use Brain\Monkey;
 use Brain\Monkey\Functions;
 use PHPUnit\Framework\TestCase;
 
-require_once AICM_PLUGIN_DIR . 'includes/class-aicm-encryption.php';
+require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-encryption.php';
 
 /**
  * Regression coverage for the AES cipher round-trip.
@@ -28,20 +28,20 @@ final class EncryptionTest extends TestCase {
 
 	public function test_openssl_is_available_on_this_build(): void {
 		// If this fails, encrypt() returns '' and no API key can ever be stored.
-		$this->assertTrue( AICM_Encryption::openssl_available() );
+		$this->assertTrue( ATTENDANT_Encryption::openssl_available() );
 	}
 
 	public function test_encrypt_decrypt_round_trip(): void {
 		$plain = 'sk-proj-EXAMPLE-not-a-real-key-1234567890ABCDEF';
-		$cipher = AICM_Encryption::encrypt( $plain );
+		$cipher = ATTENDANT_Encryption::encrypt( $plain );
 
 		$this->assertNotSame( '', $cipher, 'encrypt() returned empty — key storage is broken.' );
 		$this->assertNotSame( $plain, $cipher, 'value was not actually encrypted.' );
-		$this->assertSame( $plain, AICM_Encryption::decrypt( $cipher ) );
+		$this->assertSame( $plain, ATTENDANT_Encryption::decrypt( $cipher ) );
 	}
 
 	public function test_empty_input_returns_empty(): void {
-		$this->assertSame( '', AICM_Encryption::encrypt( '' ) );
-		$this->assertSame( '', AICM_Encryption::decrypt( '' ) );
+		$this->assertSame( '', ATTENDANT_Encryption::encrypt( '' ) );
+		$this->assertSame( '', ATTENDANT_Encryption::decrypt( '' ) );
 	}
 }

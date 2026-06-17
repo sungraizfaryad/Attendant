@@ -2,7 +2,7 @@
 /**
  * OpenAI Provider
  *
- * Implements AICM_LLM_Provider for the OpenAI API.
+ * Implements ATTENDANT_LLM_Provider for the OpenAI API.
  *
  * All HTTP requests use wp_remote_post() / wp_remote_get() — the WordPress
  * HTTP API — which respects WP_PROXY settings, uses WordPress's SSL handling,
@@ -18,7 +18,7 @@
  *  - HTTP 429 Too Many Requests → rate limit or quota exceeded
  *  - HTTP 5xx                   → OpenAI server error, retry later
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -26,12 +26,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Load the provider interface.
-require_once AICM_PLUGIN_DIR . 'includes/providers/interface-aicm-llm-provider.php';
+require_once ATTENDANT_PLUGIN_DIR . 'includes/providers/interface-attendant-llm-provider.php';
 
 /**
- * Class AICM_OpenAI_Provider
+ * Class ATTENDANT_OpenAI_Provider
  */
-class AICM_OpenAI_Provider implements AICM_LLM_Provider {
+class ATTENDANT_OpenAI_Provider implements ATTENDANT_LLM_Provider {
 
 	// -------------------------------------------------------------------------
 	// Constants
@@ -86,14 +86,14 @@ class AICM_OpenAI_Provider implements AICM_LLM_Provider {
 	 * property beyond the lifetime of this object.
 	 */
 	public function __construct() {
-		$encrypted_key         = (string) get_option( 'aicm_api_key_openai', '' );
-		$this->api_key         = AICM_Encryption::decrypt( $encrypted_key );
+		$encrypted_key         = (string) get_option( 'attendant_api_key_openai', '' );
+		$this->api_key         = ATTENDANT_Encryption::decrypt( $encrypted_key );
 		$this->chat_model      = (string) AI_ChatMate::get_setting( 'chat_model', 'gpt-4o-mini' );
 		$this->embedding_model = (string) AI_ChatMate::get_setting( 'embedding_model', 'text-embedding-3-small' );
 	}
 
 	// -------------------------------------------------------------------------
-	// AICM_LLM_Provider interface implementation
+	// ATTENDANT_LLM_Provider interface implementation
 	// -------------------------------------------------------------------------
 
 	/**
@@ -238,7 +238,7 @@ class AICM_OpenAI_Provider implements AICM_LLM_Provider {
 		if ( '' === $this->api_key ) {
 			return array(
 				'success' => false,
-				'message' => __( 'No API key is stored. Enter your OpenAI API key in the settings.', 'ai-chatmate' ),
+				'message' => __( 'No API key is stored. Enter your OpenAI API key in the settings.', 'attendant' ),
 				'model'   => '',
 			);
 		}
@@ -249,7 +249,7 @@ class AICM_OpenAI_Provider implements AICM_LLM_Provider {
 		if ( null === $response ) {
 			return array(
 				'success' => false,
-				'message' => __( 'Could not connect to OpenAI. Check your API key and network.', 'ai-chatmate' ),
+				'message' => __( 'Could not connect to OpenAI. Check your API key and network.', 'attendant' ),
 				'model'   => '',
 			);
 		}
@@ -262,7 +262,7 @@ class AICM_OpenAI_Provider implements AICM_LLM_Provider {
 
 		return array(
 			'success' => true,
-			'message' => __( 'Connected successfully.', 'ai-chatmate' ),
+			'message' => __( 'Connected successfully.', 'attendant' ),
 			'model'   => $confirmed,
 		);
 	}
@@ -359,7 +359,7 @@ class AICM_OpenAI_Provider implements AICM_LLM_Provider {
 			'Authorization' => 'Bearer ' . $this->api_key,
 			'Content-Type'  => 'application/json',
 			// Identify our plugin to OpenAI (good practice, not required).
-			'User-Agent'    => 'AI-ChatMate/' . AICM_VERSION . ' WordPress/' . get_bloginfo( 'version' ),
+			'User-Agent'    => 'AI-ChatMate/' . ATTENDANT_VERSION . ' WordPress/' . get_bloginfo( 'version' ),
 		);
 	}
 

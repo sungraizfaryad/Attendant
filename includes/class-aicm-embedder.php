@@ -3,7 +3,7 @@
  * Embedder
  *
  * Converts content chunks into embedding vectors and persists them to the
- * aicm_chunks database table.
+ * attendant_chunks database table.
  *
  * ── Embedding storage format ─────────────────────────────────────────────
  * Vectors are stored as packed binary using PHP's pack('f*', ...$floats).
@@ -30,7 +30,7 @@
  * The OpenAI provider caps batches at 100 texts; since a typical post
  * produces 2–10 chunks, we never approach that limit.
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -38,9 +38,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AICM_Embedder
+ * Class ATTENDANT_Embedder
  */
-class AICM_Embedder {
+class ATTENDANT_Embedder {
 
 	// ── Public API ───────────────────────────────────────────────────────────
 
@@ -61,9 +61,9 @@ class AICM_Embedder {
 	 * @param int               $post_id   WordPress post ID.
 	 * @param string            $post_type Post type slug (stored on each row).
 	 * @param string            $post_title Post title used as embedding prefix.
-	 * @param array[]           $chunks    Output of AICM_Chunker::chunk().
+	 * @param array[]           $chunks    Output of ATTENDANT_Chunker::chunk().
 	 *                                     Each: ['chunk_index', 'chunk_text', 'token_count']
-	 * @param AICM_LLM_Provider $provider  Provider instance (must implement generate_embeddings_batch).
+	 * @param ATTENDANT_LLM_Provider $provider  Provider instance (must implement generate_embeddings_batch).
 	 * @return bool
 	 */
 	public static function embed_post(
@@ -71,7 +71,7 @@ class AICM_Embedder {
 		string $post_type,
 		string $post_title,
 		array $chunks,
-		AICM_LLM_Provider $provider
+		ATTENDANT_LLM_Provider $provider
 	): bool {
 		if ( empty( $chunks ) ) {
 			// No chunks means the post has no indexable content.
@@ -172,7 +172,7 @@ class AICM_Embedder {
 	public static function delete_post_chunks( int $post_id ): void {
 		global $wpdb;
 
-		$table = $wpdb->prefix . 'aicm_chunks';
+		$table = $wpdb->prefix . 'attendant_chunks';
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->delete(
@@ -237,7 +237,7 @@ class AICM_Embedder {
 	private static function get_existing_hashes( int $post_id ): array {
 		global $wpdb;
 
-		$table = $wpdb->prefix . 'aicm_chunks';
+		$table = $wpdb->prefix . 'attendant_chunks';
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$rows = $wpdb->get_results(
@@ -261,14 +261,14 @@ class AICM_Embedder {
 	}
 
 	/**
-	 * Insert or update a single chunk row in the aicm_chunks table.
+	 * Insert or update a single chunk row in the attendant_chunks table.
 	 *
 	 * We use INSERT ... ON DUPLICATE KEY UPDATE rather than wpdb::replace()
 	 * because replace() DELETEs then INSERTs (which changes the row ID and
 	 * can cause foreign-key issues in future). The UNIQUE KEY on
 	 * (post_id, chunk_index) makes this possible.
 	 *
-	 * Note: the aicm_chunks table does not have a UNIQUE KEY on
+	 * Note: the attendant_chunks table does not have a UNIQUE KEY on
 	 * (post_id, chunk_index) in Phase 1. We work around this by selecting
 	 * existing IDs first and choosing between INSERT and UPDATE.
 	 *
@@ -291,7 +291,7 @@ class AICM_Embedder {
 	): void {
 		global $wpdb;
 
-		$table = $wpdb->prefix . 'aicm_chunks';
+		$table = $wpdb->prefix . 'attendant_chunks';
 		$now   = current_time( 'mysql' );
 
 		// Check whether a row already exists for this (post_id, chunk_index).
@@ -357,7 +357,7 @@ class AICM_Embedder {
 
 		global $wpdb;
 
-		$table = $wpdb->prefix . 'aicm_chunks';
+		$table = $wpdb->prefix . 'attendant_chunks';
 
 		// Build a safe placeholders list.
 		$placeholders = implode( ', ', array_fill( 0, count( $surplus_indices ), '%d' ) );

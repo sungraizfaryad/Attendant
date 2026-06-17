@@ -34,7 +34,7 @@
  *   4. Word boundary    ( )      — fallback
  *   5. Hard cut         (none found) — last resort, still within MAX_CHARS
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -42,9 +42,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AICM_Chunker
+ * Class ATTENDANT_Chunker
  */
-class AICM_Chunker {
+class ATTENDANT_Chunker {
 
 	// ── Character-based constants (tokens × 4 chars/token) ───────────────────
 
@@ -79,7 +79,7 @@ class AICM_Chunker {
 	 *  - 'chunk_text'   string Clean text (whitespace-trimmed).
 	 *  - 'token_count'  int    Estimated token count (ceil(mb_strlen / 4)).
 	 *
-	 * @param string $text Plain text from AICM_Text_Extractor::extract().
+	 * @param string $text Plain text from ATTENDANT_Text_Extractor::extract().
 	 * @return array[] Array of chunk arrays.
 	 */
 	public static function chunk( string $text ): array {
@@ -163,7 +163,7 @@ class AICM_Chunker {
 	/**
 	 * Estimate the number of tokens in a string.
 	 *
-	 * Public so that AICM_Embedder (and tests) can use it without
+	 * Public so that ATTENDANT_Embedder (and tests) can use it without
 	 * duplicating the formula.
 	 *
 	 * Formula: ceil(mb_strlen / 4)

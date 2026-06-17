@@ -22,7 +22,7 @@
  * build() returns a WP_Query args array.
  * execute() runs the query and returns simplified post data for the AI.
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -30,9 +30,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AICM_Query_Builder
+ * Class ATTENDANT_Query_Builder
  */
-class AICM_Query_Builder {
+class ATTENDANT_Query_Builder {
 
 	/** Hard cap on results returned per AI function call. */
 	private const MAX_PER_PAGE = 10;

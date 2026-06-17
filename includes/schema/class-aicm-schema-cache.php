@@ -17,7 +17,7 @@
  *    request — only when explicitly asked. This is the correct pattern for
  *    large, infrequently-needed options.
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -25,14 +25,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AICM_Schema_Cache
+ * Class ATTENDANT_Schema_Cache
  */
-class AICM_Schema_Cache {
+class ATTENDANT_Schema_Cache {
 
 	/**
 	 * The wp_options key where the schema is stored.
 	 */
-	private const OPTION_KEY = 'aicm_schema';
+	private const OPTION_KEY = 'attendant_schema';
 
 	// -------------------------------------------------------------------------
 	// Read
@@ -86,7 +86,7 @@ class AICM_Schema_Cache {
 	 * WordPress from marking this option for autoloading. On large sites
 	 * this option can be 50–200 KB; we should not load it on every request.
 	 *
-	 * @param array $schema The full schema array produced by AICM_Schema_Discovery.
+	 * @param array $schema The full schema array produced by ATTENDANT_Schema_Discovery.
 	 */
 	public static function set( array $schema ): void {
 		update_option( self::OPTION_KEY, $schema, false );

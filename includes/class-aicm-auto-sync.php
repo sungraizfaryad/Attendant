@@ -13,7 +13,7 @@
  *
  * ── Indexing is deferred ──────────────────────────────────────────────────
  * save_post and untrash_post do NOT index content immediately — they add
- * a row to aicm_queue and let the 5-minute WP-Cron job do the embedding.
+ * a row to attendant_queue and let the 5-minute WP-Cron job do the embedding.
  * This keeps the save_post request fast (no API calls inline) and makes
  * the indexing retryable if the API call fails.
  *
@@ -28,7 +28,7 @@
  *  - The post type is in the admin-configured index_post_types list.
  *  - The post is not an autosave or revision (for save_post).
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -36,9 +36,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AICM_Auto_Sync
+ * Class ATTENDANT_Auto_Sync
  */
-class AICM_Auto_Sync {
+class ATTENDANT_Auto_Sync {
 
 	// ── Registration ─────────────────────────────────────────────────────────
 
@@ -99,11 +99,11 @@ class AICM_Auto_Sync {
 
 		if ( 'publish' === $post->post_status ) {
 			// Enqueue for (re-)indexing via the background queue.
-			AICM_Index_Manager::enqueue_post( $post_id, 'index' );
+			ATTENDANT_Index_Manager::enqueue_post( $post_id, 'index' );
 		} else {
 			// Post is no longer public — remove from the search index
 			// immediately so stale content does not appear in answers.
-			AICM_Index_Manager::remove_post_from_index( $post_id );
+			ATTENDANT_Index_Manager::remove_post_from_index( $post_id );
 		}
 	}
 
@@ -138,7 +138,7 @@ class AICM_Auto_Sync {
 
 		// Remove immediately — no auto_sync check needed for deletions.
 		// Content must leave the index even if auto_sync is disabled.
-		AICM_Index_Manager::remove_post_from_index( $post_id );
+		ATTENDANT_Index_Manager::remove_post_from_index( $post_id );
 	}
 
 	/**
@@ -167,7 +167,7 @@ class AICM_Auto_Sync {
 		}
 
 		// Remove immediately — same reasoning as on_before_delete_post.
-		AICM_Index_Manager::remove_post_from_index( $post_id );
+		ATTENDANT_Index_Manager::remove_post_from_index( $post_id );
 	}
 
 	/**
@@ -201,7 +201,7 @@ class AICM_Auto_Sync {
 			return;
 		}
 
-		AICM_Index_Manager::enqueue_post( $post_id, 'index' );
+		ATTENDANT_Index_Manager::enqueue_post( $post_id, 'index' );
 	}
 
 	// ── Private helper ────────────────────────────────────────────────────────

@@ -2,7 +2,7 @@
 /**
  * RAG Retriever
  *
- * Performs semantic similarity search against the aicm_chunks table to find
+ * Performs semantic similarity search against the attendant_chunks table to find
  * the most relevant content for a user query.
  *
  * ── Algorithm ────────────────────────────────────────────────────────────────
@@ -30,7 +30,7 @@
  * vectors will have a different dimension than the query vector. Those chunks
  * are silently skipped (they will be re-indexed on the next cron run).
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -38,9 +38,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AICM_RAG_Retriever
+ * Class ATTENDANT_RAG_Retriever
  */
-class AICM_RAG_Retriever {
+class ATTENDANT_RAG_Retriever {
 
 	/** Rows fetched from the DB per loop iteration to cap memory usage. */
 	private const BATCH_SIZE = 500;
@@ -63,10 +63,10 @@ class AICM_RAG_Retriever {
 	/**
 	 * Find the most semantically similar chunks for a user query.
 	 *
-	 * Embeds the query text, then scans the aicm_chunks table in batches
+	 * Embeds the query text, then scans the attendant_chunks table in batches
 	 * to find the stored chunks with the highest cosine similarity.
 	 *
-	 * @param AICM_LLM_Provider $provider   Provider instance used to embed the query.
+	 * @param ATTENDANT_LLM_Provider $provider   Provider instance used to embed the query.
 	 * @param string            $query      Raw user query text.
 	 * @param int               $top_k      Maximum number of chunks to return (1–20).
 	 * @param string[]          $post_types Optional post type slugs to restrict search.
@@ -81,7 +81,7 @@ class AICM_RAG_Retriever {
 	 *                 }
 	 */
 	public static function find_similar(
-		AICM_LLM_Provider $provider,
+		ATTENDANT_LLM_Provider $provider,
 		string $query,
 		int $top_k = 5,
 		array $post_types = array()
@@ -111,7 +111,7 @@ class AICM_RAG_Retriever {
 		// ── Step 2: scan DB in batches + compute similarity ───────────────
 		global $wpdb;
 
-		$table = $wpdb->prefix . 'aicm_chunks';
+		$table = $wpdb->prefix . 'attendant_chunks';
 
 		// Build the SQL and its argument list incrementally to support an
 		// optional post_type IN (...) clause without double-preparing.

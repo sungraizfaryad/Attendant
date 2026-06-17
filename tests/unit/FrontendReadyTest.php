@@ -3,7 +3,7 @@ use Brain\Monkey;
 use Brain\Monkey\Functions;
 use PHPUnit\Framework\TestCase;
 
-require_once AICM_PLUGIN_DIR . 'public/class-aicm-frontend.php';
+require_once ATTENDANT_PLUGIN_DIR . 'public/class-attendant-frontend.php';
 
 /**
  * Readiness gate for the public chat widget.
@@ -37,7 +37,7 @@ final class FrontendReadyTest extends TestCase {
 	public function test_not_ready_without_api_key(): void {
 		AI_ChatMate::$test_settings = array( 'active_provider' => 'openai' );
 
-		$this->assertFalse( AICM_Frontend::is_ready() );
+		$this->assertFalse( ATTENDANT_Frontend::is_ready() );
 	}
 
 	public function test_ready_with_key_when_semantic_mode_off(): void {
@@ -45,10 +45,10 @@ final class FrontendReadyTest extends TestCase {
 			'active_provider' => 'openai',
 			'semantic_mode'   => false,
 		);
-		$this->options['aicm_api_key_openai'] = 'encrypted-blob';
+		$this->options['attendant_api_key_openai'] = 'encrypted-blob';
 
 		// Structured search needs no index — ready immediately.
-		$this->assertTrue( AICM_Frontend::is_ready() );
+		$this->assertTrue( ATTENDANT_Frontend::is_ready() );
 	}
 
 	public function test_not_ready_when_semantic_mode_on_and_index_empty(): void {
@@ -56,11 +56,11 @@ final class FrontendReadyTest extends TestCase {
 			'active_provider' => 'openai',
 			'semantic_mode'   => true,
 		);
-		$this->options['aicm_api_key_openai'] = 'encrypted-blob';
-		$this->options['aicm_index_status']   = array( 'total_chunks' => 0 );
+		$this->options['attendant_api_key_openai'] = 'encrypted-blob';
+		$this->options['attendant_index_status']   = array( 'total_chunks' => 0 );
 
-		$this->assertFalse( AICM_Frontend::is_ready() );
-		$this->assertSame( 'index_empty', AICM_Frontend::status()['reason'] );
+		$this->assertFalse( ATTENDANT_Frontend::is_ready() );
+		$this->assertSame( 'index_empty', ATTENDANT_Frontend::status()['reason'] );
 	}
 
 	public function test_ready_when_semantic_mode_on_and_index_complete(): void {
@@ -68,13 +68,13 @@ final class FrontendReadyTest extends TestCase {
 			'active_provider' => 'openai',
 			'semantic_mode'   => true,
 		);
-		$this->options['aicm_api_key_openai'] = 'encrypted-blob';
-		$this->options['aicm_index_status']   = array(
+		$this->options['attendant_api_key_openai'] = 'encrypted-blob';
+		$this->options['attendant_index_status']   = array(
 			'total_chunks'     => 42,
 			'initial_complete' => true,
 		);
 
-		$this->assertTrue( AICM_Frontend::is_ready() );
+		$this->assertTrue( ATTENDANT_Frontend::is_ready() );
 	}
 
 	public function test_not_ready_while_first_indexing_run_incomplete(): void {
@@ -84,14 +84,14 @@ final class FrontendReadyTest extends TestCase {
 			'active_provider' => 'openai',
 			'semantic_mode'   => false,
 		);
-		$this->options['aicm_api_key_openai'] = 'encrypted-blob';
-		$this->options['aicm_index_status']   = array(
+		$this->options['attendant_api_key_openai'] = 'encrypted-blob';
+		$this->options['attendant_index_status']   = array(
 			'total_chunks' => 500,
 			'pending'      => 1648,
 			'is_running'   => true,
 		);
 
-		$status = AICM_Frontend::status();
+		$status = ATTENDANT_Frontend::status();
 		$this->assertFalse( $status['ready'] );
 		$this->assertSame( 'indexing', $status['reason'] );
 	}
@@ -103,15 +103,15 @@ final class FrontendReadyTest extends TestCase {
 			'active_provider' => 'openai',
 			'semantic_mode'   => false,
 		);
-		$this->options['aicm_api_key_openai'] = 'encrypted-blob';
-		$this->options['aicm_index_status']   = array(
+		$this->options['attendant_api_key_openai'] = 'encrypted-blob';
+		$this->options['attendant_index_status']   = array(
 			'total_chunks'     => 5000,
 			'pending'          => 300,
 			'is_running'       => true,
 			'initial_complete' => true,
 		);
 
-		$this->assertTrue( AICM_Frontend::is_ready() );
+		$this->assertTrue( ATTENDANT_Frontend::is_ready() );
 	}
 
 	public function test_ready_when_indexing_never_started(): void {
@@ -121,13 +121,13 @@ final class FrontendReadyTest extends TestCase {
 			'active_provider' => 'openai',
 			'semantic_mode'   => false,
 		);
-		$this->options['aicm_api_key_openai'] = 'encrypted-blob';
-		$this->options['aicm_index_status']   = array(
+		$this->options['attendant_api_key_openai'] = 'encrypted-blob';
+		$this->options['attendant_index_status']   = array(
 			'total_chunks' => 0,
 			'pending'      => 0,
 			'is_running'   => false,
 		);
 
-		$this->assertTrue( AICM_Frontend::is_ready() );
+		$this->assertTrue( ATTENDANT_Frontend::is_ready() );
 	}
 }

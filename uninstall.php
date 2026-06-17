@@ -14,7 +14,7 @@
  *
  * Multisite: we iterate every sub-site and clean each one individually.
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 // WordPress sets this constant before calling uninstall.php.
@@ -30,7 +30,7 @@ global $wpdb;
  *
  * Extracted as a function so it can be called for each sub-site in multisite.
  */
-function aicm_uninstall_single_site(): void {
+function attendant_uninstall_single_site(): void {
 	global $wpdb;
 
 	// -----------------------------------------------------------------
@@ -41,10 +41,10 @@ function aicm_uninstall_single_site(): void {
 	// after esc_sql().
 	// -----------------------------------------------------------------
 	$tables = array(
-		$wpdb->prefix . 'aicm_chunks',
-		$wpdb->prefix . 'aicm_qa',
-		$wpdb->prefix . 'aicm_logs',
-		$wpdb->prefix . 'aicm_queue',
+		$wpdb->prefix . 'attendant_chunks',
+		$wpdb->prefix . 'attendant_qa',
+		$wpdb->prefix . 'attendant_logs',
+		$wpdb->prefix . 'attendant_queue',
 	);
 
 	foreach ( $tables as $table ) {
@@ -57,19 +57,19 @@ function aicm_uninstall_single_site(): void {
 	// 2. Delete wp_options entries.
 	// -----------------------------------------------------------------
 	$options = array(
-		'aicm_settings',
-		'aicm_db_version',
-		'aicm_index_status',
-		'aicm_schema',
-		'aicm_api_key_openai',
-		'aicm_api_key_anthropic',
-		'aicm_api_key_google',
-		'aicm_monthly_usage',
-		'aicm_field_config',
-		'aicm_onboarded',
-		'aicm_daily_usage',
-		'aicm_index_activity',
-		'aicm_process_key',
+		'attendant_settings',
+		'attendant_db_version',
+		'attendant_index_status',
+		'attendant_schema',
+		'attendant_api_key_openai',
+		'attendant_api_key_anthropic',
+		'attendant_api_key_google',
+		'attendant_monthly_usage',
+		'attendant_field_config',
+		'attendant_onboarded',
+		'attendant_daily_usage',
+		'attendant_index_activity',
+		'attendant_process_key',
 	);
 
 	foreach ( $options as $option ) {
@@ -81,23 +81,23 @@ function aicm_uninstall_single_site(): void {
 	//
 	// LIKE queries on wp_options are the only practical way to bulk-delete
 	// transients by prefix — WordPress has no built-in API for this.
-	// The pattern '_transient_aicm_%' catches all plugin transients.
+	// The pattern '_transient_attendant_%' catches all plugin transients.
 	// -----------------------------------------------------------------
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 	$wpdb->query(
 		"DELETE FROM {$wpdb->options}
-		WHERE option_name LIKE '_transient_aicm_%'
-		   OR option_name LIKE '_transient_timeout_aicm_%'
-		   OR option_name LIKE '_site_transient_aicm_%'
-		   OR option_name LIKE '_site_transient_timeout_aicm_%'"
+		WHERE option_name LIKE '_transient_attendant_%'
+		   OR option_name LIKE '_transient_timeout_attendant_%'
+		   OR option_name LIKE '_site_transient_attendant_%'
+		   OR option_name LIKE '_site_transient_timeout_attendant_%'"
 	);
 
 	// -----------------------------------------------------------------
 	// 4. Clear scheduled cron events.
 	// -----------------------------------------------------------------
 	$cron_hooks = array(
-		'aicm_weekly_schema_scan',
-		'aicm_process_index_queue',
+		'attendant_weekly_schema_scan',
+		'attendant_process_index_queue',
 	);
 
 	foreach ( $cron_hooks as $hook ) {
@@ -109,8 +109,8 @@ function aicm_uninstall_single_site(): void {
 	// Runs per site so multisite sub-site logs are removed too —
 	// wp_upload_dir() is blog-aware inside switch_to_blog().
 	// -----------------------------------------------------------------
-	if ( class_exists( 'AICM_Chat_Log' ) ) {
-		AICM_Chat_Log::delete_all();
+	if ( class_exists( 'ATTENDANT_Chat_Log' ) ) {
+		ATTENDANT_Chat_Log::delete_all();
 	}
 
 	// -----------------------------------------------------------------
@@ -121,24 +121,24 @@ function aicm_uninstall_single_site(): void {
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 	$wpdb->query(
 		"DELETE FROM {$wpdb->postmeta}
-		WHERE meta_key LIKE '_aicm_%'"
+		WHERE meta_key LIKE '_attendant_%'"
 	);
 }
 
 // -----------------------------------------------------------------
 // Load the chat-log class so each (sub-)site's log directory can be
-// removed inside aicm_uninstall_single_site(). delete_all() only needs
+// removed inside attendant_uninstall_single_site(). delete_all() only needs
 // WordPress core — the plugin's own bootstrap is intentionally NOT
 // loaded during uninstall.
 // -----------------------------------------------------------------
-if ( file_exists( __DIR__ . '/includes/class-aicm-chat-log.php' ) ) {
-	require_once __DIR__ . '/includes/class-aicm-chat-log.php';
+if ( file_exists( __DIR__ . '/includes/class-attendant-chat-log.php' ) ) {
+	require_once __DIR__ . '/includes/class-attendant-chat-log.php';
 }
 
 // -----------------------------------------------------------------
 // Run for a standard (single) site install.
 // -----------------------------------------------------------------
-aicm_uninstall_single_site();
+attendant_uninstall_single_site();
 
 // -----------------------------------------------------------------
 // Multisite: also clean every sub-site's own tables and options.
@@ -156,7 +156,7 @@ if ( is_multisite() ) {
 
 	foreach ( $site_ids as $site_id ) {
 		switch_to_blog( (int) $site_id );
-		aicm_uninstall_single_site();
+		attendant_uninstall_single_site();
 		restore_current_blog();
 	}
 }

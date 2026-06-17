@@ -5,7 +5,7 @@
  * A single boolean flag recording whether the admin completed the setup wizard.
  * Until completed, the admin menu lands on the wizard (Phase 3b).
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -13,12 +13,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AICM_Onboarding
+ * Class ATTENDANT_Onboarding
  */
-class AICM_Onboarding {
+class ATTENDANT_Onboarding {
 
 	/** wp_options key. */
-	private const OPTION_KEY = 'aicm_onboarded';
+	private const OPTION_KEY = 'attendant_onboarded';
 
 	/**
 	 * @return bool True once the wizard has been completed.

@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Attendant - AI Site Search & Content Finder
- * Plugin URI:  https://wordpress.org/plugins/ai-chatmate/
+ * Plugin URI:  https://wordpress.org/plugins/attendant/
  * Description: Attendant is an AI search chatbot that helps your visitors find content on your website. It turns plain-language questions into a safe search of your own posts, pages, products, and listings, then answers right in a chat widget. Uses your OpenAI API key.
  * Version:     2.0.0
  * Requires at least: 6.0
@@ -10,10 +10,10 @@
  * Author URI:
  * License:     GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain: ai-chatmate
+ * Text Domain: attendant
  * Domain Path: /languages
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 // Prevent direct access.
@@ -22,11 +22,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Plugin version and path constants.
-define( 'AICM_VERSION', '2.0.0' );
-define( 'AICM_PLUGIN_FILE', __FILE__ );
-define( 'AICM_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
-define( 'AICM_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'AICM_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+define( 'ATTENDANT_VERSION', '2.0.0' );
+define( 'ATTENDANT_PLUGIN_FILE', __FILE__ );
+define( 'ATTENDANT_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+define( 'ATTENDANT_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+define( 'ATTENDANT_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 
 /**
  * Minimum requirements.
@@ -34,15 +34,15 @@ define( 'AICM_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
  * We declare these as constants so they can be checked programmatically
  * and referenced in admin notices without hard-coded strings.
  */
-define( 'AICM_REQUIRED_PHP', '8.0' );
-define( 'AICM_REQUIRED_WP', '6.0' );
+define( 'ATTENDANT_REQUIRED_PHP', '8.0' );
+define( 'ATTENDANT_REQUIRED_WP', '6.0' );
 
 // -------------------------------------------------------------------------
 // Activation / deactivation hooks — registered before any class is loaded.
 // -------------------------------------------------------------------------
 
-register_activation_hook( __FILE__, 'aicm_activate_plugin' );
-register_deactivation_hook( __FILE__, 'aicm_deactivate_plugin' );
+register_activation_hook( __FILE__, 'attendant_activate_plugin' );
+register_deactivation_hook( __FILE__, 'attendant_deactivate_plugin' );
 
 /**
  * Plugin activation callback.
@@ -50,17 +50,17 @@ register_deactivation_hook( __FILE__, 'aicm_deactivate_plugin' );
  * Loads only the activator class (keeps the memory footprint small) and
  * delegates all setup work to it.
  */
-function aicm_activate_plugin(): void {
-	require_once AICM_PLUGIN_DIR . 'includes/class-aicm-activator.php';
-	AICM_Activator::activate();
+function attendant_activate_plugin(): void {
+	require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-activator.php';
+	ATTENDANT_Activator::activate();
 }
 
 /**
  * Plugin deactivation callback.
  */
-function aicm_deactivate_plugin(): void {
-	require_once AICM_PLUGIN_DIR . 'includes/class-aicm-deactivator.php';
-	AICM_Deactivator::deactivate();
+function attendant_deactivate_plugin(): void {
+	require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-deactivator.php';
+	ATTENDANT_Deactivator::deactivate();
 }
 
 // -------------------------------------------------------------------------
@@ -74,12 +74,12 @@ function aicm_deactivate_plugin(): void {
  *
  * @return bool True if requirements are met.
  */
-function aicm_requirements_met(): bool {
-	return version_compare( PHP_VERSION, AICM_REQUIRED_PHP, '>=' )
-		&& version_compare( get_bloginfo( 'version' ), AICM_REQUIRED_WP, '>=' );
+function attendant_requirements_met(): bool {
+	return version_compare( PHP_VERSION, ATTENDANT_REQUIRED_PHP, '>=' )
+		&& version_compare( get_bloginfo( 'version' ), ATTENDANT_REQUIRED_WP, '>=' );
 }
 
-if ( ! aicm_requirements_met() ) {
+if ( ! attendant_requirements_met() ) {
 	add_action(
 		'admin_notices',
 		function (): void {
@@ -90,10 +90,10 @@ if ( ! aicm_requirements_met() ) {
 						/* translators: 1: Required PHP version, 2: Required WP version */
 						__(
 							'<strong>Attendant</strong> requires PHP %1$s and WordPress %2$s or higher. Please upgrade your environment.',
-							'ai-chatmate'
+							'attendant'
 						),
-						esc_html( AICM_REQUIRED_PHP ),
-						esc_html( AICM_REQUIRED_WP )
+						esc_html( ATTENDANT_REQUIRED_PHP ),
+						esc_html( ATTENDANT_REQUIRED_WP )
 					)
 				)
 			);
@@ -155,47 +155,47 @@ final class AI_ChatMate {
 	 */
 	private function load_dependencies(): void {
 		// Core utilities (always needed).
-		require_once AICM_PLUGIN_DIR . 'includes/class-aicm-encryption.php';
-		require_once AICM_PLUGIN_DIR . 'includes/class-aicm-field-config.php';
-		require_once AICM_PLUGIN_DIR . 'includes/class-aicm-onboarding.php';
-		require_once AICM_PLUGIN_DIR . 'includes/class-aicm-billing.php';
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-encryption.php';
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-field-config.php';
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-onboarding.php';
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-billing.php';
 
 		// Schema classes — needed by REST API and cron handlers.
-		require_once AICM_PLUGIN_DIR . 'includes/schema/class-aicm-schema-cache.php';
-		require_once AICM_PLUGIN_DIR . 'includes/schema/class-aicm-field-detector.php';
-		require_once AICM_PLUGIN_DIR . 'includes/schema/class-aicm-schema-discovery.php';
-		require_once AICM_PLUGIN_DIR . 'includes/schema/class-aicm-schema-catalog.php';
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/schema/class-attendant-schema-cache.php';
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/schema/class-attendant-field-detector.php';
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/schema/class-attendant-schema-discovery.php';
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/schema/class-attendant-schema-catalog.php';
 
 		// Indexing pipeline — loaded on every request because:
 		// a) WP-Cron fires via HTTP on any page load.
 		// b) Auto-sync hooks (save_post, before_delete_post) fire everywhere.
-		// c) REST /index/start calls AICM_Index_Manager from any origin.
-		require_once AICM_PLUGIN_DIR . 'includes/class-aicm-content-fetcher.php';
-		require_once AICM_PLUGIN_DIR . 'includes/class-aicm-text-extractor.php';
-		require_once AICM_PLUGIN_DIR . 'includes/class-aicm-chunker.php';
-		require_once AICM_PLUGIN_DIR . 'includes/class-aicm-embedder.php';
-		require_once AICM_PLUGIN_DIR . 'includes/class-aicm-index-manager.php';
-		require_once AICM_PLUGIN_DIR . 'includes/class-aicm-auto-sync.php';
+		// c) REST /index/start calls ATTENDANT_Index_Manager from any origin.
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-content-fetcher.php';
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-text-extractor.php';
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-chunker.php';
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-embedder.php';
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-index-manager.php';
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-auto-sync.php';
 
 		// Chat engine — loaded on every request because REST is always active.
-		require_once AICM_PLUGIN_DIR . 'includes/class-aicm-rag-retriever.php';
-		require_once AICM_PLUGIN_DIR . 'includes/class-aicm-query-builder.php';
-		require_once AICM_PLUGIN_DIR . 'includes/class-aicm-qa-manager.php';
-		require_once AICM_PLUGIN_DIR . 'includes/class-aicm-conversation-handler.php';
-		require_once AICM_PLUGIN_DIR . 'includes/class-aicm-chat-log.php';
-		require_once AICM_PLUGIN_DIR . 'includes/class-aicm-leads.php';
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-rag-retriever.php';
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-query-builder.php';
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-qa-manager.php';
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-conversation-handler.php';
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-chat-log.php';
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-leads.php';
 
 		// REST API (always needed — REST is active on all requests).
-		require_once AICM_PLUGIN_DIR . 'includes/class-aicm-rest-api.php';
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-rest-api.php';
 
 		// Admin-only classes.
 		if ( is_admin() ) {
-			require_once AICM_PLUGIN_DIR . 'admin/class-aicm-admin.php';
+			require_once ATTENDANT_PLUGIN_DIR . 'admin/class-attendant-admin.php';
 		}
 
 		// Frontend-only class (not needed in admin or WP-Cron context).
 		if ( ! is_admin() ) {
-			require_once AICM_PLUGIN_DIR . 'public/class-aicm-frontend.php';
+			require_once ATTENDANT_PLUGIN_DIR . 'public/class-attendant-frontend.php';
 		}
 	}
 
@@ -224,18 +224,18 @@ final class AI_ChatMate {
 
 		// Cron action handlers — must be registered on all requests so WP-Cron
 		// can call them via HTTP when they are scheduled to fire.
-		add_action( 'aicm_weekly_schema_scan', array( $this, 'run_weekly_schema_scan' ) );
-		add_action( 'aicm_process_index_queue', array( $this, 'process_index_queue' ) );
+		add_action( 'attendant_weekly_schema_scan', array( $this, 'run_weekly_schema_scan' ) );
+		add_action( 'attendant_process_index_queue', array( $this, 'process_index_queue' ) );
 
 		// Background-mode indexing loopback endpoint. Both hooks are required:
 		// loopback requests carry no cookies, so they always arrive
 		// unauthenticated (nopriv); the secret-key check happens inside.
-		add_action( 'wp_ajax_aicm_async_index', array( 'AICM_Index_Manager', 'handle_async_request' ) );
-		add_action( 'wp_ajax_nopriv_aicm_async_index', array( 'AICM_Index_Manager', 'handle_async_request' ) );
+		add_action( 'wp_ajax_attendant_async_index', array( 'ATTENDANT_Index_Manager', 'handle_async_request' ) );
+		add_action( 'wp_ajax_nopriv_attendant_async_index', array( 'ATTENDANT_Index_Manager', 'handle_async_request' ) );
 
 		// Post lifecycle hooks — auto-sync must fire on every request type
 		// (admin, frontend, REST, WP-Cron) since post saves can happen anywhere.
-		AICM_Auto_Sync::init();
+		ATTENDANT_Auto_Sync::init();
 	}
 
 	/**
@@ -245,10 +245,10 @@ final class AI_ChatMate {
 	 * @return array Modified schedules.
 	 */
 	public function add_cron_schedules( array $schedules ): array {
-		if ( ! isset( $schedules['aicm_five_minutes'] ) ) {
-			$schedules['aicm_five_minutes'] = array(
+		if ( ! isset( $schedules['attendant_five_minutes'] ) ) {
+			$schedules['attendant_five_minutes'] = array(
 				'interval' => 5 * MINUTE_IN_SECONDS,
-				'display'  => __( 'Every 5 minutes (Attendant)', 'ai-chatmate' ),
+				'display'  => __( 'Every 5 minutes (Attendant)', 'attendant' ),
 			);
 		}
 		return $schedules;
@@ -260,7 +260,7 @@ final class AI_ChatMate {
 	 * Callback for the `rest_api_init` action.
 	 */
 	public function init_rest_api(): void {
-		$controller = new AICM_REST_API();
+		$controller = new ATTENDANT_REST_API();
 		$controller->register_routes();
 	}
 
@@ -270,40 +270,40 @@ final class AI_ChatMate {
 	 * Callback for the `init` action (admin-only).
 	 */
 	public function init_admin(): void {
-		AICM_Admin::instance();
+		ATTENDANT_Admin::instance();
 	}
 
 	/**
 	 * Initialise the frontend widget.
 	 *
 	 * Callback for the `init` action (frontend-only).
-	 * Bootstraps AICM_Frontend which registers enqueue and footer hooks.
+	 * Bootstraps ATTENDANT_Frontend which registers enqueue and footer hooks.
 	 */
 	public function init_frontend(): void {
-		AICM_Frontend::instance();
+		ATTENDANT_Frontend::instance();
 	}
 
 	/**
 	 * Run the weekly schema re-scan.
 	 *
-	 * Callback for the `aicm_weekly_schema_scan` WP-Cron action.
+	 * Callback for the `attendant_weekly_schema_scan` WP-Cron action.
 	 * Discovers all post types, taxonomies, and custom fields; caches
 	 * the result in wp_options so the AI always has an up-to-date picture
 	 * of the site's content structure.
 	 */
 	public function run_weekly_schema_scan(): void {
-		AICM_Schema_Discovery::run();
+		ATTENDANT_Schema_Discovery::run();
 	}
 
 	/**
 	 * Process the next batch of the content indexing queue.
 	 *
-	 * Callback for the `aicm_process_index_queue` WP-Cron action.
+	 * Callback for the `attendant_process_index_queue` WP-Cron action.
 	 * Fires every 5 minutes. If the queue is empty or a concurrency lock
 	 * is held, the method exits immediately without doing any work.
 	 */
 	public function process_index_queue(): void {
-		AICM_Index_Manager::process_queue_batch();
+		ATTENDANT_Index_Manager::process_queue_batch();
 	}
 
 	/**
@@ -314,7 +314,7 @@ final class AI_ChatMate {
 	 * @return mixed
 	 */
 	public static function get_setting( ?string $key = null, mixed $default = null ): mixed {
-		$settings = get_option( 'aicm_settings', array() );
+		$settings = get_option( 'attendant_settings', array() );
 
 		if ( null === $key ) {
 			return $settings;
@@ -332,7 +332,7 @@ final class AI_ChatMate {
 	public static function update_setting( string $key, mixed $value ): void {
 		$settings         = self::get_setting();
 		$settings[ $key ] = $value;
-		update_option( 'aicm_settings', $settings );
+		update_option( 'attendant_settings', $settings );
 	}
 }
 

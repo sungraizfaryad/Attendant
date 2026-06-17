@@ -10,7 +10,7 @@
  *    We only stop background processes here.
  *  - Uninstall (uninstall.php): plugin is deleted. All data is removed.
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -18,9 +18,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AICM_Deactivator
+ * Class ATTENDANT_Deactivator
  */
-class AICM_Deactivator {
+class ATTENDANT_Deactivator {
 
 	/**
 	 * Run all deactivation routines.
@@ -33,9 +33,9 @@ class AICM_Deactivator {
 
 		// Mark the index as not running — prevents a stale "in progress" state
 		// from showing in the admin after reactivation.
-		$status               = get_option( 'aicm_index_status', array() );
+		$status               = get_option( 'attendant_index_status', array() );
 		$status['is_running'] = false;
-		update_option( 'aicm_index_status', $status );
+		update_option( 'attendant_index_status', $status );
 
 		// Flush rewrite rules on deactivation (good practice).
 		flush_rewrite_rules();
@@ -53,8 +53,8 @@ class AICM_Deactivator {
 	 */
 	private static function clear_cron_events(): void {
 		$hooks = array(
-			'aicm_weekly_schema_scan',
-			'aicm_process_index_queue',
+			'attendant_weekly_schema_scan',
+			'attendant_process_index_queue',
 		);
 
 		foreach ( $hooks as $hook ) {
@@ -82,16 +82,16 @@ class AICM_Deactivator {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->query(
 			"DELETE FROM {$wpdb->options}
-			WHERE option_name LIKE '_transient_aicm_%'
-			   OR option_name LIKE '_transient_timeout_aicm_%'"
+			WHERE option_name LIKE '_transient_attendant_%'
+			   OR option_name LIKE '_transient_timeout_attendant_%'"
 		);
 
 		// Also clear any site transients (used in multisite context).
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->query(
 			"DELETE FROM {$wpdb->options}
-			WHERE option_name LIKE '_site_transient_aicm_%'
-			   OR option_name LIKE '_site_transient_timeout_aicm_%'"
+			WHERE option_name LIKE '_site_transient_attendant_%'
+			   OR option_name LIKE '_site_transient_timeout_attendant_%'"
 		);
 	}
 }

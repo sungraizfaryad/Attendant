@@ -8,7 +8,7 @@
  * Uses dbDelta() for table creation so that future updates can ADD columns
  * safely without dropping existing data.
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -16,9 +16,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AICM_Activator
+ * Class ATTENDANT_Activator
  */
-class AICM_Activator {
+class ATTENDANT_Activator {
 
 	/**
 	 * Run all activation routines.
@@ -31,7 +31,7 @@ class AICM_Activator {
 		self::schedule_cron_events();
 
 		// Store the DB version so future updates can run migrations.
-		update_option( 'aicm_db_version', AICM_VERSION );
+		update_option( 'attendant_db_version', ATTENDANT_VERSION );
 
 		// Flush rewrite rules in case future phases register custom endpoints.
 		flush_rewrite_rules();
@@ -64,7 +64,7 @@ class AICM_Activator {
 		$charset_collate = $wpdb->get_charset_collate();
 
 		// -----------------------------------------------------------------
-		// Table 1: aicm_chunks
+		// Table 1: attendant_chunks
 		// Stores content chunks and their embedding vectors.
 		//
 		// embedding: packed binary (pack('f*', ...)) — 1536 floats × 4 bytes
@@ -75,7 +75,7 @@ class AICM_Activator {
 		// content_hash: MD5 of the chunk text — used to skip re-embedding
 		// when content has not changed.
 		// -----------------------------------------------------------------
-		$table_chunks = $wpdb->prefix . 'aicm_chunks';
+		$table_chunks = $wpdb->prefix . 'attendant_chunks';
 		$sql_chunks   = "CREATE TABLE {$table_chunks} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			post_id bigint(20) unsigned NOT NULL,
@@ -94,7 +94,7 @@ class AICM_Activator {
 		) {$charset_collate};";
 
 		// -----------------------------------------------------------------
-		// Table 2: aicm_qa
+		// Table 2: attendant_qa
 		// Admin-managed custom Q&A pairs.
 		// These are checked first — before RAG — so admins can guarantee
 		// specific answers to specific questions without relying on AI.
@@ -102,7 +102,7 @@ class AICM_Activator {
 		// question_embedding: same binary format as chunks.embedding.
 		// priority: 1 (highest) to 100 (lowest). Default 50.
 		// -----------------------------------------------------------------
-		$table_qa = $wpdb->prefix . 'aicm_qa';
+		$table_qa = $wpdb->prefix . 'attendant_qa';
 		$sql_qa   = "CREATE TABLE {$table_qa} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			question text NOT NULL,
@@ -119,7 +119,7 @@ class AICM_Activator {
 		) {$charset_collate};";
 
 		// -----------------------------------------------------------------
-		// Table 3: aicm_logs
+		// Table 3: attendant_logs
 		// Conversation log storage (disabled by default — GDPR compliance).
 		//
 		// user_id: 0 for guests. Never store IP addresses in plaintext —
@@ -129,7 +129,7 @@ class AICM_Activator {
 		// response_ms: milliseconds the OpenAI call took — useful for
 		// identifying slow queries in the analytics dashboard.
 		// -----------------------------------------------------------------
-		$table_logs = $wpdb->prefix . 'aicm_logs';
+		$table_logs = $wpdb->prefix . 'attendant_logs';
 		$sql_logs   = "CREATE TABLE {$table_logs} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			session_id char(36) NOT NULL DEFAULT '',
@@ -148,7 +148,7 @@ class AICM_Activator {
 		) {$charset_collate};";
 
 		// -----------------------------------------------------------------
-		// Table 4: aicm_queue
+		// Table 4: attendant_queue
 		// Background indexing job queue.
 		//
 		// Used when the admin triggers a full re-index. Posts are batched
@@ -158,7 +158,7 @@ class AICM_Activator {
 		// attempts: incremented on failure. After 3 attempts the row is
 		// marked 'failed' and skipped — prevents infinite retry loops.
 		// -----------------------------------------------------------------
-		$table_queue = $wpdb->prefix . 'aicm_queue';
+		$table_queue = $wpdb->prefix . 'attendant_queue';
 		$sql_queue   = "CREATE TABLE {$table_queue} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			post_id bigint(20) unsigned NOT NULL,
@@ -191,7 +191,7 @@ class AICM_Activator {
 	 */
 	private static function set_default_options(): void {
 		add_option(
-			'aicm_settings',
+			'attendant_settings',
 			array(
 				// AI provider.
 				'active_provider'   => 'openai',
@@ -218,7 +218,7 @@ class AICM_Activator {
 				// Widget.
 				'widget_position'   => 'bottom-right',
 				'widget_color'      => '#0073aa',
-				'welcome_message'   => __( 'Hi! How can I help you today?', 'ai-chatmate' ),
+				'welcome_message'   => __( 'Hi! How can I help you today?', 'attendant' ),
 
 				// Results display.
 				'results_display'   => 'plugin_page', // plugin_page | theme_archive | in_chat.
@@ -226,13 +226,13 @@ class AICM_Activator {
 		);
 
 		// Separate option for API keys (encrypted). Never stored with other settings.
-		add_option( 'aicm_api_key_openai', '' );
-		add_option( 'aicm_api_key_anthropic', '' );
-		add_option( 'aicm_api_key_google', '' );
+		add_option( 'attendant_api_key_openai', '' );
+		add_option( 'attendant_api_key_anthropic', '' );
+		add_option( 'attendant_api_key_google', '' );
 
 		// Index status — updated by the background processor.
 		add_option(
-			'aicm_index_status',
+			'attendant_index_status',
 			array(
 				'total_chunks' => 0,
 				'pending'      => 0,
@@ -255,14 +255,14 @@ class AICM_Activator {
 	 */
 	private static function schedule_cron_events(): void {
 		// Weekly schema re-scan — discovers new post types, taxonomies, fields.
-		if ( ! wp_next_scheduled( 'aicm_weekly_schema_scan' ) ) {
-			wp_schedule_event( time(), 'weekly', 'aicm_weekly_schema_scan' );
+		if ( ! wp_next_scheduled( 'attendant_weekly_schema_scan' ) ) {
+			wp_schedule_event( time(), 'weekly', 'attendant_weekly_schema_scan' );
 		}
 
 		// Indexing queue processor — runs every 5 minutes when there are
 		// pending items in the queue.
-		if ( ! wp_next_scheduled( 'aicm_process_index_queue' ) ) {
-			wp_schedule_event( time(), 'aicm_five_minutes', 'aicm_process_index_queue' );
+		if ( ! wp_next_scheduled( 'attendant_process_index_queue' ) ) {
+			wp_schedule_event( time(), 'attendant_five_minutes', 'attendant_process_index_queue' );
 		}
 	}
 }

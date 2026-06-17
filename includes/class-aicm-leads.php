@@ -20,7 +20,7 @@
  *  - recipient comes ONLY from settings; visitor input never reaches headers
  *    unsanitised (Reply-To uses the validated email)
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -28,15 +28,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AICM_Leads
+ * Class ATTENDANT_Leads
  */
-class AICM_Leads {
+class ATTENDANT_Leads {
 
 	/** Hard ceiling on lead emails per day (all visitors combined). */
 	private const DAILY_CAP = 20;
 
 	/** Transient tracking today's lead count. */
-	private const DAILY_TRANSIENT = 'aicm_leads_today';
+	private const DAILY_TRANSIENT = 'attendant_leads_today';
 
 	/**
 	 * Whether lead capture is enabled by the admin (off by default).
@@ -97,7 +97,7 @@ class AICM_Leads {
 		}
 
 		// ── One lead per chat session ─────────────────────────────────────
-		$session_key = 'aicm_lead_' . md5( $session_id . $email );
+		$session_key = 'attendant_lead_' . md5( $session_id . $email );
 
 		if ( get_transient( $session_key ) ) {
 			return array(
@@ -137,26 +137,26 @@ class AICM_Leads {
 		$site = get_bloginfo( 'name' );
 
 		/* translators: %s: site name */
-		$subject = sprintf( __( 'New callback request from the chat assistant — %s', 'ai-chatmate' ), $site );
+		$subject = sprintf( __( 'New callback request from the chat assistant — %s', 'attendant' ), $site );
 
 		$lines   = array();
-		$lines[] = __( 'A visitor asked for a callback via the chat assistant.', 'ai-chatmate' );
+		$lines[] = __( 'A visitor asked for a callback via the chat assistant.', 'attendant' );
 		$lines[] = '';
 		if ( '' !== $name ) {
-			$lines[] = __( 'Name:', 'ai-chatmate' ) . ' ' . $name;
+			$lines[] = __( 'Name:', 'attendant' ) . ' ' . $name;
 		}
-		$lines[] = __( 'Email:', 'ai-chatmate' ) . ' ' . $email;
+		$lines[] = __( 'Email:', 'attendant' ) . ' ' . $email;
 		if ( '' !== $phone ) {
-			$lines[] = __( 'Phone:', 'ai-chatmate' ) . ' ' . $phone;
+			$lines[] = __( 'Phone:', 'attendant' ) . ' ' . $phone;
 		}
 		if ( '' !== $time ) {
-			$lines[] = __( 'Preferred time:', 'ai-chatmate' ) . ' ' . $time;
+			$lines[] = __( 'Preferred time:', 'attendant' ) . ' ' . $time;
 		}
 		if ( '' !== $topic ) {
-			$lines[] = __( 'They were looking for:', 'ai-chatmate' ) . ' ' . $topic;
+			$lines[] = __( 'They were looking for:', 'attendant' ) . ' ' . $topic;
 		}
 		$lines[] = '';
-		$lines[] = __( 'Sent automatically by Attendant. Reply to this email to contact the visitor directly.', 'ai-chatmate' );
+		$lines[] = __( 'Sent automatically by Attendant. Reply to this email to contact the visitor directly.', 'attendant' );
 
 		// Reply-To is the VALIDATED visitor email — is_email() passed above,
 		// so header injection via line breaks is impossible.

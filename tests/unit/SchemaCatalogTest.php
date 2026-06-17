@@ -1,7 +1,7 @@
 <?php
 use PHPUnit\Framework\TestCase;
 
-require_once AICM_PLUGIN_DIR . 'includes/schema/class-aicm-schema-catalog.php';
+require_once ATTENDANT_PLUGIN_DIR . 'includes/schema/class-attendant-schema-catalog.php';
 
 final class SchemaCatalogTest extends TestCase {
 
@@ -31,7 +31,7 @@ final class SchemaCatalogTest extends TestCase {
 	}
 
 	public function test_block_lists_only_configured_types_with_slugs(): void {
-		$block = AICM_Schema_Catalog::build_prompt_block( $this->schema(), array( 'listing' ) );
+		$block = ATTENDANT_Schema_Catalog::build_prompt_block( $this->schema(), array( 'listing' ) );
 
 		$this->assertStringContainsString( 'listing', $block );
 		$this->assertStringContainsString( 'location', $block );      // taxonomy slug
@@ -44,8 +44,8 @@ final class SchemaCatalogTest extends TestCase {
 	}
 
 	public function test_block_is_empty_when_no_schema(): void {
-		$this->assertSame( '', AICM_Schema_Catalog::build_prompt_block( array(), array( 'listing' ) ) );
-		$this->assertSame( '', AICM_Schema_Catalog::build_prompt_block( $this->schema(), array( 'nonexistent' ) ) );
+		$this->assertSame( '', ATTENDANT_Schema_Catalog::build_prompt_block( array(), array( 'listing' ) ) );
+		$this->assertSame( '', ATTENDANT_Schema_Catalog::build_prompt_block( $this->schema(), array( 'nonexistent' ) ) );
 	}
 
 	public function test_block_truncates_long_term_lists(): void {
@@ -54,13 +54,13 @@ final class SchemaCatalogTest extends TestCase {
 			static fn( $i ) => 'term' . $i,
 			range( 1, 100 )
 		);
-		$block = AICM_Schema_Catalog::build_prompt_block( $schema, array( 'listing' ) );
+		$block = ATTENDANT_Schema_Catalog::build_prompt_block( $schema, array( 'listing' ) );
 		$this->assertStringContainsString( 'more', $block ); // notes the truncation
 		$this->assertStringNotContainsString( 'term99', $block );
 	}
 
 	public function test_function_hints_expose_present_types_and_slugs(): void {
-		$hints = AICM_Schema_Catalog::function_hints( $this->schema(), array( 'listing', 'post' ) );
+		$hints = ATTENDANT_Schema_Catalog::function_hints( $this->schema(), array( 'listing', 'post' ) );
 
 		$this->assertSame( array( 'listing', 'post' ), $hints['post_types'] );
 		$this->assertStringContainsString( 'location(lisbon,porto,algarve)', $hints['taxonomy_hint'] );

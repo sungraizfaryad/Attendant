@@ -3,7 +3,7 @@ use Brain\Monkey;
 use Brain\Monkey\Functions;
 use PHPUnit\Framework\TestCase;
 
-require_once AICM_PLUGIN_DIR . 'includes/class-aicm-leads.php';
+require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-leads.php';
 
 /**
  * Lead capture: validation, abuse rails, and the email hand-off.
@@ -68,7 +68,7 @@ final class LeadsTest extends TestCase {
 	public function test_disabled_feature_rejects_capture(): void {
 		AI_ChatMate::$test_settings['lead_capture'] = false;
 
-		$r = AICM_Leads::capture( array( 'email' => 'visitor@example.com' ), 'sess1' );
+		$r = ATTENDANT_Leads::capture( array( 'email' => 'visitor@example.com' ), 'sess1' );
 
 		$this->assertFalse( $r['success'] );
 		$this->assertSame( 'disabled', $r['error'] );
@@ -76,7 +76,7 @@ final class LeadsTest extends TestCase {
 	}
 
 	public function test_invalid_email_is_rejected_without_sending(): void {
-		$r = AICM_Leads::capture( array( 'email' => 'not-an-email' ), 'sess1' );
+		$r = ATTENDANT_Leads::capture( array( 'email' => 'not-an-email' ), 'sess1' );
 
 		$this->assertFalse( $r['success'] );
 		$this->assertSame( 'invalid_email', $r['error'] );
@@ -84,7 +84,7 @@ final class LeadsTest extends TestCase {
 	}
 
 	public function test_valid_lead_sends_email_with_reply_to_and_sets_guards(): void {
-		$r = AICM_Leads::capture(
+		$r = ATTENDANT_Leads::capture(
 			array(
 				'email'          => 'visitor@example.com',
 				'name'           => 'Maria',
@@ -107,12 +107,12 @@ final class LeadsTest extends TestCase {
 
 		// Guards recorded: session lock + daily counter.
 		$this->assertNotEmpty( $this->transients );
-		$this->assertSame( 1, $this->transients['aicm_leads_today'] );
+		$this->assertSame( 1, $this->transients['attendant_leads_today'] );
 	}
 
 	public function test_second_lead_in_same_session_is_blocked(): void {
-		AICM_Leads::capture( array( 'email' => 'visitor@example.com' ), 'sess1' );
-		$r = AICM_Leads::capture( array( 'email' => 'visitor@example.com' ), 'sess1' );
+		ATTENDANT_Leads::capture( array( 'email' => 'visitor@example.com' ), 'sess1' );
+		$r = ATTENDANT_Leads::capture( array( 'email' => 'visitor@example.com' ), 'sess1' );
 
 		$this->assertFalse( $r['success'] );
 		$this->assertSame( 'already_captured', $r['error'] );
@@ -120,9 +120,9 @@ final class LeadsTest extends TestCase {
 	}
 
 	public function test_daily_cap_blocks_further_leads(): void {
-		$this->transients['aicm_leads_today'] = 20;
+		$this->transients['attendant_leads_today'] = 20;
 
-		$r = AICM_Leads::capture( array( 'email' => 'visitor@example.com' ), 'sess1' );
+		$r = ATTENDANT_Leads::capture( array( 'email' => 'visitor@example.com' ), 'sess1' );
 
 		$this->assertFalse( $r['success'] );
 		$this->assertSame( 'daily_cap', $r['error'] );
@@ -132,17 +132,17 @@ final class LeadsTest extends TestCase {
 	public function test_failed_send_reports_error_and_sets_no_guards(): void {
 		$this->mail_ok = false;
 
-		$r = AICM_Leads::capture( array( 'email' => 'visitor@example.com' ), 'sess1' );
+		$r = ATTENDANT_Leads::capture( array( 'email' => 'visitor@example.com' ), 'sess1' );
 
 		$this->assertFalse( $r['success'] );
 		$this->assertSame( 'send_failed', $r['error'] );
-		$this->assertArrayNotHasKey( 'aicm_leads_today', $this->transients, 'Failed send must not consume the daily quota.' );
+		$this->assertArrayNotHasKey( 'attendant_leads_today', $this->transients, 'Failed send must not consume the daily quota.' );
 	}
 
 	public function test_falls_back_to_admin_email_when_unconfigured(): void {
 		AI_ChatMate::$test_settings['lead_email'] = '';
 
-		AICM_Leads::capture( array( 'email' => 'visitor@example.com' ), 'sess1' );
+		ATTENDANT_Leads::capture( array( 'email' => 'visitor@example.com' ), 'sess1' );
 
 		$this->assertSame( 'admin@example.com', $this->mails[0]['to'] );
 	}

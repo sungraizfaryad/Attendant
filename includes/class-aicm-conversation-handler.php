@@ -16,7 +16,7 @@
  *  │  5. First chat_completion call (with search_posts function offered)  │
  *  │     ├─ AI replies directly (content) → Step 8                        │
  *  │     └─ AI calls function (function_call) ──────────────────────────┐ │
- *  │  6.   Execute WP_Query via AICM_Query_Builder                      │ │
+ *  │  6.   Execute WP_Query via ATTENDANT_Query_Builder                      │ │
  *  │  7.   Second chat_completion call (function result injected)       │ │
  *  │  8. Save turn to session history                                    │ │
  *  │  9. Track token usage cost                                          │ │
@@ -48,7 +48,7 @@
  * The function result is injected into the second chat_completion call as a
  * 'tool' role message, following OpenAI's tools API format.
  *
- * @package AIChatMate
+ * @package Attendant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -56,9 +56,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AICM_Conversation_Handler
+ * Class ATTENDANT_Conversation_Handler
  */
-class AICM_Conversation_Handler {
+class ATTENDANT_Conversation_Handler {
 
 	/**
 	 * Session transient time-to-live in seconds.
@@ -67,7 +67,7 @@ class AICM_Conversation_Handler {
 	private const SESSION_TTL_SECONDS = 30 * MINUTE_IN_SECONDS;
 
 	/** Prefix applied to all session transient keys. */
-	private const SESSION_KEY_PREFIX = 'aicm_sess_';
+	private const SESSION_KEY_PREFIX = 'attendant_sess_';
 
 	/**
 	 * Maximum characters included in the RAG context block that is injected
@@ -105,7 +105,7 @@ class AICM_Conversation_Handler {
 		if ( null === $provider ) {
 			return self::error_response(
 				$session_id,
-				__( 'Attendant is not configured. Please add an API key in the admin settings.', 'ai-chatmate' )
+				__( 'Attendant is not configured. Please add an API key in the admin settings.', 'attendant' )
 			);
 		}
 
@@ -117,7 +117,7 @@ class AICM_Conversation_Handler {
 		// Check admin-configured Q&A pairs before RAG and LLM.
 		// When a pair scores at or above the similarity threshold (0.92), its
 		// stored answer is returned immediately — no RAG, no LLM call, no cost.
-		$qa_match = AICM_QA_Manager::find_match( $provider, $user_message );
+		$qa_match = ATTENDANT_QA_Manager::find_match( $provider, $user_message );
 
 		if ( null !== $qa_match ) {
 			// Persist the exchange to session history so the conversation
@@ -154,7 +154,7 @@ class AICM_Conversation_Handler {
 		$source_ids  = array();
 
 		if ( (bool) AI_ChatMate::get_setting( 'semantic_mode', false ) ) {
-			$rag_chunks  = AICM_RAG_Retriever::find_similar( $provider, $user_message, self::RAG_TOP_K );
+			$rag_chunks  = ATTENDANT_RAG_Retriever::find_similar( $provider, $user_message, self::RAG_TOP_K );
 			$rag_context = self::build_rag_context( $rag_chunks );
 			$source_ids  = array_values( array_unique( array_column( $rag_chunks, 'post_id' ) ) );
 		}
@@ -283,7 +283,7 @@ class AICM_Conversation_Handler {
 		// never have to type the word. Narrow match (skip + phone/step) keeps
 		// this from firing on ordinary answers.
 		if ( empty( $options )
-			&& class_exists( 'AICM_Leads' ) && AICM_Leads::is_enabled()
+			&& class_exists( 'ATTENDANT_Leads' ) && ATTENDANT_Leads::is_enabled()
 			&& preg_match( '/\bskip\b/i', $reply )
 			&& preg_match( '/\b(phone|number|this step)\b/i', $reply ) ) {
 			$options = array( 'Skip' );
@@ -291,7 +291,7 @@ class AICM_Conversation_Handler {
 
 		// ── Fallback when the model returns an empty string ───────────────
 		if ( '' === trim( $reply ) ) {
-			$reply = __( "I'm sorry, I couldn't generate a response. Please try again.", 'ai-chatmate' );
+			$reply = __( "I'm sorry, I couldn't generate a response. Please try again.", 'attendant' );
 		}
 
 		// ── Step 8: persist session history ──────────────────────────────
@@ -432,19 +432,19 @@ class AICM_Conversation_Handler {
 	 * Returns null when no API key is stored for the active provider so the
 	 * handler can return a friendly error without making any API calls.
 	 *
-	 * @return AICM_LLM_Provider|null
+	 * @return ATTENDANT_LLM_Provider|null
 	 */
-	private static function get_provider(): ?AICM_LLM_Provider {
+	private static function get_provider(): ?ATTENDANT_LLM_Provider {
 		$active     = (string) AI_ChatMate::get_setting( 'active_provider', 'openai' );
-		$option_key = "aicm_api_key_{$active}";
+		$option_key = "attendant_api_key_{$active}";
 
 		if ( '' === (string) get_option( $option_key, '' ) ) {
 			return null;
 		}
 
 		if ( 'openai' === $active ) {
-			require_once AICM_PLUGIN_DIR . 'includes/providers/class-aicm-openai-provider.php';
-			return new AICM_OpenAI_Provider();
+			require_once ATTENDANT_PLUGIN_DIR . 'includes/providers/class-attendant-openai-provider.php';
+			return new ATTENDANT_OpenAI_Provider();
 		}
 
 		// Additional providers (Anthropic, Google) will be wired in future phases.
@@ -576,10 +576,10 @@ class AICM_Conversation_Handler {
 
 		// Inject the discovered content structure so the model emits valid
 		// post types, taxonomy slugs, and meta keys instead of guessing.
-		$schema  = AICM_Schema_Cache::get();
-		$schema  = is_array( $schema ) ? AICM_Field_Config::apply( $schema ) : $schema;
+		$schema  = ATTENDANT_Schema_Cache::get();
+		$schema  = is_array( $schema ) ? ATTENDANT_Field_Config::apply( $schema ) : $schema;
 		$types   = (array) AI_ChatMate::get_setting( 'index_post_types', array( 'post', 'page' ) );
-		$catalog = is_array( $schema ) ? AICM_Schema_Catalog::build_prompt_block( $schema, $types ) : '';
+		$catalog = is_array( $schema ) ? ATTENDANT_Schema_Catalog::build_prompt_block( $schema, $types ) : '';
 
 		if ( '' !== $catalog ) {
 			$prompt .= "## Searchable content structure\n\n";
@@ -623,7 +623,7 @@ class AICM_Conversation_Handler {
 		. "(plus \"Other\" / \"No preference\" where sensible) — never as a plain-text list.\n\n";
 
 		// Lead capture choreography — only taught to the model when enabled.
-		if ( class_exists( 'AICM_Leads' ) && AICM_Leads::is_enabled() ) {
+		if ( class_exists( 'ATTENDANT_Leads' ) && ATTENDANT_Leads::is_enabled() ) {
 			$prompt .= "## Callback requests\n\n"
 				. 'If you genuinely cannot help — nothing suitable exists even after relaxing filters, or the visitor '
 				. 'asks to speak to a person — offer the ways forward via suggest_choices, e.g. question '
@@ -663,7 +663,7 @@ class AICM_Conversation_Handler {
 	 * Groups chunks by post and labels each source with its title and URL.
 	 * Truncates at RAG_CONTEXT_MAX_CHARS to keep the prompt size predictable.
 	 *
-	 * @param array[] $chunks Records returned by AICM_RAG_Retriever::find_similar().
+	 * @param array[] $chunks Records returned by ATTENDANT_RAG_Retriever::find_similar().
 	 * @return string Formatted context block, or '' if no chunks.
 	 */
 	private static function build_rag_context( array $chunks ): string {
@@ -835,10 +835,10 @@ class AICM_Conversation_Handler {
 
 		$type_list = implode( ', ', $configured_types );
 
-		$schema = AICM_Schema_Cache::get();
-		$schema = is_array( $schema ) ? AICM_Field_Config::apply( $schema ) : $schema;
+		$schema = ATTENDANT_Schema_Cache::get();
+		$schema = is_array( $schema ) ? ATTENDANT_Field_Config::apply( $schema ) : $schema;
 		$hints  = is_array( $schema )
-			? AICM_Schema_Catalog::function_hints( $schema, $configured_types )
+			? ATTENDANT_Schema_Catalog::function_hints( $schema, $configured_types )
 			: array(
 				'post_types'    => array(),
 				'taxonomy_hint' => '',
@@ -971,7 +971,7 @@ class AICM_Conversation_Handler {
 		);
 
 		// Lead capture — only offered to the model when the admin enabled it.
-		if ( class_exists( 'AICM_Leads' ) && AICM_Leads::is_enabled() ) {
+		if ( class_exists( 'ATTENDANT_Leads' ) && ATTENDANT_Leads::is_enabled() ) {
 			$functions[] = array(
 				'name'        => 'capture_lead',
 				'description' => 'Record a callback request from the visitor and notify the site team by email. '
@@ -1012,7 +1012,7 @@ class AICM_Conversation_Handler {
 	/**
 	 * Dispatch an AI function call and return the result.
 	 *
-	 * Currently handles 'search_posts' via AICM_Query_Builder.
+	 * Currently handles 'search_posts' via ATTENDANT_Query_Builder.
 	 * Unknown function names return a structured error the AI can interpret
 	 * gracefully (it will tell the user it could not complete the search).
 	 *
@@ -1023,14 +1023,14 @@ class AICM_Conversation_Handler {
 	 */
 	private static function execute_function( string $fn_name, array $fn_args, string $session_id = '' ): array {
 		if ( 'search_posts' === $fn_name ) {
-			$query_args = AICM_Query_Builder::build( $fn_args );
-			return AICM_Query_Builder::execute( $query_args );
+			$query_args = ATTENDANT_Query_Builder::build( $fn_args );
+			return ATTENDANT_Query_Builder::execute( $query_args );
 		}
 
 		if ( 'capture_lead' === $fn_name ) {
 			// All validation, rate limits, and the actual email happen in
-			// AICM_Leads — the model only structures the data.
-			return AICM_Leads::capture( $fn_args, $session_id );
+			// ATTENDANT_Leads — the model only structures the data.
+			return ATTENDANT_Leads::capture( $fn_args, $session_id );
 		}
 
 		return array(
@@ -1046,7 +1046,7 @@ class AICM_Conversation_Handler {
 	/**
 	 * Estimate the total token count for an array of messages.
 	 *
-	 * Uses the same 4-chars/token heuristic as AICM_Chunker::estimate_tokens().
+	 * Uses the same 4-chars/token heuristic as ATTENDANT_Chunker::estimate_tokens().
 	 * This is a conservative approximation — actual token counts vary by model
 	 * and language, but the estimate is accurate enough for budgeting purposes.
 	 *
@@ -1081,15 +1081,15 @@ class AICM_Conversation_Handler {
 	}
 
 	/**
-	 * Accumulate monthly API usage cost in the aicm_monthly_usage option.
+	 * Accumulate monthly API usage cost in the attendant_monthly_usage option.
 	 *
 	 * Stored as: [ 'YYYY-MM' => float_usd_cost, ... ]
 	 * The admin can view this in the analytics page (Phase 6).
 	 *
-	 * @param AICM_LLM_Provider $provider Provider (needed for estimate_cost()).
+	 * @param ATTENDANT_LLM_Provider $provider Provider (needed for estimate_cost()).
 	 * @param array             $usage    Combined input/output token counts.
 	 */
-	private static function track_usage( AICM_LLM_Provider $provider, array $usage ): void {
+	private static function track_usage( ATTENDANT_LLM_Provider $provider, array $usage ): void {
 		$cost = $provider->estimate_cost(
 			(int) ( $usage['input_tokens'] ?? 0 ),
 			(int) ( $usage['output_tokens'] ?? 0 )
@@ -1100,7 +1100,7 @@ class AICM_Conversation_Handler {
 		}
 
 		// Record into both the daily (kill-switch) and monthly (analytics) maps.
-		AICM_Billing::record( $cost );
+		ATTENDANT_Billing::record( $cost );
 	}
 
 	// ── Private: error helper ─────────────────────────────────────────────────

@@ -3,7 +3,7 @@ use Brain\Monkey;
 use Brain\Monkey\Functions;
 use PHPUnit\Framework\TestCase;
 
-require_once AICM_PLUGIN_DIR . 'includes/class-aicm-field-config.php';
+require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-field-config.php';
 
 final class FieldConfigTest extends TestCase {
 
@@ -49,7 +49,7 @@ final class FieldConfigTest extends TestCase {
 			),
 		);
 
-		$clean = AICM_Field_Config::sanitize( $raw );
+		$clean = ATTENDANT_Field_Config::sanitize( $raw );
 
 		$this->assertArrayHasKey( 'listing', $clean );                     // post type key sanitized
 		$this->assertTrue( $clean['listing']['taxonomies']['location'] );  // truthy -> true
@@ -61,8 +61,8 @@ final class FieldConfigTest extends TestCase {
 	}
 
 	public function test_sanitize_ignores_non_array_input(): void {
-		$this->assertSame( array(), AICM_Field_Config::sanitize( 'not-an-array' ) );
-		$this->assertSame( array(), AICM_Field_Config::sanitize( array( 'pt' => 'nope' ) ) );
+		$this->assertSame( array(), ATTENDANT_Field_Config::sanitize( 'not-an-array' ) );
+		$this->assertSame( array(), ATTENDANT_Field_Config::sanitize( array( 'pt' => 'nope' ) ) );
 	}
 
 	public function test_apply_drops_excluded_and_overrides_labels(): void {
@@ -76,7 +76,7 @@ final class FieldConfigTest extends TestCase {
 			),
 		);
 
-		$out = AICM_Field_Config::apply( $this->schema(), $config );
+		$out = ATTENDANT_Field_Config::apply( $this->schema(), $config );
 		$pt  = $out['post_types']['listing'];
 
 		$this->assertArrayHasKey( 'location', $pt['taxonomies'] );
@@ -87,7 +87,7 @@ final class FieldConfigTest extends TestCase {
 	}
 
 	public function test_apply_is_noop_without_config(): void {
-		$out = AICM_Field_Config::apply( $this->schema(), array() );
+		$out = ATTENDANT_Field_Config::apply( $this->schema(), array() );
 		$this->assertArrayHasKey( 'mood', $out['post_types']['listing']['taxonomies'] );
 	}
 }
