@@ -1,39 +1,35 @@
 # Attendant — Progress
 
-_Last updated: 2026-06-15 (Opus 4.8 session)._
+_Last updated: 2026-06-17 (full prefix rename session)._
 _Rolling status only. Detail lives in `CLAUDE.md` and the cloud memory entries._
 
-## Done (v2.0.0, on GitHub `main`)
+## Done (v2.0.0)
 
-- Display name Conciera → **Attendant** (trademark: "Conciera" was used by a same-field doc-finder). Picked via 4 rounds of live-search vetting: no plugin-slug clash, no live software TM, only Cisco "Attendant Console" (telephony, different field). Folder/slug/text-domain/`aicm_` prefix unchanged. Log dir made brand-neutral `aicm-logs-`.
-- Search correctness: `<=` operator bug, number normaliser, underscore-meta rejection, zero-result enrichment.
-- Indexing: manual + background loopback, 45s stall watchdog, cron self-repair, activity feed, incremental vs full.
-- Widget gated until first index. Assets versioned by `filemtime`.
-- Chat history: localStorage (10×80), per-chat server session id, New / Previous UI.
-- Quick-reply chips: `suggest_choices` fn, forced `tool_choice` on zero-results, bullet→chips fallback, + phone-step Skip-chip net.
-- Lead capture: opt-in, `is_email`, 1/session + 20/day, Reply-To = visitor.
-- File chat logs: protected `uploads/aicm-logs-<key>/`, 30-day rotation, admin download.
-- readme.txt rewritten to current features + a Privacy section (history / logging / lead-capture disclosure).
-- 48 tests / 126 assertions. Plugin Check 0 errors. Build `~/Desktop/attendant-2.0.0.zip` (159K).
-- Full real-time FLP browser test PASSED: search + source buttons, zero-result + lead capture (email fired), history cross-page/refresh, admin pages, 0 console errors.
+- Full rename: `aicm_` → `attendant_`, `AICM_` → `ATTENDANT_`, `AI_ChatMate` → `Attendant_Plugin`, text-domain `attendant`, REST namespace `attendant/v1`, nonce action `attendant_chat_nonce`, header `X-Attendant-Nonce`, localStorage key `attendant_chats_v1`.
+- Migration on activate: copies all `aicm_*` options → `attendant_*`, RENAME TABLE for all 4 DB tables, renames log dir, clears old cron hooks.
+- Data verified: 9,284 chunks preserved on FLP after table rename. Zero data loss.
+- Browser-tested on both sites: settings save, chat flow, history cross-page/refresh, source chips, lead capture.
+- FLP full test passed: real property data, 0 console errors, chat persists on `/property/` archive page.
+- 48 tests / 126 assertions pass. Build `~/Desktop/attendant-2.0.0.zip` (Plugin Check 0 errors).
 
 ## Decisions
 
-- Folder / slug / text-domain / `aicm_` prefix stay despite display rename — preserves slug + stored API keys.
-- Chat history in localStorage, not server. File logs in uploads (random key), not plugin dir.
-- Log dir name brand-neutral (`aicm-logs-`) so a future rename never churns it.
-- Round 2 after a search passes only `suggest_choices` (no search chaining).
+- Migration runs first in `activate()`, before `create_tables()` — ensures old data available when tables checked.
+- Folder on disk still named `ai-chatmate` — pending rename (requires deactivate/rename/reactivate on both sites, needs user approval per CLAUDE.md).
+- GitHub repo URL update to `https://github.com/sungraizfaryad/attendant` needed after folder rename.
 
 ## Next steps
 
-1. Send the drafted reviewer reply email (new name = Attendant) to plugins@wordpress.org, then resubmit the zip.
-2. (Deferred) `aicm_` / `ai_` PHP prefix rename. Owner postponed.
+1. **Task 13**: Rename plugin folder `ai-chatmate` → `attendant` on both sites (needs user approval — deactivate, rename, reactivate).
+2. **Task 14**: Rebuild zip from renamed folder, run Plugin Check 0 errors, push to GitHub, submit to WP.org.
+3. Update build script in CLAUDE.md once folder is renamed.
 
 ## Key files
 
-- `includes/class-aicm-conversation-handler.php` — prompt + function-call orchestrator, chips fallbacks.
-- `includes/class-aicm-query-builder.php` — operator whitelist, numeric normaliser, zero-result help.
-- `includes/class-aicm-index-manager.php` — manual + background indexing + self-repair.
-- `includes/class-aicm-leads.php` — callback capture.
-- `public/js/aicm-widget.js` — localStorage history, chips, dual-nonce REST.
+- `includes/class-attendant-conversation-handler.php` — prompt + function-call orchestrator, chips fallbacks.
+- `includes/class-attendant-query-builder.php` — operator whitelist, numeric normaliser, zero-result help.
+- `includes/class-attendant-index-manager.php` — manual + background indexing + self-repair.
+- `includes/class-attendant-leads.php` — callback capture.
+- `public/js/attendant-widget.js` — localStorage history, chips, dual-nonce REST.
+- `includes/class-attendant-activator.php` — migration logic from aicm_ to attendant_.
 - `tests/unit/` — QueryBuilderTest, LeadsTest, ChoicesTest, FrontendReadyTest.

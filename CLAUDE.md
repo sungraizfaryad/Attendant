@@ -8,10 +8,9 @@ source and update this file.
 ## What this plugin is
 
 WP.org submission name: **Attendant - AI Site Search & Content Finder**
-(folder, slug, text-domain, and `aicm_` PHP prefix are intentionally still
-`ai-chatmate` — keeping them locks our WP.org reservation and avoids breaking
-existing API keys / settings). GitHub:
-`https://github.com/sungraizfaryad/AI-ChatMate`.
+Slug: `attendant`. PHP prefix: `attendant_` / `ATTENDANT_`. Text-domain: `attendant`.
+Folder on disk still named `ai-chatmate` — pending rename (Task 13). GitHub:
+`https://github.com/sungraizfaryad/attendant`.
 
 A WordPress plugin that adds an opt-in, RAG-powered chat assistant to any
 site. It indexes posts/CPTs into a `wp_aicm_chunks` table, retrieves relevant
@@ -22,7 +21,8 @@ manual indexing controls, file-based chat logs, and email lead capture.
 ## Repo layout
 
 - This folder (`media-usage-inspector/.../plugins/ai-chatmate/`) IS the canonical
-  git repo. No separate canonical-vs-test split (unlike UNMAM).
+  git repo. No separate canonical-vs-test split (unlike UNMAM). Folder rename to
+  `attendant/` is pending (requires deactivate on both sites + rsync + reactivate).
 - FLP install (`~/Local Sites/flp/app/public/wp-content/plugins/ai-chatmate/`) is
   test-only; rsync to it after every change. Real 4,160-property dataset.
 - Build zip lives at `~/Desktop/attendant-2.0.0.zip` (Plugin Check 0 errors).
@@ -36,15 +36,15 @@ manual indexing controls, file-based chat logs, and email lead capture.
 - **Never use `GLOB_BRACE`**. Undefined on musl-libc PHP (Alpine images) → fatal
   mid-uninstall. Use `glob('*')` + explicit checks.
 - **Never derive the log-dir name from `wp_salt()`**. Salt rotation orphans
-  the directory. We store a random key in option `aicm_log_dir_key`.
+  the directory. We store a random key in option `attendant_log_dir_key`.
 - **Never trust the model to write a choice list as text**. gpt-4o-mini ignores
   the "use suggest_choices" instruction maybe 30% of the time. The fix is
   belt-and-braces: forced `tool_choice` on zero-result round 2 + deterministic
   bullet→chips fallback in `extract_text_choices()`. The lead-flow phone step
   gets a third net — a single "Skip" chip injected server-side when the reply
   offers to skip the phone/number step but the model produced no chips.
-- **Enqueue assets with `filemtime()`, not `AICM_VERSION`**. Visitors aggressively
-  cache `aicm-widget.js`; releasing a new feature without filemtime versioning
+- **Enqueue assets with `filemtime()`, not `ATTENDANT_VERSION`**. Visitors aggressively
+  cache `attendant-widget.js`; releasing a new feature without filemtime versioning
   silently dropped chips/history for returning visitors.
 - **Round 2 of a function call passes ONLY `suggest_choices`** to prevent the
   model chaining another search after seeing the result.
@@ -84,29 +84,29 @@ add_filter( 'pre_wp_mail', function ( $null, $atts ) {
 
 ## Architecture map
 
-- `includes/class-aicm-conversation-handler.php` — orchestrator. Builds system
+- `includes/class-attendant-conversation-handler.php` — orchestrator. Builds system
   prompt, calls provider, handles function-call branches, owns prompt rules
   for brevity / chips / lead capture. `extract_text_choices()` is the safety
   net for the chips system.
-- `includes/class-aicm-query-builder.php` — translates `search_posts` args into
+- `includes/class-attendant-query-builder.php` — translates `search_posts` args into
   `WP_Query`. Owns the operator whitelist, numeric normaliser, NUMERIC-type
   inference, underscore-meta rejection, and `zero_results_help()`.
-- `includes/class-aicm-index-manager.php` — manual + background indexing. Has
+- `includes/class-attendant-index-manager.php` — manual + background indexing. Has
   `enqueue_full_reindex(bool $only_new)`, `ensure_cron()` self-repair,
   loopback chain via admin-ajax + hash_equals.
-- `includes/class-aicm-leads.php` — opt-in callback capture. PHP owns
+- `includes/class-attendant-leads.php` — opt-in callback capture. PHP owns
   `is_email`, session lock, daily cap, mail headers.
-- `includes/class-aicm-chat-log.php` — JSONL daily logs in a protected uploads
+- `includes/class-attendant-chat-log.php` — JSONL daily logs in a protected uploads
   subdir, admin-only download.
-- `includes/class-aicm-rest-api.php` — `/chat`, `/index/*`, `/settings`.
+- `includes/class-attendant-rest-api.php` — `/chat`, `/index/*`, `/settings`.
   `options` key in response carries quick-reply chips. Dual nonce
-  (`X-WP-Nonce` + `X-AICM-Nonce`).
-- `public/js/aicm-widget.js` — vanilla. localStorage `aicm_chats_v1`
+  (`X-WP-Nonce` + `X-Attendant-Nonce`).
+- `public/js/attendant-widget.js` — vanilla. localStorage `attendant_chats_v1`
   (10 chats × 80 msgs), per-chat server `session_id`, chips render via
   `renderChips()`, init runs on `DOMContentLoaded` because markup prints at
   `wp_footer` priority 100.
 - `admin/views/settings.php` — six tabs, submenu is registered LAST.
-- `uninstall.php` — multisite-safe; calls `AICM_Chat_Log::delete_all()` inside
+- `uninstall.php` — multisite-safe; calls `ATTENDANT_Chat_Log::delete_all()` inside
   the per-site function.
 
 ## Tests
@@ -117,13 +117,12 @@ $PHP vendor/bin/phpunit --no-coverage
 ```
 
 Brain Monkey + PHPUnit 11. `tests/bootstrap.php` stubs WP constants
-(`MINUTE_IN_SECONDS`, `DAY_IN_SECONDS`, `ABSPATH`, `AICM_PLUGIN_DIR`). When
+(`MINUTE_IN_SECONDS`, `DAY_IN_SECONDS`, `ABSPATH`, `ATTENDANT_PLUGIN_DIR`). When
 stubbing `sanitize_text_field` for a new test, use
 `static fn( $v ) => trim( strip_tags( (string) $v ) )` — the pass-through stub
 HID the operator bug.
 
-48 tests / 126 assertions as of last commit (261a7f1). Plugin Check on the
-zipped build must report **0 errors**.
+48 tests / 126 assertions. Plugin Check on the zipped build must report **0 errors**.
 
 ## Build & ship
 
