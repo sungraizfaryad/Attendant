@@ -1,7 +1,7 @@
 /**
  * AI ChatMate onboarding wizard.
  *
- * Drives the Phase 3a REST endpoints. aicmAdmin (restUrl/nonce/i18n/settingsUrl)
+ * Drives the Phase 3a REST endpoints. attendantAdmin (restUrl/nonce/i18n/settingsUrl)
  * is localized by AICM_Admin. No build step; vanilla JS.
  *
  * Security: every dynamic value inserted via innerHTML is passed through esc()
@@ -11,20 +11,20 @@
 ( function () {
 	'use strict';
 
-	var root = document.getElementById( 'aicm-wizard' );
-	if ( ! root || ! window.aicmAdmin ) {
+	var root = document.getElementById( 'attendant-wizard' );
+	if ( ! root || ! window.attendantAdmin ) {
 		return;
 	}
 
 	var state  = { step: 0, schema: null, types: [] };
-	var panels = root.querySelectorAll( '.aicm-panel' );
-	var steps  = root.querySelectorAll( '.aicm-wizard-step' );
-	var notice = document.getElementById( 'aicm-wizard-notice' );
+	var panels = root.querySelectorAll( '.attendant-panel' );
+	var steps  = root.querySelectorAll( '.attendant-wizard-step' );
+	var notice = document.getElementById( 'attendant-wizard-notice' );
 
 	function api( path, method, body ) {
-		return fetch( aicmAdmin.restUrl + path, {
+		return fetch( attendantAdmin.restUrl + path, {
 			method: method || 'GET',
-			headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': aicmAdmin.nonce },
+			headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': attendantAdmin.nonce },
 			body: body ? JSON.stringify( body ) : undefined
 		} ).then( function ( r ) {
 			return r.json().then( function ( j ) { return { ok: r.ok, json: j }; } );
@@ -57,15 +57,15 @@
 	}
 
 	function detect() {
-		var box  = document.getElementById( 'aicm-detect-result' );
-		var next = document.getElementById( 'aicm-detect-next' );
+		var box  = document.getElementById( 'attendant-detect-result' );
+		var next = document.getElementById( 'attendant-detect-next' );
 		box.innerHTML = '<span class="spinner is-active" style="float:none;"></span> ' + esc( 'Scanning…' );
 		api( '/onboarding/detect', 'POST', {} ).then( function ( res ) {
 			if ( ! res.ok ) { showNotice( ( res.json && res.json.message ) || 'Scan failed.', 'error' ); return; }
 			state.schema = res.json.schema;
 			var pts  = ( state.schema && state.schema.post_types ) ? state.schema.post_types : {};
 			var keys = Object.keys( pts );
-			var html = '<p>' + esc( res.json.post_types ) + ' content types found:</p><ul class="aicm-detect-types">';
+			var html = '<p>' + esc( res.json.post_types ) + ' content types found:</p><ul class="attendant-detect-types">';
 			keys.forEach( function ( k ) {
 				var pt   = pts[ k ];
 				var taxc = pt.taxonomies ? Object.keys( pt.taxonomies ).length : 0;
@@ -79,23 +79,23 @@
 	}
 
 	function renderTypes() {
-		var list = document.getElementById( 'aicm-types-list' );
+		var list = document.getElementById( 'attendant-types-list' );
 		var pts  = ( state.schema && state.schema.post_types ) ? state.schema.post_types : {};
 		var html = '';
 		Object.keys( pts ).forEach( function ( k ) {
 			var pt      = pts[ k ];
 			var checked = ( pt.count || 0 ) > 0 ? ' checked' : '';
-			html += '<p><label><input type="checkbox" class="aicm-type-cb" value="' + esc( k ) + '"' + checked + '> <strong>' + esc( pt.label || k ) + '</strong> <span class="description">(' + esc( pt.count || 0 ) + ')</span></label></p>';
+			html += '<p><label><input type="checkbox" class="attendant-type-cb" value="' + esc( k ) + '"' + checked + '> <strong>' + esc( pt.label || k ) + '</strong> <span class="description">(' + esc( pt.count || 0 ) + ')</span></label></p>';
 		} );
 		list.innerHTML = html || '<p class="description">No public content types found.</p>';
 	}
 
 	function chosenTypes() {
-		return Array.prototype.map.call( document.querySelectorAll( '.aicm-type-cb:checked' ), function ( c ) { return c.value; } );
+		return Array.prototype.map.call( document.querySelectorAll( '.attendant-type-cb:checked' ), function ( c ) { return c.value; } );
 	}
 
 	function renderFields() {
-		var wrap = document.getElementById( 'aicm-fields-list' );
+		var wrap = document.getElementById( 'attendant-fields-list' );
 		var pts  = ( state.schema && state.schema.post_types ) ? state.schema.post_types : {};
 		state.types = chosenTypes();
 		var html = '';
@@ -105,11 +105,11 @@
 			html += '<h3>' + esc( pt.label || k ) + '</h3>';
 			var taxes = pt.taxonomies || {};
 			Object.keys( taxes ).forEach( function ( t ) {
-				html += '<p><label><input type="checkbox" class="aicm-tax-cb" data-pt="' + esc( k ) + '" data-tax="' + esc( t ) + '" checked> ' + esc( taxes[ t ].label || t ) + ' <code>' + esc( t ) + '</code></label></p>';
+				html += '<p><label><input type="checkbox" class="attendant-tax-cb" data-pt="' + esc( k ) + '" data-tax="' + esc( t ) + '" checked> ' + esc( taxes[ t ].label || t ) + ' <code>' + esc( t ) + '</code></label></p>';
 			} );
 			var metas = pt.meta_fields || {};
 			Object.keys( metas ).forEach( function ( m ) {
-				html += '<p><label><input type="checkbox" class="aicm-meta-cb" data-pt="' + esc( k ) + '" data-key="' + esc( m ) + '" checked> ' + esc( m ) + ' <span class="description">[' + esc( metas[ m ].type || 'text' ) + ']</span></label> <input type="text" class="aicm-meta-label" data-pt="' + esc( k ) + '" data-key="' + esc( m ) + '" placeholder="' + esc( metas[ m ].label || '' ) + '" style="width:200px;"></p>';
+				html += '<p><label><input type="checkbox" class="attendant-meta-cb" data-pt="' + esc( k ) + '" data-key="' + esc( m ) + '" checked> ' + esc( m ) + ' <span class="description">[' + esc( metas[ m ].type || 'text' ) + ']</span></label> <input type="text" class="attendant-meta-label" data-pt="' + esc( k ) + '" data-key="' + esc( m ) + '" placeholder="' + esc( metas[ m ].label || '' ) + '" style="width:200px;"></p>';
 			} );
 			if ( ! Object.keys( taxes ).length && ! Object.keys( metas ).length ) {
 				html += '<p class="description">No taxonomies or custom fields detected.</p>';
@@ -121,30 +121,30 @@
 	function buildConfig() {
 		var cfg = {};
 		state.types.forEach( function ( k ) { cfg[ k ] = { taxonomies: {}, meta: {} }; } );
-		document.querySelectorAll( '.aicm-tax-cb' ).forEach( function ( c ) {
+		document.querySelectorAll( '.attendant-tax-cb' ).forEach( function ( c ) {
 			cfg[ c.dataset.pt ] = cfg[ c.dataset.pt ] || { taxonomies: {}, meta: {} };
 			cfg[ c.dataset.pt ].taxonomies[ c.dataset.tax ] = c.checked;
 		} );
-		document.querySelectorAll( '.aicm-meta-cb' ).forEach( function ( c ) {
+		document.querySelectorAll( '.attendant-meta-cb' ).forEach( function ( c ) {
 			cfg[ c.dataset.pt ] = cfg[ c.dataset.pt ] || { taxonomies: {}, meta: {} };
-			var lbl = document.querySelector( '.aicm-meta-label[data-pt="' + c.dataset.pt + '"][data-key="' + c.dataset.key + '"]' );
+			var lbl = document.querySelector( '.attendant-meta-label[data-pt="' + c.dataset.pt + '"][data-key="' + c.dataset.key + '"]' );
 			cfg[ c.dataset.pt ].meta[ c.dataset.key ] = { included: c.checked, label: lbl ? lbl.value : '' };
 		} );
 		return cfg;
 	}
 
 	function finish() {
-		var btn    = document.getElementById( 'aicm-wiz-finish' );
-		var status = document.getElementById( 'aicm-wiz-finish-status' );
+		var btn    = document.getElementById( 'attendant-wiz-finish' );
+		var status = document.getElementById( 'attendant-wiz-finish-status' );
 		btn.disabled = true;
-		status.textContent = ( aicmAdmin.i18n && aicmAdmin.i18n.saving ) || 'Saving…';
+		status.textContent = ( attendantAdmin.i18n && attendantAdmin.i18n.saving ) || 'Saving…';
 
-		var key = document.getElementById( 'aicm-wiz-key' ).value;
-		var ctx = document.getElementById( 'aicm-wiz-context' );
+		var key = document.getElementById( 'attendant-wiz-key' ).value;
+		var ctx = document.getElementById( 'attendant-wiz-context' );
 		var settings = {
-			semantic_mode:  document.getElementById( 'aicm-wiz-semantic' ).checked,
-			widget_color:   document.getElementById( 'aicm-wiz-color' ).value,
-			widget_enabled: document.getElementById( 'aicm-wiz-enable' ).checked
+			semantic_mode:  document.getElementById( 'attendant-wiz-semantic' ).checked,
+			widget_color:   document.getElementById( 'attendant-wiz-color' ).value,
+			widget_enabled: document.getElementById( 'attendant-wiz-enable' ).checked
 		};
 		if ( key ) { settings.api_key_openai = key; }
 		if ( ctx && ctx.value.trim() ) { settings.site_context = ctx.value.trim(); }
@@ -153,8 +153,8 @@
 			return api( '/onboarding/complete', 'POST', { index_post_types: state.types, config: buildConfig() } );
 		} ).then( function ( res ) {
 			if ( res.ok && res.json.success ) {
-				status.textContent = ( aicmAdmin.i18n && aicmAdmin.i18n.saved ) || 'Done.';
-				window.location = aicmAdmin.settingsUrl || ( window.location.pathname + '?page=ai-chatmate' );
+				status.textContent = ( attendantAdmin.i18n && attendantAdmin.i18n.saved ) || 'Done.';
+				window.location = attendantAdmin.settingsUrl || ( window.location.pathname + '?page=ai-chatmate' );
 			} else {
 				btn.disabled = false;
 				showNotice( 'Could not finish setup.', 'error' );
@@ -166,30 +166,30 @@
 	}
 
 	function test() {
-		var btn = document.getElementById( 'aicm-wiz-test' );
-		var out = document.getElementById( 'aicm-wiz-test-result' );
-		var key = document.getElementById( 'aicm-wiz-key' ).value;
+		var btn = document.getElementById( 'attendant-wiz-test' );
+		var out = document.getElementById( 'attendant-wiz-test-result' );
+		var key = document.getElementById( 'attendant-wiz-key' ).value;
 		btn.disabled = true;
-		out.textContent = ( aicmAdmin.i18n && aicmAdmin.i18n.testing ) || 'Testing…';
-		out.className = 'aicm-test-result';
+		out.textContent = ( attendantAdmin.i18n && attendantAdmin.i18n.testing ) || 'Testing…';
+		out.className = 'attendant-test-result';
 		api( '/test-connection', 'POST', { provider: 'openai', api_key: key } ).then( function ( res ) {
 			var j = res.json || {};
 			out.textContent = ( j.success ? '✓ ' : '✗ ' ) + ( j.message || '' );
-			out.className = 'aicm-test-result ' + ( j.success ? 'aicm-test-ok' : 'aicm-test-fail' );
+			out.className = 'attendant-test-result ' + ( j.success ? 'attendant-test-ok' : 'attendant-test-fail' );
 		} ).catch( function () {
 			out.textContent = '✗';
-			out.className = 'aicm-test-result aicm-test-fail';
+			out.className = 'attendant-test-result attendant-test-fail';
 		} ).finally( function () { btn.disabled = false; } );
 	}
 
 	root.addEventListener( 'click', function ( e ) {
-		if ( e.target.matches( '[data-aicm-next]' ) ) {
+		if ( e.target.matches( '[data-attendant-next]' ) ) {
 			go( Math.min( state.step + 1, panels.length - 1 ) );
-		} else if ( e.target.matches( '[data-aicm-prev]' ) ) {
+		} else if ( e.target.matches( '[data-attendant-prev]' ) ) {
 			go( Math.max( state.step - 1, 0 ) );
-		} else if ( e.target.id === 'aicm-wiz-finish' ) {
+		} else if ( e.target.id === 'attendant-wiz-finish' ) {
 			finish();
-		} else if ( e.target.id === 'aicm-wiz-test' ) {
+		} else if ( e.target.id === 'attendant-wiz-test' ) {
 			test();
 		}
 	} );

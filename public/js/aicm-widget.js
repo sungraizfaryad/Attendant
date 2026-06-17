@@ -3,9 +3,9 @@
  *
  * Handles the floating launcher, chat panel UI, and client-side chat history.
  *
- * Reads from window.aicmChat (set by wp_localize_script):
- *   restUrl        {string}  Base REST URL: e.g. https://example.com/wp-json/aicm/v1
- *   nonce          {string}  aicm_chat_nonce value
+ * Reads from window.attendantChat (set by wp_localize_script):
+ *   restUrl        {string}  Base REST URL: e.g. https://example.com/wp-json/attendant/v1
+ *   nonce          {string}  attendant_chat_nonce value
  *   restNonce      {string}  wp_rest nonce (sent as X-WP-Nonce)
  *   siteName       {string}  Blog name (shown in header)
  *   welcomeMessage {string}  First message shown on open (empty = skip)
@@ -13,7 +13,7 @@
  *   i18n           {object}  Strings for the history UI
  *
  * ── Chat history ──────────────────────────────────────────────────────────
- * Conversations persist in localStorage under 'aicm_chats_v1', so the chat
+ * Conversations persist in localStorage under 'attendant_chats_v1', so the chat
  * survives page refreshes and follows the visitor across pages of the same
  * site (localStorage is origin-wide). Each chat record also stores the
  * server-issued session id, so the assistant's conversational memory
@@ -30,7 +30,7 @@
 	'use strict';
 
 	function init() {
-		var cfg          = window.aicmChat  || {};
+		var cfg          = window.attendantChat  || {};
 		var restBase     = cfg.restUrl      || '';
 		var nonce        = cfg.nonce        || '';
 		var restNonce    = cfg.restNonce    || '';
@@ -44,16 +44,16 @@
 		var welcomeShown = false;
 
 		// ── Element references ────────────────────────────────────────────────
-		var launcher   = document.getElementById( 'aicm-launcher' );
-		var widget     = document.getElementById( 'aicm-widget' );
-		var messagesEl = document.getElementById( 'aicm-messages' );
-		var inputEl    = document.getElementById( 'aicm-input' );
-		var sendBtn    = document.getElementById( 'aicm-send' );
-		var closeBtn   = widget ? widget.querySelector( '.aicm-widget__close' ) : null;
-		var historyBtn = document.getElementById( 'aicm-history-btn' );
-		var newChatBtn = document.getElementById( 'aicm-newchat-btn' );
-		var historyEl  = document.getElementById( 'aicm-history' );
-		var historyUl  = document.getElementById( 'aicm-history-list' );
+		var launcher   = document.getElementById( 'attendant-launcher' );
+		var widget     = document.getElementById( 'attendant-widget' );
+		var messagesEl = document.getElementById( 'attendant-messages' );
+		var inputEl    = document.getElementById( 'attendant-input' );
+		var sendBtn    = document.getElementById( 'attendant-send' );
+		var closeBtn   = widget ? widget.querySelector( '.attendant-widget__close' ) : null;
+		var historyBtn = document.getElementById( 'attendant-history-btn' );
+		var newChatBtn = document.getElementById( 'attendant-newchat-btn' );
+		var historyEl  = document.getElementById( 'attendant-history' );
+		var historyUl  = document.getElementById( 'attendant-history-list' );
 
 		// Bail if the required elements are not in the DOM (e.g. plugin disabled).
 		if ( ! launcher || ! widget || ! messagesEl || ! inputEl || ! sendBtn ) {
@@ -62,7 +62,7 @@
 
 		// ── Chat history store (localStorage) ─────────────────────────────────
 
-		var STORE_KEY = 'aicm_chats_v1';
+		var STORE_KEY = 'attendant_chats_v1';
 		var MAX_CHATS = 10;
 		var MAX_MSGS  = 80;
 
@@ -244,7 +244,7 @@
 
 			if ( 0 === listed.length ) {
 				var empty = document.createElement( 'li' );
-				empty.className   = 'aicm-history-empty';
+				empty.className   = 'attendant-history-empty';
 				empty.textContent = i18n.noHistory || 'No previous conversations yet.';
 				historyUl.appendChild( empty );
 				return;
@@ -254,14 +254,14 @@
 				var li  = document.createElement( 'li' );
 				var btn = document.createElement( 'button' );
 				btn.type      = 'button';
-				btn.className = 'aicm-history-item' + ( chat.id === store.active ? ' is-current' : '' );
+				btn.className = 'attendant-history-item' + ( chat.id === store.active ? ' is-current' : '' );
 
 				var label = document.createElement( 'span' );
-				label.className   = 'aicm-history-item__label';
+				label.className   = 'attendant-history-item__label';
 				label.textContent = chatLabel( chat );
 
 				var meta = document.createElement( 'span' );
-				meta.className   = 'aicm-history-item__meta';
+				meta.className   = 'attendant-history-item__meta';
 				meta.textContent = new Date( chat.started ).toLocaleDateString( undefined, { month: 'short', day: 'numeric' } )
 					+ ( chat.id === store.active && i18n.current ? ' · ' + i18n.current : '' );
 
@@ -367,7 +367,7 @@
 			}
 
 			// Remove any stale quick-reply chips before sending — typed or tapped.
-			var existingChips = messagesEl.querySelector( '.aicm-chips' );
+			var existingChips = messagesEl.querySelector( '.attendant-chips' );
 			if ( existingChips ) {
 				removeEl( existingChips );
 			}
@@ -517,16 +517,16 @@
 		 */
 		function appendMessage( text, role, sources ) {
 			var wrap   = document.createElement( 'div' );
-			wrap.className = 'aicm-msg aicm-msg--' + role;
+			wrap.className = 'attendant-msg attendant-msg--' + role;
 
 			var bubble = document.createElement( 'div' );
-			bubble.className = 'aicm-msg__bubble';
+			bubble.className = 'attendant-msg__bubble';
 			bubble.innerHTML = formatText( text );
 			wrap.appendChild( bubble );
 
 			if ( sources && sources.length > 0 ) {
 				var srcEl = document.createElement( 'div' );
-				srcEl.className = 'aicm-msg__sources';
+				srcEl.className = 'attendant-msg__sources';
 
 				sources.forEach( function ( src ) {
 					if ( ! src || ! src.url || ! src.title ) {
@@ -557,10 +557,10 @@
 		 */
 		function appendTyping() {
 			var wrap   = document.createElement( 'div' );
-			wrap.className = 'aicm-msg aicm-msg--bot aicm-msg--typing';
+			wrap.className = 'attendant-msg attendant-msg--bot attendant-msg--typing';
 
 			var bubble = document.createElement( 'div' );
-			bubble.className = 'aicm-msg__bubble';
+			bubble.className = 'attendant-msg__bubble';
 			bubble.innerHTML = '<span></span><span></span><span></span>';
 
 			wrap.appendChild( bubble );
@@ -593,18 +593,18 @@
 		 */
 		function renderChips( options ) {
 			// Remove any existing chips row first.
-			var old = messagesEl.querySelector( '.aicm-chips' );
+			var old = messagesEl.querySelector( '.attendant-chips' );
 			if ( old ) {
 				removeEl( old );
 			}
 
 			var row = document.createElement( 'div' );
-			row.className = 'aicm-chips';
+			row.className = 'attendant-chips';
 
 			options.forEach( function ( label ) {
 				var btn       = document.createElement( 'button' );
 				btn.type      = 'button';
-				btn.className = 'aicm-chip';
+				btn.className = 'attendant-chip';
 				// textContent only — never innerHTML, prevents XSS from server data.
 				btn.textContent = label;
 

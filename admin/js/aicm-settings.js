@@ -2,21 +2,21 @@
  * Attendant — Settings page handler.
  *
  * Enqueued by AICM_Admin::enqueue_assets() on the top-level settings page.
- * Depends on the global `aicmAdmin` object (REST URL, nonce, i18n) that is
+ * Depends on the global `attendantAdmin` object (REST URL, nonce, i18n) that is
  * attached to the `wp-api` handle via wp_add_inline_script().
  *
- * All user-visible strings come from aicmAdmin.i18n (already translated/escaped
+ * All user-visible strings come from attendantAdmin.i18n (already translated/escaped
  * server-side); no markup is built from untrusted input.
  */
 ( function () {
 	'use strict';
 
-	const form       = document.getElementById( 'aicm-settings-form' );
-	const saveBtn    = document.getElementById( 'aicm-save-settings' );
-	const saveStatus = document.getElementById( 'aicm-save-status' );
-	const notice     = document.getElementById( 'aicm-notice' );
+	const form       = document.getElementById( 'attendant-settings-form' );
+	const saveBtn    = document.getElementById( 'attendant-save-settings' );
+	const saveStatus = document.getElementById( 'attendant-save-status' );
+	const notice     = document.getElementById( 'attendant-notice' );
 
-	if ( ! form || ! window.aicmAdmin ) {
+	if ( ! form || ! window.attendantAdmin ) {
 		return;
 	}
 
@@ -24,8 +24,8 @@
 	// Tabs: one panel visible at a time; active tab tracked in the URL
 	// hash so a reload (or a link to #indexing) lands on the right tab.
 	// -----------------------------------------------------------------
-	const tabs   = document.querySelectorAll( '.aicm-tabs .nav-tab' );
-	const panels = document.querySelectorAll( '.aicm-tab-panel' );
+	const tabs   = document.querySelectorAll( '.attendant-tabs .nav-tab' );
+	const panels = document.querySelectorAll( '.attendant-tab-panel' );
 
 	function activateTab( name ) {
 		let found = false;
@@ -76,7 +76,7 @@
 		e.preventDefault();
 
 		saveBtn.disabled  = true;
-		saveStatus.textContent = aicmAdmin.i18n.saving;
+		saveStatus.textContent = attendantAdmin.i18n.saving;
 
 		const data = {};
 		new FormData( form ).forEach( function ( value, key ) {
@@ -95,27 +95,27 @@
 			}
 		} );
 
-		fetch( aicmAdmin.restUrl + '/settings', {
+		fetch( attendantAdmin.restUrl + '/settings', {
 			method:  'POST',
 			headers: {
 				'Content-Type': 'application/json',
-				'X-WP-Nonce':   aicmAdmin.nonce,
+				'X-WP-Nonce':   attendantAdmin.nonce,
 			},
 			body: JSON.stringify( data ),
 		} )
 		.then( function ( res ) { return res.json(); } )
 		.then( function ( json ) {
 			if ( json.success ) {
-				saveStatus.textContent = aicmAdmin.i18n.saved;
-				showNotice( aicmAdmin.i18n.saved, 'success' );
+				saveStatus.textContent = attendantAdmin.i18n.saved;
+				showNotice( attendantAdmin.i18n.saved, 'success' );
 			} else {
-				saveStatus.textContent = aicmAdmin.i18n.error;
-				showNotice( json.message || aicmAdmin.i18n.error, 'error' );
+				saveStatus.textContent = attendantAdmin.i18n.error;
+				showNotice( json.message || attendantAdmin.i18n.error, 'error' );
 			}
 		} )
 		.catch( function () {
-			saveStatus.textContent = aicmAdmin.i18n.error;
-			showNotice( aicmAdmin.i18n.error, 'error' );
+			saveStatus.textContent = attendantAdmin.i18n.error;
+			showNotice( attendantAdmin.i18n.error, 'error' );
 		} )
 		.finally( function () {
 			saveBtn.disabled = false;
@@ -125,20 +125,20 @@
 	// -----------------------------------------------------------------
 	// Test connection button.
 	// -----------------------------------------------------------------
-	document.querySelectorAll( '.aicm-test-btn' ).forEach( function ( btn ) {
+	document.querySelectorAll( '.attendant-test-btn' ).forEach( function ( btn ) {
 		btn.addEventListener( 'click', function () {
 			const provider   = btn.dataset.provider;
-			const resultSpan = document.getElementById( 'aicm-test-' + provider + '-result' );
+			const resultSpan = document.getElementById( 'attendant-test-' + provider + '-result' );
 
 			btn.disabled           = true;
-			resultSpan.textContent = aicmAdmin.i18n.testing;
-			resultSpan.className   = 'aicm-test-result';
+			resultSpan.textContent = attendantAdmin.i18n.testing;
+			resultSpan.className   = 'attendant-test-result';
 
-			fetch( aicmAdmin.restUrl + '/test-connection', {
+			fetch( attendantAdmin.restUrl + '/test-connection', {
 				method:  'POST',
 				headers: {
 					'Content-Type': 'application/json',
-					'X-WP-Nonce':   aicmAdmin.nonce,
+					'X-WP-Nonce':   attendantAdmin.nonce,
 				},
 				body: JSON.stringify( { provider: provider, api_key: '' } ),
 			} )
@@ -146,15 +146,15 @@
 			.then( function ( json ) {
 				if ( json.success ) {
 					resultSpan.textContent = '✓ ' + json.message + ( json.model ? ' (' + json.model + ')' : '' );
-					resultSpan.className   = 'aicm-test-result aicm-test-ok';
+					resultSpan.className   = 'attendant-test-result attendant-test-ok';
 				} else {
 					resultSpan.textContent = '✗ ' + json.message;
-					resultSpan.className   = 'aicm-test-result aicm-test-fail';
+					resultSpan.className   = 'attendant-test-result attendant-test-fail';
 				}
 			} )
 			.catch( function () {
-				resultSpan.textContent = '✗ ' + aicmAdmin.i18n.error;
-				resultSpan.className   = 'aicm-test-result aicm-test-fail';
+				resultSpan.textContent = '✗ ' + attendantAdmin.i18n.error;
+				resultSpan.className   = 'attendant-test-result attendant-test-fail';
 			} )
 			.finally( function () {
 				btn.disabled = false;

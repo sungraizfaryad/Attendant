@@ -2,33 +2,33 @@
  * Attendant — Q&A Manager page handler.
  *
  * Enqueued by AICM_Admin::enqueue_assets() on the Q&A page.
- * Depends on the global `aicmAdmin` (REST URL + nonce) and on `aicmQA.i18n`
+ * Depends on the global `attendantAdmin` (REST URL + nonce) and on `attendantQA.i18n`
  * (translated strings) added via wp_localize_script().
  */
 ( function () {
 	'use strict';
 
-	var cfg      = window.aicmAdmin || {};
+	var cfg      = window.attendantAdmin || {};
 	var restBase = cfg.restUrl || '';
 	var nonce    = cfg.nonce   || '';
-	var i18n     = ( window.aicmQA && aicmQA.i18n ) || {};
+	var i18n     = ( window.attendantQA && attendantQA.i18n ) || {};
 
 	// ── Element references ───────────────────────────────────────────────────
-	var form      = document.getElementById( 'aicm-qa-form' );
-	var formTitle = document.getElementById( 'aicm-qa-form-title' );
-	var idFld     = document.getElementById( 'aicm-qa-id' );
-	var qFld      = document.getElementById( 'aicm-qa-question' );
-	var aFld      = document.getElementById( 'aicm-qa-answer' );
-	var pFld      = document.getElementById( 'aicm-qa-priority' );
-	var activeFld = document.getElementById( 'aicm-qa-active' );
-	var saveBtn   = document.getElementById( 'aicm-qa-save' );
-	var cancelBtn = document.getElementById( 'aicm-qa-cancel' );
-	var statusEl  = document.getElementById( 'aicm-qa-status' );
-	var addNewBtn = document.getElementById( 'aicm-qa-add-new' );
-	var tbody     = document.getElementById( 'aicm-qa-tbody' );
-	var emptyEl   = document.getElementById( 'aicm-qa-empty' );
+	var form      = document.getElementById( 'attendant-qa-form' );
+	var formTitle = document.getElementById( 'attendant-qa-form-title' );
+	var idFld     = document.getElementById( 'attendant-qa-id' );
+	var qFld      = document.getElementById( 'attendant-qa-question' );
+	var aFld      = document.getElementById( 'attendant-qa-answer' );
+	var pFld      = document.getElementById( 'attendant-qa-priority' );
+	var activeFld = document.getElementById( 'attendant-qa-active' );
+	var saveBtn   = document.getElementById( 'attendant-qa-save' );
+	var cancelBtn = document.getElementById( 'attendant-qa-cancel' );
+	var statusEl  = document.getElementById( 'attendant-qa-status' );
+	var addNewBtn = document.getElementById( 'attendant-qa-add-new' );
+	var tbody     = document.getElementById( 'attendant-qa-tbody' );
+	var emptyEl   = document.getElementById( 'attendant-qa-empty' );
 
-	if ( ! form || ! window.aicmAdmin ) {
+	if ( ! form || ! window.attendantAdmin ) {
 		return;
 	}
 
@@ -114,7 +114,7 @@
 				preview = preview.slice( 0, 100 ) + '…';
 			}
 
-			var badgeClass = row.is_active == '1' ? 'aicm-badge-active' : 'aicm-badge-inactive';
+			var badgeClass = row.is_active == '1' ? 'attendant-badge-active' : 'attendant-badge-inactive';
 			var badgeLabel = row.is_active == '1' ? i18n.active : i18n.inactive;
 
 			tr.innerHTML = ''

@@ -2,7 +2,7 @@
  * Attendant — Content Indexing page handler.
  *
  * Enqueued by AICM_Admin::enqueue_assets() on the Indexing page.
- * Depends on the global `aicmAdmin` (REST URL + nonce) and on `aicmIndexing`
+ * Depends on the global `attendantAdmin` (REST URL + nonce) and on `attendantIndexing`
  * ({ isRunning, mode, i18n }) added via wp_localize_script().
  *
  * ── Processing modes (chosen in Settings → Indexing, locked per run) ──────
@@ -22,27 +22,27 @@
 ( function () {
 	'use strict';
 
-	const cfg       = window.aicmIndexing || {};
+	const cfg       = window.attendantIndexing || {};
 	const i18n      = cfg.i18n || {};
-	const restBase  = aicmAdmin.restUrl;
-	const nonce     = aicmAdmin.nonce;
+	const restBase  = attendantAdmin.restUrl;
+	const nonce     = attendantAdmin.nonce;
 
 	let mode        = ( 'background' === cfg.mode ) ? 'background' : 'frontend';
 
-	const startBtn  = document.getElementById( 'aicm-start-index' );
-	const stopBtn   = document.getElementById( 'aicm-stop-index' );
-	const spinner   = document.getElementById( 'aicm-index-spinner' );
-	const msgBox    = document.getElementById( 'aicm-index-message' );
-	const statusEl  = document.getElementById( 'aicm-running-status' );
-	const chunksEl  = document.getElementById( 'aicm-total-chunks' );
-	const postsEl   = document.getElementById( 'aicm-indexed-posts' );
-	const pendingEl = document.getElementById( 'aicm-pending-count' );
-	const actPanel  = document.getElementById( 'aicm-activity-panel' );
-	const actList   = document.getElementById( 'aicm-activity-list' );
-	const actLive   = document.getElementById( 'aicm-activity-live' );
-	const scopeEls  = document.querySelectorAll( 'input[name="aicm_scan_scope"]' );
+	const startBtn  = document.getElementById( 'attendant-start-index' );
+	const stopBtn   = document.getElementById( 'attendant-stop-index' );
+	const spinner   = document.getElementById( 'attendant-index-spinner' );
+	const msgBox    = document.getElementById( 'attendant-index-message' );
+	const statusEl  = document.getElementById( 'attendant-running-status' );
+	const chunksEl  = document.getElementById( 'attendant-total-chunks' );
+	const postsEl   = document.getElementById( 'attendant-indexed-posts' );
+	const pendingEl = document.getElementById( 'attendant-pending-count' );
+	const actPanel  = document.getElementById( 'attendant-activity-panel' );
+	const actList   = document.getElementById( 'attendant-activity-list' );
+	const actLive   = document.getElementById( 'attendant-activity-live' );
+	const scopeEls  = document.querySelectorAll( 'input[name="attendant_scan_scope"]' );
 
-	if ( ! startBtn || ! window.aicmAdmin ) {
+	if ( ! startBtn || ! window.attendantAdmin ) {
 		return;
 	}
 
@@ -101,9 +101,9 @@
 		setRunning( !! status.is_running );
 
 		if ( status.is_running ) {
-			statusEl.innerHTML = '<span class="aicm-badge" style="background:#d63638;color:#fff;padding:3px 10px;border-radius:3px;font-size:12px;">' + escHtml( i18n.inProgress ) + '</span>';
+			statusEl.innerHTML = '<span class="attendant-badge" style="background:#d63638;color:#fff;padding:3px 10px;border-radius:3px;font-size:12px;">' + escHtml( i18n.inProgress ) + '</span>';
 		} else if ( ! status.is_running && status.last_indexed ) {
-			statusEl.innerHTML = '<span class="aicm-badge" style="background:#00a32a;color:#fff;padding:3px 10px;border-radius:3px;font-size:12px;">' + escHtml( i18n.complete ) + '</span>';
+			statusEl.innerHTML = '<span class="attendant-badge" style="background:#00a32a;color:#fff;padding:3px 10px;border-radius:3px;font-size:12px;">' + escHtml( i18n.complete ) + '</span>';
 		}
 
 		renderActivity( status.activity );
@@ -185,12 +185,12 @@
 				: ( ok ? i18n.actIndexed : i18n.actFailed );
 
 			const li      = document.createElement( 'li' );
-			li.className  = ok ? 'aicm-act-ok' : 'aicm-act-fail';
+			li.className  = ok ? 'attendant-act-ok' : 'attendant-act-fail';
 			li.dataset.key = key;
 			li.innerHTML  = ''
-				+ '<span class="aicm-act-type">' + escHtml( e.type || '—' ) + '</span>'
-				+ '<span class="aicm-act-title">' + escHtml( e.title || ( '#' + e.post_id ) ) + '</span>'
-				+ '<span class="aicm-act-status">' + escHtml( label ) + '</span>';
+				+ '<span class="attendant-act-type">' + escHtml( e.type || '—' ) + '</span>'
+				+ '<span class="attendant-act-title">' + escHtml( e.title || ( '#' + e.post_id ) ) + '</span>'
+				+ '<span class="attendant-act-status">' + escHtml( label ) + '</span>';
 
 			actList.insertBefore( li, actList.firstChild );
 		}
@@ -301,7 +301,7 @@
 		setRunning( true );
 		clearMessage();
 
-		const scopeEl = document.querySelector( 'input[name="aicm_scan_scope"]:checked' );
+		const scopeEl = document.querySelector( 'input[name="attendant_scan_scope"]:checked' );
 		const scope   = ( scopeEl && 'all' === scopeEl.value ) ? 'all' : 'new';
 
 		api( 'POST', '/index/start', { scope: scope } )

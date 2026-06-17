@@ -2,17 +2,17 @@
  * Attendant — Schema page handler (Rescan button).
  *
  * Enqueued by AICM_Admin::enqueue_assets() on the Schema page.
- * Depends on the global `aicmAdmin` (REST URL + nonce) and on `aicmSchema.i18n`
+ * Depends on the global `attendantAdmin` (REST URL + nonce) and on `attendantSchema.i18n`
  * (translated strings) added via wp_localize_script().
  */
 ( function () {
 	'use strict';
 
-	const i18n   = ( window.aicmSchema && aicmSchema.i18n ) || {};
-	const btn    = document.getElementById( 'aicm-rescan-btn' );
-	const status = document.getElementById( 'aicm-rescan-status' );
+	const i18n   = ( window.attendantSchema && attendantSchema.i18n ) || {};
+	const btn    = document.getElementById( 'attendant-rescan-btn' );
+	const status = document.getElementById( 'attendant-rescan-status' );
 
-	if ( ! btn || ! window.aicmAdmin ) {
+	if ( ! btn || ! window.attendantAdmin ) {
 		return;
 	}
 
@@ -20,11 +20,11 @@
 		btn.disabled       = true;
 		status.textContent = i18n.scanning;
 
-		fetch( aicmAdmin.restUrl + '/schema/rescan', {
+		fetch( attendantAdmin.restUrl + '/schema/rescan', {
 			method:  'POST',
 			headers: {
 				'Content-Type': 'application/json',
-				'X-WP-Nonce':   aicmAdmin.nonce,
+				'X-WP-Nonce':   attendantAdmin.nonce,
 			},
 		} )
 		.then( function ( res ) { return res.json(); } )
