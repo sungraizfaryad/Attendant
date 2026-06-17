@@ -1,6 +1,6 @@
 {
-  "name": "sungraiz/ai-chatmate",
-  "description": "AI ChatMate dev tooling",
+  "name": "sungraiz/attendant",
+  "description": "Attendant dev tooling",
   "type": "wordpress-plugin",
   "license": "GPL-2.0-or-later",
   "require": {

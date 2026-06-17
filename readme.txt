@@ -58,13 +58,13 @@ A visitor says: "What is your return policy?" → Attendant searches your indexe
 
 == Installation ==
 
-1. Upload the `ai-chatmate` folder to `/wp-content/plugins/`
+1. Upload the `attendant` folder to `/wp-content/plugins/`
 2. Activate the plugin in **Plugins → Installed Plugins**
 3. Go to **Attendant → Settings**
 4. Enter your OpenAI API key and click **Save Settings**
 5. Click **Test Connection** to confirm your key is working
 6. Go to **Attendant → Content Indexing** and click **Start Indexing**
-7. Add the chat widget with the shortcode `[ai_chatmate]` or enable the floating widget (appears automatically in the footer on every page)
+7. Add the chat widget with the shortcode `[attendant]` or enable the floating widget (appears automatically in the footer on every page)
 
 == Frequently Asked Questions ==
 
@@ -155,7 +155,7 @@ You are responsible for disclosing these features in your own privacy policy if 
 * Schema discovery — auto-detects post types, taxonomies, and custom fields (ACF, MetaBox, WooCommerce).
 * Content indexing — chunker, embedder, background queue (WP-Cron), auto-sync on post save/delete.
 * Chat engine — RAG retrieval (cosine similarity), OpenAI function-calling (search_posts), conversation handler with session history and token budgeting.
-* Frontend chat widget — floating launcher, accessible dialog, brand colour + position overrides, [ai_chatmate] shortcode.
+* Frontend chat widget — floating launcher, accessible dialog, brand colour + position overrides, [attendant] shortcode.
 * Analytics page — monthly API cost history, index health stats, conversation stats (when logging enabled).
 * Q&A Manager — admin-configured question/answer pairs matched semantically before RAG (threshold 0.92); REST CRUD API.
 
