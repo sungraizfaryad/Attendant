@@ -410,11 +410,11 @@
 			// X-WP-Nonce keeps the REST request authenticated as the SAME user
 			// the page was rendered for (uid 0 for visitors, real uid for
 			// logged-in users). Without it WordPress downgrades the request to
-			// logged-out, and the user-bound X-AICM-Nonce can never verify for
+			// logged-out, and the user-bound X-Attendant-Nonce can never verify for
 			// logged-in visitors.
 			var headers = {
 				'Content-Type': 'application/json',
-				'X-AICM-Nonce': nonce,
+				'X-Attendant-Nonce': nonce,
 			};
 			if ( restNonce ) {
 				headers['X-WP-Nonce'] = restNonce;
