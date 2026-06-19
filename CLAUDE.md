@@ -130,6 +130,7 @@ HID the operator bug.
 SRC="/Users/sungraizfaryad/Local Sites/media-usage-inspector/app/public/wp-content/plugins/attendant"
 BUILD=/tmp/attendant-build
 ZIP="$HOME/Desktop/attendant-2.0.0.zip"
+rm -f "$ZIP"                       # zip APPENDS to an existing archive — stale top dirs cause WP.org WRONGFORMAT
 rm -rf "$BUILD" && mkdir -p "$BUILD/attendant"
 cp -R "$SRC"/. "$BUILD/attendant"/
 ( cd "$BUILD/attendant" && rm -rf .git .github .gitignore .distignore \
