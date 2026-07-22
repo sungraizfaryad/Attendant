@@ -793,15 +793,20 @@ class ATTENDANT_Conversation_Handler {
 		// A stable but unique ID for this tool call turn.
 		$tool_call_id = 'call_' . wp_generate_uuid4();
 
+		// Gemini's id for the call (empty on OpenAI) — must round-trip into
+		// the replayed functionCall/functionResponse parts.
+		$gemini_id = (string) ( $function_call['gemini_id'] ?? '' );
+
 		// Append the assistant's tool-call message (content must be null or '').
 		$messages[] = array(
 			'role'       => 'assistant',
 			'content'    => null,
 			'tool_calls' => array(
 				array(
-					'id'       => $tool_call_id,
-					'type'     => 'function',
-					'function' => array(
+					'id'        => $tool_call_id,
+					'type'      => 'function',
+					'gemini_id' => $gemini_id,
+					'function'  => array(
 						'name'      => (string) ( $function_call['name'] ?? $fn_name ),
 						'arguments' => (string) ( $function_call['arguments'] ?? '{}' ),
 					),
@@ -809,10 +814,14 @@ class ATTENDANT_Conversation_Handler {
 			),
 		);
 
-		// Append the tool result message.
+		// Append the tool result message. Gemini requires 'name' to match the
+		// preceding functionCall (rejects the request otherwise); OpenAI
+		// ignores it.
 		$messages[] = array(
 			'role'         => 'tool',
 			'tool_call_id' => $tool_call_id,
+			'name'         => $fn_name,
+			'gemini_id'    => $gemini_id,
 			'content'      => (string) wp_json_encode( $fn_result ),
 		);
 

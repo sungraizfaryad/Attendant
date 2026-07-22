@@ -54,7 +54,7 @@ if ( ! current_user_can( 'manage_options' ) ) {
 			printf(
 				wp_kses(
 					/* translators: %s: link to the Settings page */
-					__( 'No API key is configured. Q&A pairs cannot be embedded for matching until an API key is added on the <a href="%s">Settings page</a>.', 'attendant' ),
+					__( 'No embedding-capable API key is configured. Q&A pairs still match by keyword similarity, but meaning-based matching stays off until a key is added on the <a href="%s">Settings page</a>.', 'attendant' ),
 					array( 'a' => array( 'href' => array() ) )
 				),
 				esc_url( admin_url( 'admin.php?page=attendant' ) )

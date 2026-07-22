@@ -90,7 +90,7 @@ interface ATTENDANT_LLM_Provider {
 	/**
 	 * Return the provider's machine-readable identifier.
 	 *
-	 * @return string 'openai' | 'anthropic' | 'google'
+	 * @return string 'google' | 'openai'
 	 */
 	public function get_provider_name(): string;
 

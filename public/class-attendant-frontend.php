@@ -135,8 +135,8 @@ class ATTENDANT_Frontend {
 			|| (int) ( $index['total_chunks'] ?? 0 ) > 0;
 
 		// An API key for the active provider is always required.
-		$active = (string) Attendant_Plugin::get_setting( 'active_provider', 'openai' );
-		if ( '' === (string) get_option( "attendant_api_key_{$active}", '' ) ) {
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/providers/class-attendant-provider-factory.php';
+		if ( ! ATTENDANT_Provider_Factory::has_key( ATTENDANT_Provider_Factory::active_provider() ) ) {
 			$ready  = false;
 			$reason = 'no_key';
 		} elseif ( $index_started && empty( $index['initial_complete'] ) ) {

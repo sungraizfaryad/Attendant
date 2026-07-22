@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: Attendant - AI Site Search & Content Finder
+ * Plugin Name: Attendant - Free AI Site Search & Chatbot (Google Gemini)
  * Plugin URI:  https://wordpress.org/plugins/attendant/
- * Description: Attendant is an AI search chatbot that helps your visitors find content on your website. It turns plain-language questions into a safe search of your own posts, pages, products, and listings, then answers right in a chat widget. Uses your OpenAI API key.
+ * Description: Free AI search chatbot for your site, powered by Google Gemini's free tier (no credit card). Visitors ask plain-language questions; Attendant safely searches your own posts, pages, products, and listings and answers in a chat widget. OpenAI supported too.
  * Version:     2.1.0
  * Requires at least: 6.0
  * Requires PHP: 8.0
@@ -355,8 +355,16 @@ add_action( 'plugins_loaded', 'attendant' );
  * Run schema/option migrations when plugin files were updated without the
  * activation hook firing (normal WP update flow). Cheap check per request;
  * real work happens once, until attendant_db_version catches up.
+ *
+ * Admin/cron requests only — migrations include an ALTER TABLE that must not
+ * land on a random visitor pageview, and every update flow involves wp-admin.
+ * Priority 20: the bootstrap (priority 10) registers the custom cron
+ * schedule that schedule_cron_events() relies on.
  */
 function attendant_maybe_run_upgrade_migrations(): void {
+	if ( ! is_admin() && ! wp_doing_cron() ) {
+		return;
+	}
 	$stored = (string) get_option( 'attendant_db_version', '0.0.0' );
 	if ( version_compare( $stored, ATTENDANT_VERSION, '>=' ) ) {
 		return;
@@ -366,4 +374,4 @@ function attendant_maybe_run_upgrade_migrations(): void {
 	}
 	ATTENDANT_Activator::run_migrations();
 }
-add_action( 'plugins_loaded', 'attendant_maybe_run_upgrade_migrations', 5 );
+add_action( 'plugins_loaded', 'attendant_maybe_run_upgrade_migrations', 20 );

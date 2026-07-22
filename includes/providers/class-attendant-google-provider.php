@@ -14,8 +14,9 @@
  *    back inside functionResponse
  *
  * We always request the blocking endpoint — the plugin does not stream.
- * No embeddings here either: retrieval stays OpenAI-or-FULLTEXT (stored
- * vectors are 1536-dim OpenAI embeddings; mixing dimensions breaks cosine).
+ * Embeddings use gemini-embedding-001 at 1536 dims (free of charge on the
+ * Gemini API free tier). Vectors from different providers are never mixed —
+ * the factory's embedding-provider stamp guarantees one space per index.
  *
  * @package Attendant
  */

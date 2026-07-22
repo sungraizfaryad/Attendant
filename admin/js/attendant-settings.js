@@ -108,6 +108,10 @@
 			if ( json.success ) {
 				saveStatus.textContent = attendantAdmin.i18n.saved;
 				showNotice( attendantAdmin.i18n.saved, 'success' );
+				// The key-stored placeholders, test buttons and the
+				// re-index notice are server-rendered — refresh so they
+				// reflect what was just saved.
+				window.location.reload();
 			} else {
 				saveStatus.textContent = attendantAdmin.i18n.error;
 				showNotice( json.message || attendantAdmin.i18n.error, 'error' );

@@ -117,6 +117,13 @@ class ATTENDANT_Index_Manager {
 				ATTENDANT_Provider_Factory::stamp_embedding_provider( $active );
 				// Q&A pair vectors live in the same space — rebuild them too.
 				ATTENDANT_QA_Manager::reembed_all_pairs();
+
+				// Blank the content hashes: the embedder skips unchanged
+				// chunks by hash, which would leave the OLD provider's
+				// vectors in place under the new stamp. Forcing a hash
+				// mismatch makes this run genuinely re-embed everything.
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared
+				$wpdb->query( "UPDATE {$wpdb->prefix}attendant_chunks SET content_hash = ''" );
 			}
 		}
 

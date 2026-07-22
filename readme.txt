@@ -150,7 +150,7 @@ You are responsible for disclosing these features in your own privacy policy if 
 = 2.1.0 =
 * New: Google Gemini support — run the entire plugin on Google's FREE tier. One free API key (no credit card) powers both the chat and the content training.
 * New: Setup wizard recommends the free Gemini key with a direct link; OpenAI remains fully supported for existing users — nothing changes on update.
-* New: Keyword-search fallback — if your AI key is removed or the free daily quota runs out, the assistant keeps answering from your content instead of going silent.
+* New: Keyword-search fallback — if the key used for content matching is removed after a provider switch, search falls back to fast keyword matching instead of going silent.
 * Improved: switching providers is safe — search keeps using your existing index until you choose to re-index (free with Gemini).
 
 = 2.0.0 =

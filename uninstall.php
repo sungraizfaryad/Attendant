@@ -64,6 +64,7 @@ function attendant_uninstall_single_site(): void {
 		'attendant_api_key_openai',
 		'attendant_api_key_anthropic',
 		'attendant_api_key_google',
+		'attendant_embedding_provider',
 		'attendant_monthly_usage',
 		'attendant_field_config',
 		'attendant_onboarded',

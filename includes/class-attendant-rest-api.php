@@ -457,11 +457,10 @@ class ATTENDANT_REST_API {
 
 		return new WP_REST_Response(
 			array(
-				'settings'          => $settings,
+				'settings'       => $settings,
 				// Indicate whether a key is stored without revealing it.
-				'has_key_openai'    => '' !== (string) get_option( 'attendant_api_key_openai', '' ),
-				'has_key_anthropic' => '' !== (string) get_option( 'attendant_api_key_anthropic', '' ),
-				'has_key_google'    => '' !== (string) get_option( 'attendant_api_key_google', '' ),
+				'has_key_google' => '' !== (string) get_option( 'attendant_api_key_google', '' ),
+				'has_key_openai' => '' !== (string) get_option( 'attendant_api_key_openai', '' ),
 			),
 			200
 		);
@@ -492,9 +491,8 @@ class ATTENDANT_REST_API {
 		// options with encryption, never mixed with general settings.
 		// -----------------------------------------------------------
 		$key_map = array(
-			'api_key_openai'    => 'attendant_api_key_openai',
-			'api_key_anthropic' => 'attendant_api_key_anthropic',
-			'api_key_google'    => 'attendant_api_key_google',
+			'api_key_google' => 'attendant_api_key_google',
+			'api_key_openai' => 'attendant_api_key_openai',
 		);
 
 		foreach ( $key_map as $param_name => $option_name ) {

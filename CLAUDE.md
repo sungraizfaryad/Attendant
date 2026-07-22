@@ -122,7 +122,7 @@ stubbing `sanitize_text_field` for a new test, use
 `static fn( $v ) => trim( strip_tags( (string) $v ) )` — the pass-through stub
 HID the operator bug.
 
-48 tests / 126 assertions. Plugin Check on the zipped build must report **0 errors**.
+81 tests / 191 assertions. Plugin Check on the zipped build must report **0 errors**.
 
 ## Build & ship
 

@@ -231,6 +231,9 @@ final class GoogleProviderTest extends TestCase {
 	}
 
 	public function test_tool_result_becomes_function_response(): void {
+		// Message shape mirrors EXACTLY what the conversation handler's
+		// build_messages_with_tool_result() produces — including 'name' and
+		// 'gemini_id' on both entries. Gemini rejects the round otherwise.
 		$this->respond_with( $this->text_reply( 'Found.' ) );
 		$provider = new ATTENDANT_Google_Provider();
 		$provider->chat_completion(
@@ -241,9 +244,10 @@ final class GoogleProviderTest extends TestCase {
 					'content'    => null,
 					'tool_calls' => array(
 						array(
-							'id'       => 'call_1',
-							'type'     => 'function',
-							'function' => array(
+							'id'        => 'call_1',
+							'type'      => 'function',
+							'gemini_id' => 'fc_9',
+							'function'  => array(
 								'name'      => 'search_posts',
 								'arguments' => '{"q":"villas"}',
 							),
@@ -254,6 +258,7 @@ final class GoogleProviderTest extends TestCase {
 					'role'         => 'tool',
 					'tool_call_id' => 'call_1',
 					'name'         => 'search_posts',
+					'gemini_id'    => 'fc_9',
 					'content'      => '{"count":3}',
 				),
 			)
@@ -262,8 +267,50 @@ final class GoogleProviderTest extends TestCase {
 		$contents = $this->sent_body['contents'];
 		$this->assertSame( 'model', $contents[1]['role'] );
 		$this->assertSame( 'search_posts', $contents[1]['parts'][0]['functionCall']['name'] );
+		$this->assertSame( 'fc_9', $contents[1]['parts'][0]['functionCall']['id'] );
 		$this->assertSame( 'user', $contents[2]['role'] );
 		$this->assertSame( 'search_posts', $contents[2]['parts'][0]['functionResponse']['name'] );
+		$this->assertSame( 'fc_9', $contents[2]['parts'][0]['functionResponse']['id'] );
 		$this->assertSame( array( 'count' => 3 ), $contents[2]['parts'][0]['functionResponse']['response']['result'] );
+	}
+
+	public function test_handler_round2_shape_carries_function_name(): void {
+		// Regression guard for the empty functionResponse.name bug: the
+		// handler always sets 'name' on the tool message, and the provider
+		// must forward it — an empty name is a Gemini 400.
+		$this->respond_with( $this->text_reply( 'ok' ) );
+		$provider = new ATTENDANT_Google_Provider();
+		$provider->chat_completion(
+			array(
+				array( 'role' => 'user', 'content' => 'q' ),
+				array(
+					'role'       => 'assistant',
+					'content'    => null,
+					'tool_calls' => array(
+						array(
+							'id'        => 'call_2',
+							'type'      => 'function',
+							'gemini_id' => '',
+							'function'  => array(
+								'name'      => 'capture_lead',
+								'arguments' => '{}',
+							),
+						),
+					),
+				),
+				array(
+					'role'         => 'tool',
+					'tool_call_id' => 'call_2',
+					'name'         => 'capture_lead',
+					'gemini_id'    => '',
+					'content'      => '{"ok":true}',
+				),
+			)
+		);
+
+		$fr = $this->sent_body['contents'][2]['parts'][0]['functionResponse'];
+		$this->assertSame( 'capture_lead', $fr['name'] );
+		// Empty gemini_id must NOT emit an id key at all.
+		$this->assertArrayNotHasKey( 'id', $fr );
 	}
 }
