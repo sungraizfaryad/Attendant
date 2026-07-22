@@ -74,9 +74,42 @@ final class ProviderFactoryTest extends TestCase {
 		$this->assertNull( ATTENDANT_Provider_Factory::create() );
 	}
 
-	public function test_embedding_provider_defaults_to_openai(): void {
+	/** Install a wpdb double reporting the given chunk count. */
+	private function stub_wpdb( int $chunk_count ): void {
+		$GLOBALS['wpdb'] = new class( $chunk_count ) {
+			public string $prefix = 'wp_';
+			private int $count;
+			public function __construct( int $count ) {
+				$this->count = $count;
+			}
+			public function get_var( $sql ) {
+				return $this->count;
+			}
+		};
+	}
+
+	public function test_unstamped_legacy_install_resolves_to_openai(): void {
+		// Chunks exist but no stamp — vectors predate the option: OpenAI.
 		$this->stub_options( array() );
+		$this->stub_wpdb( 500 );
+		Functions\when( 'update_option' )->justReturn( true );
 		$this->assertSame( 'openai', ATTENDANT_Provider_Factory::embedding_provider() );
+	}
+
+	public function test_unstamped_fresh_install_follows_active_provider(): void {
+		// Empty index — nothing to stay consistent with: follow active.
+		Attendant_Plugin::$test_settings = array( 'active_provider' => 'google' );
+		$this->stub_options( array() );
+		$this->stub_wpdb( 0 );
+		$persisted = array();
+		Functions\when( 'update_option' )->alias(
+			function ( $k, $v ) use ( &$persisted ) {
+				$persisted[ $k ] = $v;
+				return true;
+			}
+		);
+		$this->assertSame( 'google', ATTENDANT_Provider_Factory::embedding_provider() );
+		$this->assertSame( 'google', $persisted['attendant_embedding_provider'] );
 	}
 
 	public function test_embeddings_follow_stamp_not_active_provider(): void {

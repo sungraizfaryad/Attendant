@@ -114,7 +114,7 @@ class ATTENDANT_REST_API {
 						'required'          => true,
 						'type'              => 'string',
 						'sanitize_callback' => 'sanitize_key',
-						'validate_callback' => static fn( string $v ): bool => in_array( $v, array( 'openai', 'anthropic', 'google' ), true ),
+						'validate_callback' => static fn( string $v ): bool => in_array( $v, array( 'google', 'openai' ), true ),
 					),
 					'api_key'  => array(
 						'required'          => false,
@@ -539,8 +539,9 @@ class ATTENDANT_REST_API {
 			'lead_email'        => '',
 		);
 
-		$allowed_providers   = array( 'openai', 'anthropic', 'google' );
-		$allowed_models      = array( 'gpt-4o-mini', 'gpt-4o', 'claude-sonnet-4-20250514', 'gemini-2.0-flash' );
+		$allowed_providers     = array( 'google', 'openai' );
+		$allowed_models        = array( 'gpt-4o-mini', 'gpt-4o' );
+		$allowed_google_models = array( 'gemini-2.5-flash', 'gemini-2.5-flash-lite' );
 		$allowed_embed       = array( 'text-embedding-3-small', 'text-embedding-3-large' );
 		$allowed_personality = array( 'professional', 'friendly', 'casual', 'custom' );
 		$allowed_positions   = array( 'bottom-right', 'bottom-left' );
@@ -552,6 +553,9 @@ class ATTENDANT_REST_API {
 		// String fields with enum validation.
 		if ( isset( $params['active_provider'] ) && in_array( $params['active_provider'], $allowed_providers, true ) ) {
 			$updated['active_provider'] = $params['active_provider'];
+		}
+		if ( isset( $params['chat_model_google'] ) && in_array( $params['chat_model_google'], $allowed_google_models, true ) ) {
+			$updated['chat_model_google'] = $params['chat_model_google'];
 		}
 		if ( isset( $params['chat_model'] ) && in_array( $params['chat_model'], $allowed_models, true ) ) {
 			$updated['chat_model'] = $params['chat_model'];

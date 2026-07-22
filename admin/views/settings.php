@@ -27,12 +27,16 @@ if ( ! current_user_can( 'manage_options' ) ) {
 $settings = Attendant_Plugin::get_setting();
 
 // Determine whether each API key is stored (without decrypting it).
-$has_openai    = '' !== (string) get_option( 'attendant_api_key_openai', '' );
-$has_anthropic = '' !== (string) get_option( 'attendant_api_key_anthropic', '' );
-$has_google    = '' !== (string) get_option( 'attendant_api_key_google', '' );
+require_once ATTENDANT_PLUGIN_DIR . 'includes/providers/class-attendant-provider-factory.php';
+$has_openai = ATTENDANT_Provider_Factory::has_key( 'openai' );
+$has_google = ATTENDANT_Provider_Factory::has_key( 'google' );
 
-$active_provider = esc_attr( $settings['active_provider'] ?? 'openai' );
-$chat_model      = esc_attr( $settings['chat_model'] ?? 'gpt-4o-mini' );
+// Which provider's vectors the index holds — drives the re-index notice.
+$attendant_embed_stamp = ATTENDANT_Provider_Factory::embedding_provider();
+
+$active_provider   = esc_attr( $settings['active_provider'] ?? 'openai' );
+$chat_model        = esc_attr( $settings['chat_model'] ?? 'gpt-4o-mini' );
+$chat_model_google = esc_attr( $settings['chat_model_google'] ?? 'gemini-2.5-flash' );
 $embed_model     = esc_attr( $settings['embedding_model'] ?? 'text-embedding-3-small' );
 $personality     = esc_attr( $settings['ai_personality'] ?? 'friendly' );
 $welcome_msg     = (string) ( $settings['welcome_message'] ?? '' );
@@ -129,14 +133,70 @@ $logging         = ! empty( $settings['logging_enabled'] );
 				</th>
 				<td>
 					<select id="attendant-active-provider" name="active_provider">
+						<option value="google" <?php selected( $active_provider, 'google' ); ?>>
+							<?php echo esc_html__( 'Google Gemini — FREE, no card needed (recommended)', 'attendant' ); ?>
+						</option>
 						<option value="openai" <?php selected( $active_provider, 'openai' ); ?>>
-							<?php echo esc_html__( 'OpenAI', 'attendant' ); ?>
+							<?php echo esc_html__( 'OpenAI — paid (~$5–10/month typical)', 'attendant' ); ?>
 						</option>
 					</select>
+					<p class="description">
+						<?php echo esc_html__( 'One Google Gemini key powers both the chat and the site training (embeddings), completely free of charge.', 'attendant' ); ?>
+					</p>
 				</td>
 			</tr>
 
-			<tr>
+			<tr class="attendant-provider-config" data-provider="google"
+				<?php echo 'google' === $active_provider ? '' : 'style="display:none;"'; ?>>
+				<th scope="row">
+					<label for="attendant-api-key-google">
+						<?php echo esc_html__( 'Google Gemini API Key', 'attendant' ); ?>
+					</label>
+				</th>
+				<td>
+					<input
+						type="password"
+						id="attendant-api-key-google"
+						name="api_key_google"
+						class="regular-text"
+						autocomplete="new-password"
+						placeholder="<?php echo $has_google ? esc_attr__( '••••••••  (key stored)', 'attendant' ) : esc_attr__( 'AIza…', 'attendant' ); ?>"
+						value=""
+					>
+					<?php if ( $has_google ) : ?>
+						<button type="button" class="button attendant-test-btn" data-provider="google">
+							<?php echo esc_html__( 'Test Connection', 'attendant' ); ?>
+						</button>
+						<span id="attendant-test-google-result" class="attendant-test-result"></span>
+					<?php endif; ?>
+					<p class="description">
+						<?php
+						printf(
+							/* translators: %s: link to Google AI Studio */
+							esc_html__( 'Free key from %s — sign in with any Google account, two clicks, no payment details ever asked.', 'attendant' ),
+							'<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com/apikey</a>'
+						);
+						?>
+					</p>
+
+					<p style="margin-top:12px;">
+						<label for="attendant-chat-model-google">
+							<strong><?php echo esc_html__( 'Chat Model', 'attendant' ); ?></strong>
+						</label><br>
+						<select id="attendant-chat-model-google" name="chat_model_google">
+							<option value="gemini-2.5-flash" <?php selected( $chat_model_google, 'gemini-2.5-flash' ); ?>>
+								<?php echo esc_html__( 'Gemini 2.5 Flash — Recommended (free tier)', 'attendant' ); ?>
+							</option>
+							<option value="gemini-2.5-flash-lite" <?php selected( $chat_model_google, 'gemini-2.5-flash-lite' ); ?>>
+								<?php echo esc_html__( 'Gemini 2.5 Flash-Lite — faster, higher free daily limit', 'attendant' ); ?>
+							</option>
+						</select>
+					</p>
+				</td>
+			</tr>
+
+			<tr class="attendant-provider-config" data-provider="openai"
+				<?php echo 'openai' === $active_provider ? '' : 'style="display:none;"'; ?>>
 				<th scope="row">
 					<label for="attendant-api-key-openai">
 						<?php echo esc_html__( 'OpenAI API Key', 'attendant' ); ?>
@@ -153,7 +213,7 @@ $logging         = ! empty( $settings['logging_enabled'] );
 						value=""
 					>
 					<?php if ( $has_openai ) : ?>
-						<button type="button" id="attendant-test-openai" class="button attendant-test-btn" data-provider="openai">
+						<button type="button" class="button attendant-test-btn" data-provider="openai">
 							<?php echo esc_html__( 'Test Connection', 'attendant' ); ?>
 						</button>
 						<span id="attendant-test-openai-result" class="attendant-test-result"></span>
@@ -162,54 +222,62 @@ $logging         = ! empty( $settings['logging_enabled'] );
 						<?php
 						printf(
 							/* translators: %s: link to OpenAI API keys page */
-							esc_html__( 'Get your API key from %s', 'attendant' ),
+							esc_html__( 'Get your API key from %s — OpenAI usage is billed to your OpenAI account.', 'attendant' ),
 							'<a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">platform.openai.com/api-keys</a>'
 						);
 						?>
 					</p>
-				</td>
-			</tr>
 
-			<tr>
-				<th scope="row">
-					<label for="attendant-chat-model">
-						<?php echo esc_html__( 'Chat Model', 'attendant' ); ?>
-					</label>
-				</th>
-				<td>
-					<select id="attendant-chat-model" name="chat_model">
-						<option value="gpt-4o-mini" <?php selected( $chat_model, 'gpt-4o-mini' ); ?>>
-							<?php echo esc_html__( 'gpt-4o-mini — Recommended ($0.15 / 1M input tokens)', 'attendant' ); ?>
-						</option>
-						<option value="gpt-4o" <?php selected( $chat_model, 'gpt-4o' ); ?>>
-							<?php echo esc_html__( 'gpt-4o — More capable ($2.50 / 1M input tokens)', 'attendant' ); ?>
-						</option>
-					</select>
-					<p class="description">
-						<?php echo esc_html__( 'gpt-4o-mini is the best cost/quality choice for most sites.', 'attendant' ); ?>
+					<p style="margin-top:12px;">
+						<label for="attendant-chat-model">
+							<strong><?php echo esc_html__( 'Chat Model', 'attendant' ); ?></strong>
+						</label><br>
+						<select id="attendant-chat-model" name="chat_model">
+							<option value="gpt-4o-mini" <?php selected( $chat_model, 'gpt-4o-mini' ); ?>>
+								<?php echo esc_html__( 'gpt-4o-mini — Recommended ($0.15 / 1M input tokens)', 'attendant' ); ?>
+							</option>
+							<option value="gpt-4o" <?php selected( $chat_model, 'gpt-4o' ); ?>>
+								<?php echo esc_html__( 'gpt-4o — More capable ($2.50 / 1M input tokens)', 'attendant' ); ?>
+							</option>
+						</select>
+					</p>
+
+					<p style="margin-top:12px;">
+						<label for="attendant-embed-model">
+							<strong><?php echo esc_html__( 'Embedding Model', 'attendant' ); ?></strong>
+						</label><br>
+						<select id="attendant-embed-model" name="embedding_model">
+							<option value="text-embedding-3-small" <?php selected( $embed_model, 'text-embedding-3-small' ); ?>>
+								<?php echo esc_html__( 'text-embedding-3-small — Recommended ($0.02 / 1M tokens)', 'attendant' ); ?>
+							</option>
+							<option value="text-embedding-3-large" <?php selected( $embed_model, 'text-embedding-3-large' ); ?>>
+								<?php echo esc_html__( 'text-embedding-3-large — Higher accuracy ($0.13 / 1M tokens)', 'attendant' ); ?>
+							</option>
+						</select>
 					</p>
 				</td>
 			</tr>
 
-			<tr>
-				<th scope="row">
-					<label for="attendant-embed-model">
-						<?php echo esc_html__( 'Embedding Model', 'attendant' ); ?>
-					</label>
-				</th>
-				<td>
-					<select id="attendant-embed-model" name="embedding_model">
-						<option value="text-embedding-3-small" <?php selected( $embed_model, 'text-embedding-3-small' ); ?>>
-							<?php echo esc_html__( 'text-embedding-3-small — Recommended ($0.02 / 1M tokens)', 'attendant' ); ?>
-						</option>
-						<option value="text-embedding-3-large" <?php selected( $embed_model, 'text-embedding-3-large' ); ?>>
-							<?php echo esc_html__( 'text-embedding-3-large — Higher accuracy ($0.13 / 1M tokens)', 'attendant' ); ?>
-						</option>
-					</select>
-				</td>
-			</tr>
-
 		</table>
+
+		<?php if ( $active_provider !== $attendant_embed_stamp && ATTENDANT_Provider_Factory::has_key( $active_provider ) ) : ?>
+			<div class="notice notice-info inline" style="margin:8px 0 0;">
+				<p>
+					<?php
+					printf(
+						/* translators: 1: provider holding the current index, 2: active provider */
+						esc_html__( 'Your content index was built with %1$s embeddings, so search keeps using that key. Run a full re-index to rebuild it with %2$s%3$s.', 'attendant' ),
+						esc_html( 'google' === $attendant_embed_stamp ? 'Google Gemini' : 'OpenAI' ),
+						esc_html( 'google' === $active_provider ? 'Google Gemini' : 'OpenAI' ),
+						esc_html( 'google' === $active_provider ? ' (free)' : '' )
+					);
+					?>
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=attendant-indexing' ) ); ?>">
+						<?php echo esc_html__( 'Go to Content Indexing', 'attendant' ); ?>
+					</a>
+				</p>
+			</div>
+		<?php endif; ?>
 
 		<hr>
 

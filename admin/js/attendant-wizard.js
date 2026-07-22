@@ -146,7 +146,10 @@
 			widget_color:   document.getElementById( 'attendant-wiz-color' ).value,
 			widget_enabled: document.getElementById( 'attendant-wiz-enable' ).checked
 		};
-		if ( key ) { settings.api_key_openai = key; }
+		if ( key ) {
+			settings[ 'api_key_' + wizProvider() ] = key;
+			settings.active_provider = wizProvider();
+		}
 		if ( ctx && ctx.value.trim() ) { settings.site_context = ctx.value.trim(); }
 
 		api( '/settings', 'POST', settings ).then( function () {
@@ -165,6 +168,29 @@
 		} );
 	}
 
+	// Selected wizard provider ('google' default, 'openai' optional).
+	function wizProvider() {
+		var checked = document.querySelector( 'input[name="attendant-wiz-provider"]:checked' );
+		return checked ? checked.value : 'google';
+	}
+
+	// Swap the key label/placeholder/link when the provider radio changes.
+	root.addEventListener( 'change', function ( e ) {
+		if ( ! e.target.matches( 'input[name="attendant-wiz-provider"]' ) ) {
+			return;
+		}
+		var google = wizProvider() === 'google';
+		var label  = document.getElementById( 'attendant-wiz-key-label' );
+		var input  = document.getElementById( 'attendant-wiz-key' );
+		var link   = document.getElementById( 'attendant-wiz-key-link' );
+		if ( label ) { label.textContent = google ? 'Google Gemini API Key' : 'OpenAI API Key'; }
+		if ( input ) { input.placeholder = google ? 'AIza…' : 'sk-...'; }
+		if ( link ) {
+			link.href        = google ? 'https://aistudio.google.com/apikey' : 'https://platform.openai.com/api-keys';
+			link.textContent = google ? 'aistudio.google.com/apikey' : 'platform.openai.com/api-keys';
+		}
+	} );
+
 	function test() {
 		var btn = document.getElementById( 'attendant-wiz-test' );
 		var out = document.getElementById( 'attendant-wiz-test-result' );
@@ -172,7 +198,7 @@
 		btn.disabled = true;
 		out.textContent = ( attendantAdmin.i18n && attendantAdmin.i18n.testing ) || 'Testing…';
 		out.className = 'attendant-test-result';
-		api( '/test-connection', 'POST', { provider: 'openai', api_key: key } ).then( function ( res ) {
+		api( '/test-connection', 'POST', { provider: wizProvider(), api_key: key } ).then( function ( res ) {
 			var j = res.json || {};
 			out.textContent = ( j.success ? '✓ ' : '✗ ' ) + ( j.message || '' );
 			out.className = 'attendant-test-result ' + ( j.success ? 'attendant-test-ok' : 'attendant-test-fail' );

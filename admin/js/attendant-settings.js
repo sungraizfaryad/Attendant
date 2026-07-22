@@ -123,6 +123,19 @@
 	} );
 
 	// -----------------------------------------------------------------
+	// Provider switcher: show only the active provider's key/model row.
+	// -----------------------------------------------------------------
+	const providerSelect = document.getElementById( 'attendant-active-provider' );
+
+	if ( providerSelect ) {
+		providerSelect.addEventListener( 'change', function () {
+			document.querySelectorAll( '.attendant-provider-config' ).forEach( function ( row ) {
+				row.style.display = row.dataset.provider === providerSelect.value ? '' : 'none';
+			} );
+		} );
+	}
+
+	// -----------------------------------------------------------------
 	// Test connection button.
 	// -----------------------------------------------------------------
 	document.querySelectorAll( '.attendant-test-btn' ).forEach( function ( btn ) {

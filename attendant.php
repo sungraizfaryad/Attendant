@@ -3,7 +3,7 @@
  * Plugin Name: Attendant - AI Site Search & Content Finder
  * Plugin URI:  https://wordpress.org/plugins/attendant/
  * Description: Attendant is an AI search chatbot that helps your visitors find content on your website. It turns plain-language questions into a safe search of your own posts, pages, products, and listings, then answers right in a chat widget. Uses your OpenAI API key.
- * Version:     2.0.0
+ * Version:     2.1.0
  * Requires at least: 6.0
  * Requires PHP: 8.0
  * Author:      Sungraiz Faryad
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Plugin version and path constants.
-define( 'ATTENDANT_VERSION', '2.0.0' );
+define( 'ATTENDANT_VERSION', '2.1.0' );
 define( 'ATTENDANT_PLUGIN_FILE', __FILE__ );
 define( 'ATTENDANT_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ATTENDANT_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

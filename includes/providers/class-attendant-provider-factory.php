@@ -96,14 +96,30 @@ final class ATTENDANT_Provider_Factory {
 	/**
 	 * Which provider's vectors the index currently holds.
 	 *
-	 * Defaults to 'openai' because every install that indexed before this
-	 * option existed did so with OpenAI embeddings.
+	 * No stamp yet means one of two things: a legacy install whose vectors
+	 * are OpenAI (indexed before this option existed), or a fresh site with
+	 * an empty index — there the stamp simply follows the active provider,
+	 * since there are no existing vectors to stay consistent with. The
+	 * resolution is persisted so the chunk count is only checked once.
 	 *
 	 * @return string
 	 */
 	public static function embedding_provider(): string {
-		$stamp = (string) get_option( 'attendant_embedding_provider', 'openai' );
-		return isset( self::PROVIDERS[ $stamp ] ) ? $stamp : 'openai';
+		$stamp = (string) get_option( 'attendant_embedding_provider', '' );
+
+		if ( isset( self::PROVIDERS[ $stamp ] ) ) {
+			return $stamp;
+		}
+
+		global $wpdb;
+		$table = $wpdb->prefix . 'attendant_chunks';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$has_chunks = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table}" ) > 0;
+
+		$resolved = $has_chunks ? 'openai' : self::active_provider();
+		update_option( 'attendant_embedding_provider', $resolved );
+
+		return $resolved;
 	}
 
 	/**

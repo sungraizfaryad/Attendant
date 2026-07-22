@@ -1,16 +1,18 @@
-=== Attendant - AI Site Search & Content Finder ===
+=== Attendant - Free AI Site Search & Chatbot (Google Gemini) ===
 Contributors:      sungraizfaryad
-Tags:              ai, site-search, chatbot, openai, search
+Tags:              ai, site-search, chatbot, gemini, free
 Requires at least: 6.0
 Tested up to:      7.0
-Stable tag:        2.0.0
+Stable tag:        2.1.0
 Requires PHP:      8.0
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
-AI search chatbot that helps visitors find content on your website. Turns questions into a safe search of your own posts, pages, and products.
+Free AI chatbot for your site — powered by Google Gemini's free tier. Visitors ask questions, Attendant searches your own posts, pages, and products.
 
 == Description ==
+
+**Completely free to run.** Attendant works with Google Gemini's free tier: one free API key (no credit card, ever) powers both the chat and the AI training on your own content. Prefer OpenAI? That works too.
 
 Attendant is an AI-powered site search chatbot that helps your visitors find content on your website. When someone asks a question in plain language, Attendant searches your own posts, pages, products, and listings, then answers right in the chat — so visitors reach the right page without digging through menus. It combines **conversational search** with **knowledge Q&A** in one chat widget.
 
@@ -54,7 +56,7 @@ A visitor says: "What is your return policy?" → Attendant searches your indexe
 
 * PHP 8.0 or higher
 * WordPress 6.0 or higher
-* OpenAI API key
+* A free Google Gemini API key (no credit card) — or an OpenAI API key if you prefer
 
 == Installation ==
 
@@ -68,13 +70,17 @@ A visitor says: "What is your return policy?" → Attendant searches your indexe
 
 == Frequently Asked Questions ==
 
+= Is it really free? =
+
+Yes, with Google Gemini. Sign in to aistudio.google.com with any Google account, create an API key in two clicks — no credit card is ever asked — and paste it into the setup wizard. Both the chat and the content training (embeddings) run on Google's free tier at $0. Because no payment method exists on the account, you cannot be charged accidentally: heavy usage just pauses until the daily free quota resets.
+
 = Do I need an OpenAI account? =
 
-Yes. You need an OpenAI API key from platform.openai.com. The plugin uses your key directly — we never see it.
+No. OpenAI is an optional alternative provider. If you use it, each conversation turn with gpt-4o-mini costs approximately $0.005 USD — 1,000 conversations per month ≈ $5–10, billed by OpenAI to your account.
 
-= How much will it cost to run? =
+= Are there limits on the free tier? =
 
-With gpt-4o-mini (our recommended model), each conversation turn costs approximately $0.005 USD. 1,000 conversations per month ≈ $5–10. Content indexing for a 500-page site costs approximately $0.025 (one-time).
+Google's free tier allows hundreds to ~1,500 chat requests per day depending on the model and region — plenty for a typical site. Embedding (training) is free of charge and only rate-limited per minute, so a large first index simply takes a little longer.
 
 = Is my data sent to OpenAI? =
 
@@ -102,11 +108,18 @@ Yes, optionally. File logging is off by default. When enabled, each exchange is 
 
 == External services ==
 
-This plugin connects to the OpenAI API. This is required for the AI chat features: OpenAI turns a visitor's natural-language question into a structured search of your own content and writes the answer.
+This plugin connects to the AI provider you choose in Settings — Google Gemini (recommended, free tier) or OpenAI. This is required for the AI chat features: the provider turns a visitor's natural-language question into a structured search of your own content and writes the answer.
 
-What is sent, and when: only when a visitor sends a chat message, the plugin sends that message text plus the titles and short excerpts of the matching content from your own site to OpenAI. If you enable the optional Semantic Q&A mode, the text of your selected content is also sent to OpenAI during indexing to generate embeddings. Your API key, your full database, and IP addresses are never sent. Nothing is sent until you add your own OpenAI API key and turn the chat widget on — both are off by default.
+What is sent, and when: only when a visitor sends a chat message, the plugin sends that message text plus the titles and short excerpts of the matching content from your own site to your chosen provider. If you enable the optional Semantic Q&A mode, the text of your selected content is also sent to that provider during indexing to generate embeddings. Your API key, your full database, and IP addresses are never sent. Nothing is sent until you add your own API key and turn the chat widget on — both are off by default. The plugin only ever talks to the one provider you configure.
 
-The service is provided by OpenAI, L.L.C. Please review their policies:
+Note on Google's free tier: Google's terms allow content submitted on the free tier to be used to improve their services. Attendant only sends your public website content and visitor chat messages — review Google's terms if that matters for your site.
+
+Google Gemini API — provided by Google LLC:
+
+* Terms: https://ai.google.dev/gemini-api/terms
+* Privacy Policy: https://policies.google.com/privacy
+
+OpenAI API — provided by OpenAI, L.L.C.:
 
 * Terms of Use: https://openai.com/policies/terms-of-use
 * Privacy Policy: https://openai.com/policies/privacy-policy
@@ -133,6 +146,12 @@ You are responsible for disclosing these features in your own privacy policy if 
 5. Q&A Manager — add custom question-answer pairs
 
 == Changelog ==
+
+= 2.1.0 =
+* New: Google Gemini support — run the entire plugin on Google's FREE tier. One free API key (no credit card) powers both the chat and the content training.
+* New: Setup wizard recommends the free Gemini key with a direct link; OpenAI remains fully supported for existing users — nothing changes on update.
+* New: Keyword-search fallback — if your AI key is removed or the free daily quota runs out, the assistant keeps answering from your content instead of going silent.
+* Improved: switching providers is safe — search keeps using your existing index until you choose to re-index (free with Gemini).
 
 = 2.0.0 =
 * Rebuilt as a structured-search-first site assistant.

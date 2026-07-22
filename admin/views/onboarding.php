@@ -81,21 +81,45 @@ $attendant_steps = array(
 
 	<!-- 4: Connect AI -->
 	<section class="attendant-panel" data-panel="4">
-		<h2><?php echo esc_html__( 'Connect the AI (optional)', 'attendant' ); ?></h2>
-		<p class="description"><?php echo esc_html__( 'Add your OpenAI API key to enable natural-language answers. You can skip this — search still works without a key.', 'attendant' ); ?></p>
+		<h2><?php echo esc_html__( 'Connect the AI', 'attendant' ); ?></h2>
+		<p class="description"><?php echo esc_html__( 'One API key powers the chat and trains the assistant on your site. Google Gemini is completely free — no card, no charges, ever.', 'attendant' ); ?></p>
 		<table class="form-table" role="presentation">
 			<tr>
-				<th scope="row"><label for="attendant-wiz-key"><?php echo esc_html__( 'OpenAI API Key', 'attendant' ); ?></label></th>
+				<th scope="row"><?php echo esc_html__( 'AI Provider', 'attendant' ); ?></th>
 				<td>
-					<input type="password" id="attendant-wiz-key" class="regular-text" autocomplete="new-password" placeholder="sk-...">
+					<label style="display:block;margin-bottom:6px;">
+						<input type="radio" name="attendant-wiz-provider" value="google" checked>
+						<strong><?php echo esc_html__( 'Google Gemini', 'attendant' ); ?></strong>
+						— <?php echo esc_html__( 'FREE. Sign in with any Google account, no payment details asked.', 'attendant' ); ?>
+					</label>
+					<label style="display:block;">
+						<input type="radio" name="attendant-wiz-provider" value="openai">
+						<strong><?php echo esc_html__( 'OpenAI', 'attendant' ); ?></strong>
+						— <?php echo esc_html__( 'Paid (roughly $5–10/month for a typical site).', 'attendant' ); ?>
+					</label>
+				</td>
+			</tr>
+			<tr>
+				<th scope="row"><label for="attendant-wiz-key" id="attendant-wiz-key-label"><?php echo esc_html__( 'Google Gemini API Key', 'attendant' ); ?></label></th>
+				<td>
+					<input type="password" id="attendant-wiz-key" class="regular-text" autocomplete="new-password" placeholder="AIza…">
 					<button type="button" class="button" id="attendant-wiz-test"><?php echo esc_html__( 'Test', 'attendant' ); ?></button>
 					<span id="attendant-wiz-test-result" class="attendant-test-result"></span>
+					<p class="description" id="attendant-wiz-key-hint">
+						<?php
+						printf(
+							/* translators: %s: link to Google AI Studio */
+							esc_html__( 'Get your free key at %s — two clicks, copy, paste here.', 'attendant' ),
+							'<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" id="attendant-wiz-key-link">aistudio.google.com/apikey</a>'
+						);
+						?>
+					</p>
 				</td>
 			</tr>
 			<tr>
 				<th scope="row"><?php echo esc_html__( 'Semantic Q&A', 'attendant' ); ?></th>
 				<td>
-					<label><input type="checkbox" id="attendant-wiz-semantic"> <?php echo esc_html__( 'Enable fuzzy meaning-based answers (costs more; best for blogs and docs)', 'attendant' ); ?></label>
+					<label><input type="checkbox" id="attendant-wiz-semantic"> <?php echo esc_html__( 'Enable meaning-based answers (free with Gemini; best for blogs and docs)', 'attendant' ); ?></label>
 				</td>
 			</tr>
 		</table>

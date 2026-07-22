@@ -44,7 +44,10 @@ if ( ! current_user_can( 'manage_options' ) ) {
 		?>
 	</p>
 
-	<?php if ( '' === (string) get_option( 'attendant_api_key_openai', '' ) ) : ?>
+	<?php
+	require_once ATTENDANT_PLUGIN_DIR . 'includes/providers/class-attendant-provider-factory.php';
+	if ( null === ATTENDANT_Provider_Factory::create_for_embeddings() ) :
+		?>
 	<div class="notice notice-warning inline" style="max-width:760px;">
 		<p>
 			<?php
