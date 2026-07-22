@@ -1,40 +1,38 @@
 # Attendant — Progress
 
-_Last updated: 2026-06-19 (v2.0.0 live on WP.org)._
+_Last updated: 2026-07-22 (v2.1.0 "Gemini free" built on branch gemini-only, NOT deployed)._
 _Rolling status only. Detail lives in `CLAUDE.md` and the cloud memory entries._
 
-## Done (v2.0.0 — shipped)
+## Done (v2.1.0 — branch gemini-only, local)
 
-- Slug `attendant` approved by WP.org reviewer team after rename round.
-- Full prefix rename: `aicm_` → `attendant_`, `AICM_` → `ATTENDANT_`, `AI_ChatMate` → `Attendant_Plugin`, text-domain `attendant`, REST namespace `attendant/v1`, nonce `attendant_chat_nonce`, header `X-Attendant-Nonce`, localStorage `attendant_chats_v1`.
-- Folder renamed `ai-chatmate/` → `attendant/` on both local installs; data-migrating `activate()` copies legacy `aicm_*` options + RENAME TABLE for all 4 DB tables + WP_Filesystem::move on log dir + clears old cron hooks.
-- FLP install verified end-to-end after rename: 9,284 chunks preserved, OpenAI key intact, live chat tested with real property data, source chips work, history persists cross-page + reload, 0 console errors.
-- WP.org SVN: trunk (r3578671), assets (r3578672, 9 files), tag `2.0.0/`. Public: https://wordpress.org/plugins/attendant.
-- GitHub: https://github.com/sungraizfaryad/Attendant `main` @ `cc22b1b`, tag `2.0.0`.
-- 48 tests / 126 assertions pass. Plugin Check 0 production errors.
+- Direction reset: reverted to v2.0.0 baseline (= GitHub main). The old local 2.1.0 (Smart Search) + 2.2.0 (6 providers/OpenRouter/Slack/debug) work is PARKED on `backup/v2.2.0-full` — not shipping, kept for parts.
+- Google Gemini added as second provider: free chat (gemini-2.5-flash/-lite) + free embeddings (gemini-embedding-001 @1536 dims) — one free key, no card. OpenAI untouched for existing installs (still the default there).
+- Embedding-provider stamp: chunk/query/Q&A vectors always share one space; full re-index re-stamps + blanks content hashes + re-embeds Q&A pairs. Legacy installs resolve to openai, fresh installs follow active provider.
+- FULLTEXT/fuzzy fallback (includes/fallback/) when the stamped embedder's key is missing; FULLTEXT index added via version-drift migration runner (admin/cron only, priority 20).
+- Settings: 2-provider selector (Gemini first, FREE labeled), per-provider key+model rows, re-index mismatch notice, reload-after-save. Wizard step 4: Gemini radio default + AI Studio link. readme/title lead with "Free (Google Gemini)".
+- Adversarial review (14 agents) caught + fixed: empty functionResponse.name (Gemini 400 on every tool round-trip), gemini_id not threaded, stale-vector re-index skip, drift-runner cron-schedule race + ALTER-on-frontend.
+- 81 tests / 191 assertions green. Plugin Check 0 production errors. Playwright: settings/wizard/chat verified, 0 console errors. Both installs (mui + FLP) run this build; FLP 9,284 chunks intact, db_version reset to 2.1.0.
+- Build: ~/Desktop/attendant-2.1.0-gemini.zip.
 
 ## Decisions (durable)
 
-- Activator migration runs first, before `create_tables()` — ensures legacy options/tables available when new tables are built.
-- WP_Filesystem::move() for log dir rename (Plugin Check `WordPress.WP.AlternativeFunctions.rename_rename` blocker).
-- `.svnignore` required — deploy.sh export drags in `tests/`, `docs/`, `CLAUDE.md`, `progress.md`, `phpcs.xml.dist`, etc. unless ignored. (`CLAUDE.md` contains FLP auto-login URL — must not ship.)
-- Build script must `rm -f "$ZIP"` before `zip -rqX` — otherwise stale top-level dir from previous build remains in archive (= WP.org WRONGFORMAT).
-- Banner + icon are textless: WP.org renders plugin title above banner, so wordmark would duplicate.
+- Two providers only (google + openai). OpenRouter/others: future maybe.
+- Embeddings never mix vector spaces — stamp option `attendant_embedding_provider`, re-stamp only on FULL re-index with the new provider's key present.
+- Gemini free tier confirmed: key without card (Google billing docs), embeddings "Free of charge" (pricing page), chat ~250–1,500 req/day by model/region.
+- Gemini quirks encoded: always v1beta (v1 drops tools), merge consecutive same-role turns, functionResponse.name REQUIRED, echo functionCall id when present.
+- Old tags 2.1.0/2.2.0 point into backup branch — delete before tagging the release.
 
 ## Next steps
 
-- Watch WP.org listing for asset cache to populate (~5–15 min after r3578672).
-- Optional: add GitHub repo description + topics for discoverability.
-- Address Plugin Check warnings (not errors) before v2.0.1: `WordPress.DB.DirectDatabaseQuery.DirectQuery/NoCaching` on the `RENAME TABLE` queries + transient deletes.
-- Bump `Tested up to:` on next WP major.
+- Sungraiz: paste a free Gemini key (aistudio.google.com/apikey) on mui or FLP → switch provider → live E2E Gemini chat test (needs a real key; everything else verified).
+- Approve WP.org title change: "Attendant - Free AI Site Search & Chatbot (Google Gemini)".
+- Ship decision: merge gemini-only → main, push GitHub, deploy.sh to WP.org as 2.1.0 (delete stale local tags first).
+- FLP settings still contain dead 2.2.0-era options (handoff_*, slack webhook placeholder) — harmless, ignore or clean at ship.
 
 ## Key files
 
-- `includes/class-attendant-conversation-handler.php` — prompt + function-call orchestrator, chips fallbacks.
-- `includes/class-attendant-query-builder.php` — operator whitelist, numeric normaliser, zero-result help.
-- `includes/class-attendant-index-manager.php` — manual + background indexing + self-repair.
-- `includes/class-attendant-leads.php` — callback capture.
-- `public/js/attendant-widget.js` — localStorage history, chips, dual-nonce REST.
-- `includes/class-attendant-activator.php` — migration logic from `aicm_` to `attendant_`.
-- `.svnignore` — controls what ships to WP.org SVN (mirrors `.distignore` + adds CLAUDE.md/progress.md).
-- `tests/unit/` — QueryBuilderTest, LeadsTest, ChoicesTest, FrontendReadyTest, etc.
+- `includes/providers/` — interface, factory (+embedding stamp), google + openai providers.
+- `includes/fallback/` — keyword retriever + fuzzy Q&A matcher.
+- `includes/class-attendant-conversation-handler.php` — round-2 tool messages carry name + gemini_id (Gemini requirement).
+- `admin/views/settings.php` + `onboarding.php` — provider rows / wizard radio.
+- `tests/unit/` — GoogleProviderTest (incl. handler-shape regression), ProviderFactoryTest, KeywordRetrieverTest, QAFuzzyMatcherTest.
