@@ -25,7 +25,7 @@ _Rolling status only. Detail lives in `CLAUDE.md` and the cloud memory entries._
 ## Next steps
 
 - DONE 2026-07-22: live Gemini E2E verified on mui — free embeddings (113 chunks), RAG + tool call + reply in widget. Model default: gemini-flash-lite-latest (rolling alias, biggest free quota). Gotchas learned: pinned ids retired for new keys; thinkingLevel minimal required; thoughtSignature must round-trip; watch macOS DNS SERVFAIL caching + FPM opcache during dev.
-- Approve WP.org title change: "Attendant - Free AI Site Search & Chatbot (Google Gemini)".
+- Title finalized: "Attendant - Free AI Site Search & Chatbot" (brackets dropped per Sungraiz).
 - Ship decision: merge gemini-only → main, push GitHub, deploy.sh to WP.org as 2.1.0 (delete stale local tags first).
 - FLP settings still contain dead 2.2.0-era options (handoff_*, slack webhook placeholder) — harmless, ignore or clean at ship.
 
