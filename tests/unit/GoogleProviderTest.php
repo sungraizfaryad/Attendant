@@ -72,7 +72,7 @@ final class GoogleProviderTest extends TestCase {
 		$provider = new ATTENDANT_Google_Provider();
 		$provider->chat_completion( array( array( 'role' => 'user', 'content' => 'q' ) ) );
 
-		$this->assertStringContainsString( '/v1beta/models/gemini-2.5-flash:generateContent', $this->sent_url );
+		$this->assertStringContainsString( '/v1beta/models/gemini-flash-lite-latest:generateContent', $this->sent_url );
 	}
 
 	public function test_system_becomes_system_instruction(): void {

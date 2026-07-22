@@ -40,11 +40,18 @@ class ATTENDANT_Google_Provider implements ATTENDANT_LLM_Provider {
 	/** Must match the chunks table schema (and the old OpenAI vectors' size). */
 	private const EMBEDDING_DIMENSIONS = 1536;
 
-	/** USD per 1M tokens. */
+	/**
+	 * USD per 1M tokens — free-tier usage costs 0; these are the paid-tier
+	 * rates used only when a billed key exceeds free limits.
+	 */
 	private const PRICING = array(
-		'gemini-2.5-flash' => array(
+		'gemini-flash-latest'      => array(
 			'input'  => 0.30,
 			'output' => 2.50,
+		),
+		'gemini-flash-lite-latest' => array(
+			'input'  => 0.10,
+			'output' => 0.40,
 		),
 	);
 
@@ -68,7 +75,10 @@ class ATTENDANT_Google_Provider implements ATTENDANT_LLM_Provider {
 	public function __construct() {
 		$encrypted        = (string) get_option( 'attendant_api_key_google', '' );
 		$this->api_key    = ATTENDANT_Encryption::decrypt( $encrypted );
-		$this->chat_model = (string) Attendant_Plugin::get_setting( 'chat_model_google', 'gemini-2.5-flash' );
+		// gemini-flash-lite-latest: Google's rolling alias — never goes stale
+		// (pinned ids like 2.5-flash get retired for new API keys) and Lite
+		// carries the biggest free-tier daily quota.
+		$this->chat_model = (string) Attendant_Plugin::get_setting( 'chat_model_google', 'gemini-flash-lite-latest' );
 	}
 
 	/**
@@ -97,6 +107,14 @@ class ATTENDANT_Google_Provider implements ATTENDANT_LLM_Provider {
 			'generationConfig' => array(
 				'maxOutputTokens' => $options['max_tokens'] ?? 1024,
 				'temperature'     => $options['temperature'] ?? 0.7,
+				// Gemini 3 flash models think by default and the reasoning
+				// tokens count against maxOutputTokens — with the handler's
+				// tight caps the visible reply starves (finishReason
+				// MAX_TOKENS, thoughts eating ~80% of the budget). A chat
+				// widget doesn't need chain-of-thought. Note: 'minimal' is
+				// the Gemini 3 knob; the older thinkingBudget:0 form is
+				// rejected by these models.
+				'thinkingConfig'  => array( 'thinkingLevel' => 'minimal' ),
 			),
 		);
 
@@ -158,8 +176,11 @@ class ATTENDANT_Google_Provider implements ATTENDANT_LLM_Provider {
 				$result['function_call'] = array(
 					'name'      => (string) ( $part['functionCall']['name'] ?? '' ),
 					'arguments' => (string) wp_json_encode( is_array( $args ) ? $args : array() ),
-					// Gemini 3 ids must round-trip into functionResponse.
+					// Gemini 3 ids must round-trip into functionResponse,
+					// and the part-level thoughtSignature must be echoed on
+					// the replayed functionCall — the API 400s without it.
 					'gemini_id' => (string) ( $part['functionCall']['id'] ?? '' ),
+					'thought_sig' => (string) ( $part['thoughtSignature'] ?? '' ),
 				);
 			}
 		}
@@ -209,6 +230,11 @@ class ATTENDANT_Google_Provider implements ATTENDANT_LLM_Provider {
 					);
 					if ( '' !== (string) ( $call['gemini_id'] ?? '' ) ) {
 						$part['functionCall']['id'] = (string) $call['gemini_id'];
+					}
+					// Sits on the PART, next to functionCall — required by
+					// Gemini 3 when a call is replayed.
+					if ( '' !== (string) ( $call['thought_sig'] ?? '' ) ) {
+						$part['thoughtSignature'] = (string) $call['thought_sig'];
 					}
 					$append( 'model', $part );
 				}

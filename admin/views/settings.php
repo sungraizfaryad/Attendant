@@ -36,7 +36,7 @@ $attendant_embed_stamp = ATTENDANT_Provider_Factory::embedding_provider();
 
 $active_provider   = esc_attr( $settings['active_provider'] ?? 'openai' );
 $chat_model        = esc_attr( $settings['chat_model'] ?? 'gpt-4o-mini' );
-$chat_model_google = esc_attr( $settings['chat_model_google'] ?? 'gemini-2.5-flash' );
+$chat_model_google = esc_attr( $settings['chat_model_google'] ?? 'gemini-flash-lite-latest' );
 $embed_model     = esc_attr( $settings['embedding_model'] ?? 'text-embedding-3-small' );
 $personality     = esc_attr( $settings['ai_personality'] ?? 'friendly' );
 $welcome_msg     = (string) ( $settings['welcome_message'] ?? '' );
@@ -184,11 +184,17 @@ $logging         = ! empty( $settings['logging_enabled'] );
 							<strong><?php echo esc_html__( 'Chat Model', 'attendant' ); ?></strong>
 						</label><br>
 						<select id="attendant-chat-model-google" name="chat_model_google">
-							<option value="gemini-2.5-flash" <?php selected( $chat_model_google, 'gemini-2.5-flash' ); ?>>
-								<?php echo esc_html__( 'Gemini 2.5 Flash — Recommended (free tier)', 'attendant' ); ?>
+							<option value="gemini-flash-lite-latest" <?php selected( $chat_model_google, 'gemini-flash-lite-latest' ); ?>>
+								<?php echo esc_html__( 'Gemini Flash-Lite (always newest) — Recommended: fast, biggest free daily limit', 'attendant' ); ?>
 							</option>
-							<option value="gemini-2.5-flash-lite" <?php selected( $chat_model_google, 'gemini-2.5-flash-lite' ); ?>>
-								<?php echo esc_html__( 'Gemini 2.5 Flash-Lite — faster, higher free daily limit', 'attendant' ); ?>
+							<option value="gemini-flash-latest" <?php selected( $chat_model_google, 'gemini-flash-latest' ); ?>>
+								<?php echo esc_html__( 'Gemini Flash (always newest) — smarter, smaller free daily limit', 'attendant' ); ?>
+							</option>
+							<option value="gemini-3.5-flash" <?php selected( $chat_model_google, 'gemini-3.5-flash' ); ?>>
+								<?php echo esc_html__( 'Gemini 3.5 Flash — pinned version', 'attendant' ); ?>
+							</option>
+							<option value="gemini-3.5-flash-lite" <?php selected( $chat_model_google, 'gemini-3.5-flash-lite' ); ?>>
+								<?php echo esc_html__( 'Gemini 3.5 Flash-Lite — pinned version', 'attendant' ); ?>
 							</option>
 						</select>
 					</p>

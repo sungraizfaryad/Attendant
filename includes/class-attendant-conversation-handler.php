@@ -793,9 +793,11 @@ class ATTENDANT_Conversation_Handler {
 		// A stable but unique ID for this tool call turn.
 		$tool_call_id = 'call_' . wp_generate_uuid4();
 
-		// Gemini's id for the call (empty on OpenAI) — must round-trip into
-		// the replayed functionCall/functionResponse parts.
-		$gemini_id = (string) ( $function_call['gemini_id'] ?? '' );
+		// Gemini's id + thought signature for the call (both empty on
+		// OpenAI) — must round-trip into the replayed functionCall parts,
+		// or Gemini rejects the second round outright.
+		$gemini_id   = (string) ( $function_call['gemini_id'] ?? '' );
+		$thought_sig = (string) ( $function_call['thought_sig'] ?? '' );
 
 		// Append the assistant's tool-call message (content must be null or '').
 		$messages[] = array(
@@ -803,10 +805,11 @@ class ATTENDANT_Conversation_Handler {
 			'content'    => null,
 			'tool_calls' => array(
 				array(
-					'id'        => $tool_call_id,
-					'type'      => 'function',
-					'gemini_id' => $gemini_id,
-					'function'  => array(
+					'id'          => $tool_call_id,
+					'type'        => 'function',
+					'gemini_id'   => $gemini_id,
+					'thought_sig' => $thought_sig,
+					'function'    => array(
 						'name'      => (string) ( $function_call['name'] ?? $fn_name ),
 						'arguments' => (string) ( $function_call['arguments'] ?? '{}' ),
 					),

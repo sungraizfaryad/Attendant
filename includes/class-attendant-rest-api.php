@@ -539,7 +539,7 @@ class ATTENDANT_REST_API {
 
 		$allowed_providers     = array( 'google', 'openai' );
 		$allowed_models        = array( 'gpt-4o-mini', 'gpt-4o' );
-		$allowed_google_models = array( 'gemini-2.5-flash', 'gemini-2.5-flash-lite' );
+		$allowed_google_models = array( 'gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-3.5-flash', 'gemini-3.5-flash-lite' );
 		$allowed_embed       = array( 'text-embedding-3-small', 'text-embedding-3-large' );
 		$allowed_personality = array( 'professional', 'friendly', 'casual', 'custom' );
 		$allowed_positions   = array( 'bottom-right', 'bottom-left' );
