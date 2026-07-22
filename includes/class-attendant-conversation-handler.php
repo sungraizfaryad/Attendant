@@ -117,7 +117,19 @@ class ATTENDANT_Conversation_Handler {
 		// Check admin-configured Q&A pairs before RAG and LLM.
 		// When a pair scores at or above the similarity threshold (0.92), its
 		// stored answer is returned immediately — no RAG, no LLM call, no cost.
-		$qa_match = ATTENDANT_QA_Manager::find_match( $provider, $user_message );
+		// Pair embeddings live in the stamped embedding provider's vector
+		// space; without that key the fuzzy matcher covers Q&A instead.
+		$qa_embedder = ATTENDANT_Provider_Factory::create_for_embeddings();
+
+		if ( null !== $qa_embedder ) {
+			$qa_match = ATTENDANT_QA_Manager::find_match( $qa_embedder, $user_message );
+		} else {
+			require_once ATTENDANT_PLUGIN_DIR . 'includes/fallback/class-attendant-qa-fuzzy-matcher.php';
+			$qa_match = ATTENDANT_QA_Fuzzy_Matcher::match(
+				$user_message,
+				ATTENDANT_QA_Manager::list_active_pairs_for_fallback()
+			);
+		}
 
 		if ( null !== $qa_match ) {
 			// Persist the exchange to session history so the conversation
@@ -154,7 +166,13 @@ class ATTENDANT_Conversation_Handler {
 		$source_ids  = array();
 
 		if ( (bool) Attendant_Plugin::get_setting( 'semantic_mode', false ) ) {
-			$rag_chunks  = ATTENDANT_RAG_Retriever::find_similar( $provider, $user_message, self::RAG_TOP_K );
+			// Query embedding must match the stored vectors' provider; when
+			// that key is gone, keyword FULLTEXT keeps retrieval alive.
+			$embedder = ATTENDANT_Provider_Factory::create_for_embeddings();
+
+			$rag_chunks  = null !== $embedder
+				? ATTENDANT_RAG_Retriever::find_similar( $embedder, $user_message, self::RAG_TOP_K )
+				: ATTENDANT_RAG_Retriever::find_similar_fulltext( $user_message, self::RAG_TOP_K );
 			$rag_context = self::build_rag_context( $rag_chunks );
 			$source_ids  = array_values( array_unique( array_column( $rag_chunks, 'post_id' ) ) );
 		}
@@ -435,20 +453,8 @@ class ATTENDANT_Conversation_Handler {
 	 * @return ATTENDANT_LLM_Provider|null
 	 */
 	private static function get_provider(): ?ATTENDANT_LLM_Provider {
-		$active     = (string) Attendant_Plugin::get_setting( 'active_provider', 'openai' );
-		$option_key = "attendant_api_key_{$active}";
-
-		if ( '' === (string) get_option( $option_key, '' ) ) {
-			return null;
-		}
-
-		if ( 'openai' === $active ) {
-			require_once ATTENDANT_PLUGIN_DIR . 'includes/providers/class-attendant-openai-provider.php';
-			return new ATTENDANT_OpenAI_Provider();
-		}
-
-		// Additional providers (Anthropic, Google) will be wired in future phases.
-		return null;
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/providers/class-attendant-provider-factory.php';
+		return ATTENDANT_Provider_Factory::create();
 	}
 
 	// ── Private: session management ──────────────────────────────────────────

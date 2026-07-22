@@ -26,16 +26,28 @@ class ATTENDANT_Activator {
 	 * Called by register_activation_hook() in the main plugin file.
 	 */
 	public static function activate(): void {
-		self::migrate_from_aicm();
-		self::create_tables();
-		self::set_default_options();
-		self::schedule_cron_events();
-
-		// Store the DB version so future updates can run migrations.
-		update_option( 'attendant_db_version', ATTENDANT_VERSION );
+		self::run_migrations();
 
 		// Flush rewrite rules in case future phases register custom endpoints.
 		flush_rewrite_rules();
+	}
+
+	/**
+	 * Run all idempotent schema and option migrations.
+	 *
+	 * Separated from activate() so plugins_loaded can call it on version
+	 * drift (updates replace files without firing the activation hook).
+	 * Everything here must be safe on an already-configured install.
+	 */
+	public static function run_migrations(): void {
+		self::migrate_from_aicm();
+		self::create_tables();
+		self::add_fulltext_index();
+		self::set_default_options();
+		self::schedule_cron_events();
+
+		// Record the DB schema version so future drift checks know where we are.
+		update_option( 'attendant_db_version', ATTENDANT_VERSION );
 	}
 
 	private static function migrate_from_aicm(): void {
@@ -248,6 +260,28 @@ class ATTENDANT_Activator {
 		dbDelta( $sql_qa );
 		dbDelta( $sql_logs );
 		dbDelta( $sql_queue );
+	}
+
+	/**
+	 * FULLTEXT index on chunk_text — powers keyword retrieval when the
+	 * embedding provider's key is missing or the index predates a provider
+	 * switch. Idempotent; InnoDB ≥ 5.6 adds it with online DDL.
+	 */
+	private static function add_fulltext_index(): void {
+		global $wpdb;
+		$table = $wpdb->prefix . 'attendant_chunks';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$indexes = $wpdb->get_results(
+			$wpdb->prepare(
+				'SHOW INDEX FROM ' . $table . ' WHERE Key_name = %s', // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+				'ft_chunk_text'
+			)
+		);
+		if ( ! empty( $indexes ) ) {
+			return;
+		}
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
+		$wpdb->query( "ALTER TABLE {$table} ADD FULLTEXT KEY ft_chunk_text (chunk_text)" );
 	}
 
 	// -------------------------------------------------------------------------

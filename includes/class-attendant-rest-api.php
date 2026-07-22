@@ -689,13 +689,16 @@ class ATTENDANT_REST_API {
 			'model'   => '',
 		);
 
-		// Only OpenAI provider is implemented in Phase 1.
-		if ( 'openai' === $provider ) {
-			require_once ATTENDANT_PLUGIN_DIR . 'includes/providers/class-attendant-openai-provider.php';
-			$openai_provider = new ATTENDANT_OpenAI_Provider();
-			$result          = $openai_provider->test_connection();
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/providers/class-attendant-provider-factory.php';
+
+		$instance = in_array( $provider, ATTENDANT_Provider_Factory::supported(), true )
+			? ATTENDANT_Provider_Factory::create( $provider )
+			: null;
+
+		if ( null !== $instance ) {
+			$result = $instance->test_connection();
 		} else {
-			$result['message'] = __( 'This provider is not yet implemented.', 'attendant' );
+			$result['message'] = __( 'Unknown provider or no API key to test.', 'attendant' );
 		}
 
 		// Restore the original stored key if we temporarily replaced it.

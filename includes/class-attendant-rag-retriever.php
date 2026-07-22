@@ -255,4 +255,61 @@ class ATTENDANT_RAG_Retriever {
 
 		return (float) sqrt( $sum );
 	}
+
+	/**
+	 * FULLTEXT fallback used when the stamped embedding provider has no key
+	 * (e.g. the admin switched chat providers and removed the old key before
+	 * re-indexing). Returns the same record shape as find_similar() so
+	 * build_rag_context() works with either.
+	 *
+	 * MATCH scores aren't cosine similarities — only comparable within one
+	 * result set — so the raw score passes through purely for ordering.
+	 *
+	 * @param string $query Raw user query text.
+	 * @param int    $top_k Maximum chunks to return.
+	 * @return array[] Chunk records sorted by relevance.
+	 */
+	public static function find_similar_fulltext( string $query, int $top_k = 5 ): array {
+		$query = trim( $query );
+
+		if ( '' === $query ) {
+			return array();
+		}
+
+		global $wpdb;
+
+		$table = $wpdb->prefix . 'attendant_chunks';
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$sql = $wpdb->prepare(
+			"SELECT post_id, post_type, chunk_index, chunk_text,
+			        MATCH(chunk_text) AGAINST (%s IN NATURAL LANGUAGE MODE) AS score
+			 FROM {$table}
+			 WHERE MATCH(chunk_text) AGAINST (%s IN NATURAL LANGUAGE MODE)
+			 ORDER BY score DESC
+			 LIMIT %d",
+			$query,
+			$query,
+			max( 1, min( 20, $top_k ) )
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
+		$rows = $wpdb->get_results( $sql, ARRAY_A );
+
+		if ( ! is_array( $rows ) ) {
+			return array();
+		}
+
+		return array_map(
+			static fn( array $row ): array => array(
+				'post_id'     => (int) $row['post_id'],
+				'post_type'   => (string) $row['post_type'],
+				'chunk_index' => (int) $row['chunk_index'],
+				'chunk_text'  => (string) $row['chunk_text'],
+				'similarity'  => (float) $row['score'],
+			),
+			$rows
+		);
+	}
 }

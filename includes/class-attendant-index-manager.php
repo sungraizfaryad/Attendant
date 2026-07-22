@@ -105,6 +105,21 @@ class ATTENDANT_Index_Manager {
 			return 0;
 		}
 
+		// A FULL re-index rebuilds every vector, so it may re-stamp the
+		// embedding provider to the active one. Incremental runs must keep
+		// embedding with whatever the existing vectors used.
+		if ( ! $only_new ) {
+			require_once ATTENDANT_PLUGIN_DIR . 'includes/providers/class-attendant-provider-factory.php';
+			$active = ATTENDANT_Provider_Factory::active_provider();
+
+			if ( $active !== ATTENDANT_Provider_Factory::embedding_provider()
+				&& ATTENDANT_Provider_Factory::has_key( $active ) ) {
+				ATTENDANT_Provider_Factory::stamp_embedding_provider( $active );
+				// Q&A pair vectors live in the same space — rebuild them too.
+				ATTENDANT_QA_Manager::reembed_all_pairs();
+			}
+		}
+
 		// Make sure the fallback cron exists before seeding work.
 		self::ensure_cron();
 
@@ -483,21 +498,10 @@ class ATTENDANT_Index_Manager {
 	 * @return ATTENDANT_LLM_Provider|null
 	 */
 	private static function get_provider(): ?ATTENDANT_LLM_Provider {
-		$active     = (string) Attendant_Plugin::get_setting( 'active_provider', 'openai' );
-		$option_key = "attendant_api_key_{$active}";
-
-		// No key stored — bail immediately.
-		if ( '' === (string) get_option( $option_key, '' ) ) {
-			return null;
-		}
-
-		if ( 'openai' === $active ) {
-			require_once ATTENDANT_PLUGIN_DIR . 'includes/providers/class-attendant-openai-provider.php';
-			return new ATTENDANT_OpenAI_Provider();
-		}
-
-		// Anthropic and Google providers will be added in future phases.
-		return null;
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/providers/class-attendant-provider-factory.php';
+		// Chunk embedding follows the stamp so incremental runs never mix
+		// vector spaces; a full re-index re-stamps to the active provider.
+		return ATTENDANT_Provider_Factory::create_for_embeddings();
 	}
 
 	/**

@@ -246,6 +246,66 @@ class ATTENDANT_QA_Manager {
 		return ( false !== $deleted && $deleted > 0 );
 	}
 
+	/**
+	 * Re-embed every pair with the current embedding provider.
+	 *
+	 * Called when a full re-index re-stamps the embedding provider — pair
+	 * vectors must live in the same space as the chunk vectors or matching
+	 * silently degrades. Best-effort: a failed embed leaves the pair with a
+	 * NULL vector, which find_match() already skips.
+	 */
+	public static function reembed_all_pairs(): void {
+		global $wpdb;
+		$table    = $wpdb->prefix . 'attendant_qa';
+		$provider = self::get_provider();
+
+		if ( null === $provider ) {
+			return;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$rows = $wpdb->get_results( "SELECT id, question FROM {$table}", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		foreach ( (array) $rows as $row ) {
+			$blob = self::make_embedding_blob( $provider, (string) $row['question'] );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+			$wpdb->update(
+				$table,
+				array( 'question_embedding' => $blob ),
+				array( 'id' => (int) $row['id'] ),
+				array( '%s' ),
+				array( '%d' )
+			);
+		}
+	}
+
+	/**
+	 * Active Q&A pairs in the shape QA_Fuzzy_Matcher consumes — the fallback
+	 * path when no embedding key is available. Threshold 0.65 is tuned
+	 * alongside the fuzzy matcher.
+	 *
+	 * @return array<int, array{id:int, question:string, answer:string, threshold:float}>
+	 */
+	public static function list_active_pairs_for_fallback(): array {
+		global $wpdb;
+		$table = $wpdb->prefix . 'attendant_qa';
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$rows = $wpdb->get_results( "SELECT id, question, answer FROM {$table} WHERE is_active = 1", ARRAY_A );
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( ! is_array( $rows ) ) {
+			return array();
+		}
+		return array_map(
+			static fn( $r ) => array(
+				'id'        => (int) $r['id'],
+				'question'  => (string) $r['question'],
+				'answer'    => (string) $r['answer'],
+				'threshold' => 0.65,
+			),
+			$rows
+		);
+	}
+
 	// ── Matching ──────────────────────────────────────────────────────────────
 
 	/**
@@ -375,19 +435,10 @@ class ATTENDANT_QA_Manager {
 	 * @return ATTENDANT_LLM_Provider|null
 	 */
 	private static function get_provider(): ?ATTENDANT_LLM_Provider {
-		$active     = (string) Attendant_Plugin::get_setting( 'active_provider', 'openai' );
-		$option_key = "attendant_api_key_{$active}";
-
-		if ( '' === (string) get_option( $option_key, '' ) ) {
-			return null;
-		}
-
-		if ( 'openai' === $active ) {
-			require_once ATTENDANT_PLUGIN_DIR . 'includes/providers/class-attendant-openai-provider.php';
-			return new ATTENDANT_OpenAI_Provider();
-		}
-
-		return null;
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/providers/class-attendant-provider-factory.php';
+		// Q&A embeddings must live in the same vector space as the index —
+		// follow the stamped embedding provider, not the chat provider.
+		return ATTENDANT_Provider_Factory::create_for_embeddings();
 	}
 
 	// ── Private: embedding ────────────────────────────────────────────────────

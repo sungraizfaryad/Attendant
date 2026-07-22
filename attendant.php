@@ -350,3 +350,20 @@ function attendant(): Attendant_Plugin {
 // Boot the plugin on `plugins_loaded` so that all plugins are available and
 // WordPress is in a consistent state before we do anything.
 add_action( 'plugins_loaded', 'attendant' );
+
+/**
+ * Run schema/option migrations when plugin files were updated without the
+ * activation hook firing (normal WP update flow). Cheap check per request;
+ * real work happens once, until attendant_db_version catches up.
+ */
+function attendant_maybe_run_upgrade_migrations(): void {
+	$stored = (string) get_option( 'attendant_db_version', '0.0.0' );
+	if ( version_compare( $stored, ATTENDANT_VERSION, '>=' ) ) {
+		return;
+	}
+	if ( ! class_exists( 'ATTENDANT_Activator' ) ) {
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-activator.php';
+	}
+	ATTENDANT_Activator::run_migrations();
+}
+add_action( 'plugins_loaded', 'attendant_maybe_run_upgrade_migrations', 5 );
