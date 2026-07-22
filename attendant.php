@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: Attendant - Free AI Site Search & Chatbot (Google Gemini)
+ * Plugin Name: Attendant - Free AI Site Search & Chatbot
  * Plugin URI:  https://wordpress.org/plugins/attendant/
  * Description: Free AI search chatbot for your site, powered by Google Gemini's free tier (no credit card). Visitors ask plain-language questions; Attendant safely searches your own posts, pages, products, and listings and answers in a chat widget. OpenAI supported too.
  * Version:     2.1.0

@@ -1,4 +1,4 @@
-=== Attendant - Free AI Site Search & Chatbot (Google Gemini) ===
+=== Attendant - Free AI Site Search & Chatbot ===
 Contributors:      sungraizfaryad
 Tags:              ai, site-search, chatbot, gemini, free
 Requires at least: 6.0
