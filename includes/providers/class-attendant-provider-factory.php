@@ -145,4 +145,18 @@ final class ATTENDANT_Provider_Factory {
 			update_option( 'attendant_embedding_provider', $provider );
 		}
 	}
+
+	/**
+	 * True when the admin switched providers but the index still holds the
+	 * old provider's vectors — i.e. a full re-index is needed before search
+	 * runs on the new provider. Requires a stored key for the new provider,
+	 * since a re-index without one would just fail.
+	 *
+	 * @return bool
+	 */
+	public static function needs_full_reindex(): bool {
+		$active = self::active_provider();
+
+		return self::embedding_provider() !== $active && self::has_key( $active );
+	}
 }

@@ -139,6 +139,36 @@ final class ProviderFactoryTest extends TestCase {
 		$this->assertNull( ATTENDANT_Provider_Factory::create_for_embeddings() );
 	}
 
+	public function test_needs_full_reindex_on_provider_switch_with_key(): void {
+		// Switched to Google (key stored), index still OpenAI → banner.
+		Attendant_Plugin::$test_settings = array( 'active_provider' => 'google' );
+		$this->stub_options(
+			array(
+				'attendant_api_key_google'     => 'enc-g',
+				'attendant_embedding_provider' => 'openai',
+			)
+		);
+		$this->assertTrue( ATTENDANT_Provider_Factory::needs_full_reindex() );
+	}
+
+	public function test_no_reindex_nag_when_providers_match(): void {
+		Attendant_Plugin::$test_settings = array( 'active_provider' => 'google' );
+		$this->stub_options(
+			array(
+				'attendant_api_key_google'     => 'enc-g',
+				'attendant_embedding_provider' => 'google',
+			)
+		);
+		$this->assertFalse( ATTENDANT_Provider_Factory::needs_full_reindex() );
+	}
+
+	public function test_no_reindex_nag_without_new_provider_key(): void {
+		// Switched to Google but no key yet — a re-index couldn't run anyway.
+		Attendant_Plugin::$test_settings = array( 'active_provider' => 'google' );
+		$this->stub_options( array( 'attendant_embedding_provider' => 'openai' ) );
+		$this->assertFalse( ATTENDANT_Provider_Factory::needs_full_reindex() );
+	}
+
 	public function test_stamp_validates_slug(): void {
 		$updates = array();
 		Functions\when( 'update_option' )->alias(

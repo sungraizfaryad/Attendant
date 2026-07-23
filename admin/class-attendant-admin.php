@@ -54,6 +54,7 @@ class ATTENDANT_Admin {
 		add_action( 'admin_menu', array( $this, 'register_menus' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'admin_post_attendant_download_log', array( $this, 'download_chat_log' ) );
+		add_action( 'admin_notices', array( $this, 'maybe_show_reindex_notice' ) );
 	}
 
 	// -------------------------------------------------------------------------
@@ -311,6 +312,71 @@ class ATTENDANT_Admin {
 				)
 			);
 		}
+	}
+
+	// -------------------------------------------------------------------------
+	// Admin notices
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Warn on every plugin admin screen when the AI provider was switched but
+	 * the content index still holds the previous provider's vectors. The
+	 * notice clears itself the moment a full re-index starts (re-stamping
+	 * happens at enqueue time) or the provider is switched back.
+	 */
+	public function maybe_show_reindex_notice(): void {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( null === $screen || ! str_contains( (string) $screen->id, self::MENU_SLUG ) ) {
+			return;
+		}
+
+		// Not during the setup wizard — nothing is configured yet.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only view toggle.
+		if ( isset( $_GET['onboarding'] ) || ! ATTENDANT_Onboarding::is_complete() ) {
+			return;
+		}
+
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/providers/class-attendant-provider-factory.php';
+
+		if ( ! ATTENDANT_Provider_Factory::needs_full_reindex() ) {
+			return;
+		}
+
+		$active      = ATTENDANT_Provider_Factory::active_provider();
+		$stamp       = ATTENDANT_Provider_Factory::embedding_provider();
+		$active_name = 'google' === $active ? __( 'Google Gemini', 'attendant' ) : __( 'OpenAI', 'attendant' );
+		$stamp_name  = 'google' === $stamp ? __( 'Google Gemini', 'attendant' ) : __( 'OpenAI', 'attendant' );
+		$on_indexing = str_contains( (string) $screen->id, self::MENU_SLUG . '-indexing' );
+		?>
+		<div class="notice notice-warning">
+			<p>
+				<strong><?php echo esc_html__( 'Attendant: AI provider changed — re-index needed.', 'attendant' ); ?></strong>
+				<?php
+				printf(
+					/* translators: 1: new provider name, 2: provider the index was built with */
+					esc_html__( 'You switched the AI provider to %1$s, but your content index was built with %2$s. Search keeps using %2$s until you rebuild the index.', 'attendant' ),
+					esc_html( $active_name ),
+					esc_html( $stamp_name )
+				);
+				?>
+			</p>
+			<p>
+				<?php if ( $on_indexing ) : ?>
+					<?php
+					printf(
+						/* translators: %s: new provider name */
+						esc_html__( 'Run "Index All Content" below to rebuild it with %s.', 'attendant' ),
+						esc_html( $active_name )
+					);
+					?>
+				<?php else : ?>
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::MENU_SLUG . '-indexing' ) ); ?>" class="button button-primary">
+						<?php echo esc_html__( 'Re-index now', 'attendant' ); ?>
+					</a>
+				<?php endif; ?>
+			</p>
+		</div>
+		<?php
 	}
 
 	// -------------------------------------------------------------------------

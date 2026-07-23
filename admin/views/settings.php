@@ -31,9 +31,6 @@ require_once ATTENDANT_PLUGIN_DIR . 'includes/providers/class-attendant-provider
 $has_openai = ATTENDANT_Provider_Factory::has_key( 'openai' );
 $has_google = ATTENDANT_Provider_Factory::has_key( 'google' );
 
-// Which provider's vectors the index holds — drives the re-index notice.
-$attendant_embed_stamp = ATTENDANT_Provider_Factory::embedding_provider();
-
 $active_provider   = esc_attr( $settings['active_provider'] ?? 'openai' );
 $chat_model        = esc_attr( $settings['chat_model'] ?? 'gpt-4o-mini' );
 $chat_model_google = esc_attr( $settings['chat_model_google'] ?? 'gemini-flash-lite-latest' );
@@ -265,25 +262,6 @@ $logging         = ! empty( $settings['logging_enabled'] );
 			</tr>
 
 		</table>
-
-		<?php if ( $active_provider !== $attendant_embed_stamp && ATTENDANT_Provider_Factory::has_key( $active_provider ) ) : ?>
-			<div class="notice notice-info inline" style="margin:8px 0 0;">
-				<p>
-					<?php
-					printf(
-						/* translators: 1: provider holding the current index, 2: active provider */
-						esc_html__( 'Your content index was built with %1$s embeddings, so search keeps using that key. Run a full re-index to rebuild it with %2$s%3$s.', 'attendant' ),
-						esc_html( 'google' === $attendant_embed_stamp ? 'Google Gemini' : 'OpenAI' ),
-						esc_html( 'google' === $active_provider ? 'Google Gemini' : 'OpenAI' ),
-						esc_html( 'google' === $active_provider ? ' (free)' : '' )
-					);
-					?>
-					<a href="<?php echo esc_url( admin_url( 'admin.php?page=attendant-indexing' ) ); ?>">
-						<?php echo esc_html__( 'Go to Content Indexing', 'attendant' ); ?>
-					</a>
-				</p>
-			</div>
-		<?php endif; ?>
 
 		<hr>
 
