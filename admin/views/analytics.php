@@ -28,8 +28,18 @@ if ( ! current_user_can( 'manage_options' ) ) {
 
 global $wpdb;
 
-// ── Monthly cost history ───────────────────────────────────────────────────
-$monthly_usage = (array) get_option( 'attendant_monthly_usage', array() );
+// ── Active provider — spend is tracked and displayed per provider ──────────
+// Switching providers starts a fresh ledger; switching back shows the old
+// provider's history untouched. Gemini free tier bills $0, so its numbers
+// are paid-tier estimates kept for the budget cap.
+require_once ATTENDANT_PLUGIN_DIR . 'includes/providers/class-attendant-provider-factory.php';
+require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-billing.php';
+$active_slug    = ATTENDANT_Provider_Factory::active_provider();
+$is_gemini      = 'google' === $active_slug;
+$provider_label = $is_gemini ? __( 'Google Gemini', 'attendant' ) : __( 'OpenAI', 'attendant' );
+
+// ── Monthly cost history (active provider only) ────────────────────────────
+$monthly_usage = ATTENDANT_Billing::monthly_usage( $active_slug );
 
 // Sort descending by month key (YYYY-MM) so newest is first.
 krsort( $monthly_usage );
@@ -53,11 +63,6 @@ $budget_pct     = ( $budget_set && $monthly_budget > 0 )
 	? min( 100, round( ( $this_month_cost / $monthly_budget ) * 100, 1 ) )
 	: 0.0;
 $over_budget    = $budget_set && $this_month_cost >= $monthly_budget;
-
-// Gemini free tier bills $0 — the recorded numbers are paid-tier estimates,
-// kept for the budget cap. Label them as such instead of as real spend.
-require_once ATTENDANT_PLUGIN_DIR . 'includes/providers/class-attendant-provider-factory.php';
-$is_gemini = 'google' === ATTENDANT_Provider_Factory::active_provider();
 
 // ── Index stats ────────────────────────────────────────────────────────────
 $index_status = (array) get_option(
@@ -157,7 +162,13 @@ if ( $logging_enabled ) {
 				$<?php echo esc_html( number_format( $this_month_cost, 4 ) ); ?>
 			</div>
 			<div style="color:#646970;margin-top:4px;">
-				<?php echo esc_html__( 'Estimated API cost this month', 'attendant' ); ?>
+				<?php
+				printf(
+					/* translators: %s: active provider name */
+					esc_html__( 'Estimated API cost this month (%s)', 'attendant' ),
+					esc_html( $provider_label )
+				);
+				?>
 			</div>
 			<?php if ( $is_gemini ) : ?>
 				<div style="font-size:11px;color:#00a32a;margin-top:6px;">
@@ -254,11 +265,18 @@ if ( $logging_enabled ) {
 	<!-- ── Monthly cost history ───────────────────────────────────────────── -->
 	<h2><?php echo esc_html__( 'Monthly API Cost', 'attendant' ); ?></h2>
 
-	<?php if ( $is_gemini ) : ?>
-		<p class="description">
-			<?php echo esc_html__( 'Estimated values. On the Gemini free tier Google charges you nothing — these numbers (and the budget cap) only matter if you enabled billing on your Google account.', 'attendant' ); ?>
-		</p>
-	<?php endif; ?>
+	<p class="description">
+		<?php
+		printf(
+			/* translators: %s: active provider name */
+			esc_html__( 'Showing usage for the active provider: %s. Each provider keeps its own history — switch providers to see theirs.', 'attendant' ),
+			esc_html( $provider_label )
+		);
+		if ( $is_gemini ) {
+			echo ' ' . esc_html__( 'Estimated values. On the Gemini free tier Google charges you nothing — these numbers (and the budget cap) only matter if you enabled billing on your Google account.', 'attendant' );
+		}
+		?>
+	</p>
 
 	<?php if ( empty( $usage_display ) ) : ?>
 		<p class="description">
@@ -358,10 +376,10 @@ if ( $logging_enabled ) {
 				<strong><?php echo esc_html__( 'Conversation logging is disabled.', 'attendant' ); ?></strong>
 				<?php
 				printf(
-					/* translators: %s: link to Settings page */
+					/* translators: %s: link to the Settings Privacy tab */
 					esc_html__( 'Enable conversation logging in %s to track chat volume, session counts, and response times. IP addresses are never logged — only anonymous session IDs.', 'attendant' ),
-					'<a href="' . esc_url( admin_url( 'admin.php?page=attendant' ) ) . '">'
-					. esc_html__( 'Settings', 'attendant' )
+					'<a href="' . esc_url( admin_url( 'admin.php?page=attendant#privacy' ) ) . '">'
+					. esc_html__( 'Settings → Privacy', 'attendant' )
 					. '</a>'
 				);
 				?>

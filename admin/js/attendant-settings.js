@@ -55,6 +55,12 @@
 		activateTab( window.location.hash.slice( 1 ) );
 	}
 
+	// Hash links from other admin pages (e.g. Analytics → "Settings → Privacy")
+	// can land while this page is already open — follow them too.
+	window.addEventListener( 'hashchange', function () {
+		activateTab( window.location.hash.slice( 1 ) );
+	} );
+
 	// Checkboxes that must be sent as explicit booleans: unchecked boxes are
 	// absent from FormData, so without this they could never be turned off.
 	const CHECKBOXES = [ 'logging_enabled', 'auto_sync', 'file_logging', 'lead_capture' ];

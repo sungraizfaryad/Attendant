@@ -1117,8 +1117,9 @@ class ATTENDANT_Conversation_Handler {
 			return;
 		}
 
-		// Record into both the daily (kill-switch) and monthly (analytics) maps.
-		ATTENDANT_Billing::record( $cost );
+		// Record into both the daily (kill-switch) and monthly (analytics) maps,
+		// against the provider that actually served the request.
+		ATTENDANT_Billing::record( $provider->get_provider_name(), $cost );
 	}
 
 	// ── Private: error helper ─────────────────────────────────────────────────

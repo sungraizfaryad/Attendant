@@ -188,13 +188,19 @@ $logging         = ! empty( $settings['logging_enabled'] );
 								<?php echo esc_html__( 'Gemini Flash (always newest) — smarter, smaller free daily limit', 'attendant' ); ?>
 							</option>
 							<option value="gemini-3.5-flash" <?php selected( $chat_model_google, 'gemini-3.5-flash' ); ?>>
-								<?php echo esc_html__( 'Gemini 3.5 Flash — pinned version', 'attendant' ); ?>
+								<?php echo esc_html__( 'Gemini 3.5 Flash — fixed version', 'attendant' ); ?>
 							</option>
 							<option value="gemini-3.5-flash-lite" <?php selected( $chat_model_google, 'gemini-3.5-flash-lite' ); ?>>
-								<?php echo esc_html__( 'Gemini 3.5 Flash-Lite — pinned version', 'attendant' ); ?>
+								<?php echo esc_html__( 'Gemini 3.5 Flash-Lite — fixed version', 'attendant' ); ?>
 							</option>
 						</select>
 					</p>
+					<ul style="margin:8px 0 0;padding-left:18px;list-style:disc;color:#646970;font-size:12px;line-height:1.7;">
+						<li><?php echo esc_html__( 'Flash-Lite: fastest replies and the biggest free daily allowance — the right choice for most sites.', 'attendant' ); ?></li>
+						<li><?php echo esc_html__( 'Flash: smarter answers, but a smaller free daily allowance.', 'attendant' ); ?></li>
+						<li><?php echo esc_html__( '"Always newest" upgrades itself automatically when Google releases a better version — recommended.', 'attendant' ); ?></li>
+						<li><?php echo esc_html__( '"Fixed version" stays on this exact model and never changes — but Google may retire it for new API keys over time.', 'attendant' ); ?></li>
+					</ul>
 				</td>
 			</tr>
 

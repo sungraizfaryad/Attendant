@@ -41,6 +41,7 @@ class ATTENDANT_Activator {
 	 */
 	public static function run_migrations(): void {
 		self::migrate_from_aicm();
+		self::migrate_billing_per_provider();
 		self::create_tables();
 		self::add_fulltext_index();
 		self::set_default_options();
@@ -48,6 +49,27 @@ class ATTENDANT_Activator {
 
 		// Record the DB schema version so future drift checks know where we are.
 		update_option( 'attendant_db_version', ATTENDANT_VERSION );
+	}
+
+	/**
+	 * Nest the flat pre-2.1.0 spend maps under 'openai'.
+	 *
+	 * Billing is now tracked per provider. Everything recorded before the
+	 * split came from OpenAI (the only provider back then), so a flat
+	 * [ 'YYYY-MM' => cost ] map becomes [ 'openai' => map ]. Idempotent:
+	 * an already-nested map has arrays as values and is left alone.
+	 */
+	private static function migrate_billing_per_provider(): void {
+		foreach ( array( 'attendant_daily_usage', 'attendant_monthly_usage' ) as $option ) {
+			$raw = get_option( $option, array() );
+			if ( ! is_array( $raw ) || array() === $raw ) {
+				continue;
+			}
+			$first = reset( $raw );
+			if ( ! is_array( $first ) ) {
+				update_option( $option, array( 'openai' => $raw ), false );
+			}
+		}
 	}
 
 	private static function migrate_from_aicm(): void {

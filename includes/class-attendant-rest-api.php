@@ -375,9 +375,9 @@ class ATTENDANT_REST_API {
 			);
 		}
 
-		// Daily budget kill-switch: once today's API spend reaches the configured
-		// daily budget, the bot pauses until tomorrow. Protects against bill shock.
-		if ( ATTENDANT_Billing::daily_budget_reached() ) {
+		// Budget kill-switch: once the active provider's spend reaches the daily
+		// or monthly budget, the bot pauses until the period rolls over.
+		if ( ATTENDANT_Billing::daily_budget_reached() || ATTENDANT_Billing::monthly_budget_reached() ) {
 			return new WP_Error(
 				'attendant_budget_reached',
 				__( 'The chat assistant is temporarily unavailable. Please try again later.', 'attendant' ),
