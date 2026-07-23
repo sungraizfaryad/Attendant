@@ -48,6 +48,32 @@ manual indexing controls, file-based chat logs, and email lead capture.
   silently dropped chips/history for returning visitors.
 - **Round 2 of a function call passes ONLY `suggest_choices`** to prevent the
   model chaining another search after seeing the result.
+- **Gemini: never pin model ids.** Google retires pinned ids (e.g.
+  gemini-2.5-flash) for NEW API keys while the id still appears in GET /models
+  — test-connection passes, generateContent 404s. Use the rolling aliases
+  (`gemini-flash-lite-latest` default). Each model has its OWN free-tier daily
+  quota bucket; Lite's is the biggest.
+- **Gemini 3 function calling has two hard requirements** or round 2 400s:
+  the replayed functionCall part must echo the part-level `thoughtSignature`
+  AND the call `id`. Both are captured in the provider's `function_call`
+  result (`thought_sig`, `gemini_id`) and threaded through
+  `build_messages_with_tool_result()` — do not drop those keys.
+- **Gemini 3 thinks by default** and reasoning tokens count against
+  maxOutputTokens — under our tight caps the visible reply starves
+  (finishReason MAX_TOKENS). We send `thinkingConfig.thinkingLevel: minimal`;
+  the older `thinkingBudget: 0` form is REJECTED by Gemini 3 models.
+- **Never mix embedding vector spaces.** `attendant_embedding_provider`
+  stamps which provider built the index; queries/Q&A must embed with the
+  stamped provider. Only a FULL re-index (with the new provider's key) may
+  re-stamp — and it must blank `content_hash` first, or the embedder's
+  skip-unchanged optimization strands old vectors under the new stamp.
+- **Every model in the settings allowlist needs a PRICING row** in its
+  provider class — `estimate_cost()` feeds the monthly-budget kill switch,
+  and the fallback bills at the highest known rate (fail closed), never $0.
+- **Local-dev traps seen here:** macOS negative-caches a router DNS SERVFAIL
+  (curl fails while nslookup works → `dscacheutil -flushcache`), and Local's
+  PHP-FPM opcache can serve stale plugin code while WP-CLI runs fresh files —
+  if CLI and browser disagree, flush opcache before debugging further.
 
 ## How to develop here (Local by Flywheel)
 
