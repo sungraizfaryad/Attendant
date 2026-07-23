@@ -3,14 +3,15 @@
 _Last updated: 2026-07-23 (v2.1.0 "Gemini free" complete + live-verified, NOT deployed)._
 _Rolling status only. Detail lives in `CLAUDE.md` and the cloud memory entries._
 
-## Done (branch `gemini-only` @ e189327)
+## Done (branch `gemini-only` @ 1f8e3de)
 
 - Google Gemini added as second provider: FREE chat + FREE embeddings, one no-card key. OpenAI untouched for existing installs. Old 6-provider/OpenRouter/Slack/debug direction abandoned — parked on `backup/v2.2.0-full`.
 - LIVE-VERIFIED with a real free key on mui: 113 chunks embedded via Gemini ($0, 0 failures), RAG retrieval + search_posts tool call + reply working in the widget.
 - Embedding-provider stamp (`attendant_embedding_provider`) keeps chunk/query/Q&A vectors in one space; full re-index re-stamps + blanks content hashes + re-embeds Q&A pairs. FULLTEXT/fuzzy fallback in `includes/fallback/` when stamped key missing.
-- Wizard defaults to Gemini (free, AI Studio link); settings has 2-provider rows + re-index mismatch notice. Title: "Attendant - Free AI Site Search & Chatbot". Version 2.1.0.
+- Wizard defaults to Gemini (free, AI Studio link); settings has 2-provider rows. Title: "Attendant - Free AI Site Search & Chatbot". Version 2.1.0.
+- Provider-switch re-index banner (admin_notices) on all 5 plugin admin screens until full re-index re-stamps; indexing page gets "run Index All Content below" wording. Condition: `ATTENDANT_Provider_Factory::needs_full_reindex()`. Live-verified on mui.
 - Default model `gemini-flash-lite-latest` (rolling alias, biggest free daily quota). All selectable models priced; estimate_cost fails closed (unknown id → highest rate) so the monthly-budget kill switch can't be blinded.
-- 81 tests / 191 assertions green. Plugin Check 0 production errors. Adversarial review (14 agents) + security review findings all fixed. Both installs (mui + FLP) run this build; FLP 9,284 chunks intact. Build: `~/Desktop/attendant-2.1.0-gemini.zip`.
+- 84 tests / 194 assertions green. Plugin Check 0 production errors. Adversarial review (14 agents) + security review findings all fixed. Both installs (mui + FLP) run this build; FLP 9,284 chunks intact. Build: `~/Desktop/attendant-2.1.0-gemini.zip`.
 
 ## Decisions (durable)
 
