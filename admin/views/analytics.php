@@ -323,7 +323,15 @@ if ( $logging_enabled ) {
 			</tbody>
 			<tfoot>
 				<tr>
-					<th><?php echo esc_html__( 'All-time total', 'attendant' ); ?></th>
+					<th>
+						<?php
+						printf(
+							/* translators: %s: active provider name */
+							esc_html__( 'All-time total (%s)', 'attendant' ),
+							esc_html( $provider_label )
+						);
+						?>
+					</th>
 					<th colspan="2">
 						$<?php echo esc_html( number_format( array_sum( array_values( $monthly_usage ) ), 4 ) ); ?>
 					</th>

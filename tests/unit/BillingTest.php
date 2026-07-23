@@ -79,6 +79,48 @@ final class BillingTest extends TestCase {
 		$this->assertSame( array(), ATTENDANT_Billing::monthly_usage( 'google' ) );
 	}
 
+	public function test_mixed_shape_map_keeps_both_sides(): void {
+		// A stale PHP worker running old code can append a flat date key next
+		// to already-nested buckets. Per-key normalization must keep both —
+		// regardless of which shape happens to sit first in the array.
+		$GLOBALS['__attendant_opt']['attendant_monthly_usage'] = array(
+			'2024-05' => 12.3,
+			'google'  => array( '2026-01' => 5.0 ),
+		);
+		$this->assertSame( 12.3, ATTENDANT_Billing::month_spend( 'openai', '2024-05' ) );
+		$this->assertSame( 5.0, ATTENDANT_Billing::month_spend( 'google', '2026-01' ) );
+
+		$GLOBALS['__attendant_opt']['attendant_monthly_usage'] = array(
+			'google'  => array( '2026-01' => 5.0 ),
+			'2024-05' => 12.3,
+		);
+		$this->assertSame( 12.3, ATTENDANT_Billing::month_spend( 'openai', '2024-05' ) );
+		$this->assertSame( 5.0, ATTENDANT_Billing::month_spend( 'google', '2026-01' ) );
+	}
+
+	public function test_normalize_sums_flat_leaf_into_existing_bucket_month(): void {
+		// Flat leaf and nested openai bucket for the SAME month are both real
+		// spend increments — they add up instead of one shadowing the other.
+		$normalized = ATTENDANT_Billing::normalize_map(
+			array(
+				'openai'  => array( '2026-07' => 1.0 ),
+				'2026-07' => 0.5,
+			)
+		);
+		$this->assertSame( 1.5, $normalized['openai']['2026-07'] );
+	}
+
+	public function test_normalize_drops_garbage(): void {
+		$normalized = ATTENDANT_Billing::normalize_map(
+			array(
+				'2026-07'  => 'not-a-number',
+				'weird'    => 'scalar-under-non-date-key',
+				'google'   => array( 'not-a-date' => 3.0, '2026-07' => 2.0 ),
+			)
+		);
+		$this->assertSame( array( 'google' => array( '2026-07' => 2.0 ) ), $normalized );
+	}
+
 	public function test_record_ignores_zero_or_negative(): void {
 		ATTENDANT_Billing::record( 'openai', 0.0, '2026-06-07', '2026-06' );
 		ATTENDANT_Billing::record( 'openai', -2.0, '2026-06-07', '2026-06' );

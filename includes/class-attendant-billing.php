@@ -152,25 +152,56 @@ class ATTENDANT_Billing {
 	}
 
 	/**
-	 * Load a spend option, healing the legacy flat single-provider shape.
+	 * Normalize a stored spend map into per-provider shape, key by key.
 	 *
 	 * Pre-2.1.0 installs stored [ 'YYYY-MM' => cost ] directly; everything
-	 * recorded back then came from OpenAI, so a flat map belongs to it.
+	 * recorded back then came from OpenAI, so date-keyed scalar leaves fold
+	 * into the openai bucket. Provider-keyed arrays pass through with their
+	 * own leaves validated. Deciding per key (not from the first element)
+	 * keeps MIXED shapes correct — e.g. a stale PHP worker still running
+	 * old code can append a flat date key next to already-nested buckets,
+	 * and both entries are real spend, so same-month values are summed.
+	 *
+	 * @param mixed $raw Raw option value.
+	 * @return array<string, array<string, float>>
+	 */
+	public static function normalize_map( $raw ): array {
+		if ( ! is_array( $raw ) ) {
+			return array();
+		}
+
+		$out = array();
+		foreach ( $raw as $key => $val ) {
+			$key = (string) $key;
+
+			if ( preg_match( '/^\d{4}-\d{2}/', $key ) ) {
+				if ( is_numeric( $val ) ) {
+					$out['openai'][ $key ] = round( (float) ( $out['openai'][ $key ] ?? 0.0 ) + (float) $val, 6 );
+				}
+				continue;
+			}
+
+			if ( ! is_array( $val ) ) {
+				continue;
+			}
+			foreach ( $val as $leaf_key => $leaf ) {
+				$leaf_key = (string) $leaf_key;
+				if ( preg_match( '/^\d{4}-\d{2}/', $leaf_key ) && is_numeric( $leaf ) ) {
+					$out[ $key ][ $leaf_key ] = round( (float) ( $out[ $key ][ $leaf_key ] ?? 0.0 ) + (float) $leaf, 6 );
+				}
+			}
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Load a spend option in normalized per-provider shape.
 	 *
 	 * @param string $option Option name.
 	 * @return array<string, array<string, float>>
 	 */
 	private static function provider_map( string $option ): array {
-		$raw = get_option( $option, array() );
-		if ( ! is_array( $raw ) || array() === $raw ) {
-			return array();
-		}
-
-		$first = reset( $raw );
-		if ( ! is_array( $first ) ) {
-			return array( 'openai' => $raw );
-		}
-
-		return $raw;
+		return self::normalize_map( get_option( $option, array() ) );
 	}
 }

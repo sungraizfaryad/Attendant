@@ -55,19 +55,21 @@ class ATTENDANT_Activator {
 	 * Nest the flat pre-2.1.0 spend maps under 'openai'.
 	 *
 	 * Billing is now tracked per provider. Everything recorded before the
-	 * split came from OpenAI (the only provider back then), so a flat
-	 * [ 'YYYY-MM' => cost ] map becomes [ 'openai' => map ]. Idempotent:
-	 * an already-nested map has arrays as values and is left alone.
+	 * split came from OpenAI (the only provider back then). Normalization
+	 * is per key so mixed shapes settle correctly too; idempotent — an
+	 * already-normalized map comes back unchanged and is not re-written.
 	 */
 	private static function migrate_billing_per_provider(): void {
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-billing.php';
+
 		foreach ( array( 'attendant_daily_usage', 'attendant_monthly_usage' ) as $option ) {
 			$raw = get_option( $option, array() );
 			if ( ! is_array( $raw ) || array() === $raw ) {
 				continue;
 			}
-			$first = reset( $raw );
-			if ( ! is_array( $first ) ) {
-				update_option( $option, array( 'openai' => $raw ), false );
+			$normalized = ATTENDANT_Billing::normalize_map( $raw );
+			if ( $normalized !== $raw ) {
+				update_option( $option, $normalized, false );
 			}
 		}
 	}
@@ -100,7 +102,12 @@ class ATTENDANT_Activator {
 		foreach ( $option_map as $old => $new ) {
 			$val = get_option( $old );
 			if ( false !== $val ) {
-				update_option( $new, $val );
+				// Copy only when the destination is absent — a stale aicm_*
+				// leftover (FTP-deleted old install, partial DB restore) must
+				// never clobber data the renamed install has accumulated since.
+				if ( false === get_option( $new ) ) {
+					update_option( $new, $val );
+				}
 				delete_option( $old );
 			}
 		}
