@@ -503,7 +503,7 @@ $logging         = ! empty( $settings['logging_enabled'] );
 						step="0.01"
 					>
 					<p class="description">
-						<?php echo esc_html__( 'Long-term monthly spend tracking shown on the Analytics page.', 'attendant' ); ?>
+						<?php echo esc_html__( 'Long-term monthly spend tracking shown on the Analytics page. Costs are estimates — on the Gemini free tier Google bills you $0, so leave this at 0 unless you enabled billing.', 'attendant' ); ?>
 					</p>
 				</td>
 			</tr>

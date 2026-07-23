@@ -54,6 +54,11 @@ $budget_pct     = ( $budget_set && $monthly_budget > 0 )
 	: 0.0;
 $over_budget    = $budget_set && $this_month_cost >= $monthly_budget;
 
+// Gemini free tier bills $0 — the recorded numbers are paid-tier estimates,
+// kept for the budget cap. Label them as such instead of as real spend.
+require_once ATTENDANT_PLUGIN_DIR . 'includes/providers/class-attendant-provider-factory.php';
+$is_gemini = 'google' === ATTENDANT_Provider_Factory::active_provider();
+
 // ── Index stats ────────────────────────────────────────────────────────────
 $index_status = (array) get_option(
 	'attendant_index_status',
@@ -134,7 +139,7 @@ if ( $logging_enabled ) {
 				<?php
 				printf(
 					/* translators: 1: current cost, 2: budget limit */
-					esc_html__( 'This month\'s API cost ($%1$s) has reached the $%2$s budget. The chat widget is paused until next month.', 'attendant' ),
+					esc_html__( 'This month\'s estimated API cost ($%1$s) has reached the $%2$s budget. The chat widget is paused until next month.', 'attendant' ),
 					esc_html( number_format( $this_month_cost, 4 ) ),
 					esc_html( number_format( $monthly_budget, 2 ) )
 				);
@@ -152,8 +157,13 @@ if ( $logging_enabled ) {
 				$<?php echo esc_html( number_format( $this_month_cost, 4 ) ); ?>
 			</div>
 			<div style="color:#646970;margin-top:4px;">
-				<?php echo esc_html__( 'API cost this month', 'attendant' ); ?>
+				<?php echo esc_html__( 'Estimated API cost this month', 'attendant' ); ?>
 			</div>
+			<?php if ( $is_gemini ) : ?>
+				<div style="font-size:11px;color:#00a32a;margin-top:6px;">
+					<?php echo esc_html__( 'Gemini free tier: Google bills you $0. This is what the usage would cost on the paid tier.', 'attendant' ); ?>
+				</div>
+			<?php endif; ?>
 			<?php if ( $budget_set ) : ?>
 				<div style="margin-top:8px;">
 					<div style="background:#f0f0f1;border-radius:3px;height:6px;overflow:hidden;">
@@ -243,6 +253,12 @@ if ( $logging_enabled ) {
 
 	<!-- ── Monthly cost history ───────────────────────────────────────────── -->
 	<h2><?php echo esc_html__( 'Monthly API Cost', 'attendant' ); ?></h2>
+
+	<?php if ( $is_gemini ) : ?>
+		<p class="description">
+			<?php echo esc_html__( 'Estimated values. On the Gemini free tier Google charges you nothing — these numbers (and the budget cap) only matter if you enabled billing on your Google account.', 'attendant' ); ?>
+		</p>
+	<?php endif; ?>
 
 	<?php if ( empty( $usage_display ) ) : ?>
 		<p class="description">
