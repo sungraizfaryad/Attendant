@@ -42,6 +42,7 @@
 		var isOpen       = false;
 		var isBusy       = false;
 		var welcomeShown = false;
+		var pendingSync  = false; // another tab changed the store mid-reply
 
 		// ── Element references ────────────────────────────────────────────────
 		var launcher   = document.getElementById( 'attendant-launcher' );
@@ -83,7 +84,70 @@
 		// possible. If storage is blocked, the copy still works for this page.
 		var store = loadStore();
 
+		// Messages are append-only, so two tabs editing the same chat differ
+		// only in their tails: keep the common prefix, then both tails (theirs
+		// first — it was on disk before ours). Consume-once matching drops a
+		// tail message we already have without eating a genuine repeat.
+		function mergeMessages( ours, theirs ) {
+			var n = Math.min( ours.length, theirs.length );
+			var p = 0;
+			while ( p < n && JSON.stringify( ours[ p ] ) === JSON.stringify( theirs[ p ] ) ) {
+				p++;
+			}
+			var theirTail = theirs.slice( p );
+			var remaining = theirTail.map( function ( m ) {
+				return JSON.stringify( m );
+			} );
+			var ourTail = ours.slice( p ).filter( function ( m ) {
+				var i = remaining.indexOf( JSON.stringify( m ) );
+				if ( i > -1 ) {
+					remaining.splice( i, 1 );
+					return false;
+				}
+				return true;
+			} );
+			return ours.slice( 0, p ).concat( theirTail, ourTail ).slice( -MAX_MSGS );
+		}
+
+		// Fold another tab's copy of the store into ours. Our active-chat
+		// pointer wins so this tab never jumps conversations underneath the
+		// visitor; chats existing in both copies get their messages merged.
+		function mergeStores( theirs ) {
+			var byId = {};
+			store.chats.forEach( function ( c ) {
+				byId[ c.id ] = c;
+			} );
+			theirs.chats.forEach( function ( tc ) {
+				var mine = byId[ tc.id ];
+				if ( ! mine ) {
+					store.chats.push( tc );
+					byId[ tc.id ] = tc;
+					return;
+				}
+				mine.messages = mergeMessages( mine.messages, tc.messages );
+				if ( ! mine.session && tc.session ) {
+					mine.session = tc.session;
+				}
+			} );
+			store.chats.sort( function ( a, b ) {
+				return ( b.started || 0 ) - ( a.started || 0 );
+			} );
+			store.chats = store.chats.slice( 0, MAX_CHATS );
+		}
+
 		function saveStore() {
+			// Merge what another tab may have written since we last read, so a
+			// concurrent conversation over there is never overwritten.
+			try {
+				var raw = window.localStorage.getItem( STORE_KEY );
+				if ( raw ) {
+					var disk = JSON.parse( raw );
+					if ( disk && Array.isArray( disk.chats ) ) {
+						mergeStores( disk );
+					}
+				}
+			} catch ( e ) { /* unreadable — write ours as-is */ }
+
 			try {
 				window.localStorage.setItem( STORE_KEY, JSON.stringify( store ) );
 			} catch ( e ) { /* quota/private mode — in-memory only */ }
@@ -478,6 +542,11 @@
 			.finally( function () {
 				isBusy           = false;
 				sendBtn.disabled = false;
+				// Repaint messages that arrived from another tab mid-request.
+				if ( pendingSync ) {
+					pendingSync = false;
+					renderChat( activeChat() );
+				}
 				inputEl.focus();
 			} );
 		}
@@ -504,6 +573,37 @@
 		if ( restored.messages.length > 0 ) {
 			renderChat( restored );
 		}
+
+		// ── Cross-tab sync ────────────────────────────────────────────────────
+		// The storage event fires in every OTHER tab when one writes the store.
+		// Fold their copy in and repaint if the conversation on screen changed.
+		// While a reply is in flight we only merge; the repaint waits until the
+		// reply lands so the typing indicator isn't wiped mid-request.
+		window.addEventListener( 'storage', function ( e ) {
+			if ( e.key !== STORE_KEY && null !== e.key ) {
+				return;
+			}
+
+			var before = JSON.stringify( activeChat().messages );
+			mergeStores( loadStore() );
+
+			var chat = activeChat();
+			if ( chat.session && chat.session !== sessionId && '' === sessionId ) {
+				sessionId = chat.session;
+			}
+
+			if ( JSON.stringify( chat.messages ) === before ) {
+				return;
+			}
+			if ( isBusy ) {
+				pendingSync = true;
+				return;
+			}
+			renderChat( chat );
+			if ( widget.classList.contains( 'is-history' ) ) {
+				renderHistoryList();
+			}
+		} );
 
 		// ── DOM helpers ───────────────────────────────────────────────────────
 
