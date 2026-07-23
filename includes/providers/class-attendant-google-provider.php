@@ -42,7 +42,10 @@ class ATTENDANT_Google_Provider implements ATTENDANT_LLM_Provider {
 
 	/**
 	 * USD per 1M tokens — free-tier usage costs 0; these are the paid-tier
-	 * rates used only when a billed key exceeds free limits.
+	 * rates used only when a billed key exceeds free limits. Every model the
+	 * settings allowlist offers MUST have a row here: estimate_cost() feeds
+	 * the monthly-budget kill switch, and a missing row must not silently
+	 * zero the spend (see the fail-closed fallback below).
 	 */
 	private const PRICING = array(
 		'gemini-flash-latest'      => array(
@@ -50,6 +53,14 @@ class ATTENDANT_Google_Provider implements ATTENDANT_LLM_Provider {
 			'output' => 2.50,
 		),
 		'gemini-flash-lite-latest' => array(
+			'input'  => 0.10,
+			'output' => 0.40,
+		),
+		'gemini-3.5-flash'         => array(
+			'input'  => 0.30,
+			'output' => 2.50,
+		),
+		'gemini-3.5-flash-lite'    => array(
 			'input'  => 0.10,
 			'output' => 0.40,
 		),
@@ -385,9 +396,12 @@ class ATTENDANT_Google_Provider implements ATTENDANT_LLM_Provider {
 	 * {@inheritdoc}
 	 */
 	public function estimate_cost( int $input_tokens, int $output_tokens ): float {
+		// Fail closed: an unpriced model bills at the most expensive known
+		// rate rather than $0 — a silent zero would blind the monthly-budget
+		// kill switch and allow unbounded spend on a billed key.
 		$pricing = self::PRICING[ $this->chat_model ] ?? array(
-			'input'  => 0.00,
-			'output' => 0.00,
+			'input'  => 0.30,
+			'output' => 2.50,
 		);
 
 		return round(
