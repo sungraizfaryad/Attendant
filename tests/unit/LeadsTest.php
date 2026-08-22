@@ -110,6 +110,37 @@ final class LeadsTest extends TestCase {
 		$this->assertSame( 1, $this->transients['attendant_leads_today'] );
 	}
 
+	public function test_captured_lead_fires_integration_hook(): void {
+		// Newsletter/CRM plugins hook attendant_lead_captured — it must fire
+		// exactly once, after the send, with the sanitised payload.
+		$fired = array();
+		Monkey\Actions\expectDone( 'attendant_lead_captured' )
+			->once()
+			->whenHappen(
+				function ( $email, $lead ) use ( &$fired ) {
+					$fired = array( $email, $lead );
+				}
+			);
+
+		ATTENDANT_Leads::capture(
+			array(
+				'email' => 'visitor@example.com',
+				'name'  => 'Maria',
+			),
+			'sess1'
+		);
+
+		$this->assertSame( 'visitor@example.com', $fired[0] );
+		$this->assertSame( 'Maria', $fired[1]['name'] );
+		$this->assertSame( 'sess1', $fired[1]['session_id'] );
+	}
+
+	public function test_rejected_lead_fires_no_hook(): void {
+		Monkey\Actions\expectDone( 'attendant_lead_captured' )->never();
+		$r = ATTENDANT_Leads::capture( array( 'email' => 'not-an-email' ), 'sess1' );
+		$this->assertSame( 'invalid_email', $r['error'] );
+	}
+
 	public function test_second_lead_in_same_session_is_blocked(): void {
 		ATTENDANT_Leads::capture( array( 'email' => 'visitor@example.com' ), 'sess1' );
 		$r = ATTENDANT_Leads::capture( array( 'email' => 'visitor@example.com' ), 'sess1' );

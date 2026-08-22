@@ -102,6 +102,14 @@ No. The conversation is kept in the visitor's own browser (localStorage) so it s
 
 Yes, but it is off by default. When you enable lead capture in Settings and a visitor agrees to be contacted, the assistant collects the email they provide (and optionally a phone number and preferred time) and emails the request to the address you configure. It is rate-limited to one request per conversation and a daily maximum, and nothing is stored in a database. See the Privacy section for details.
 
+= Can captured leads go to my newsletter or CRM tool? =
+
+Yes. Every accepted callback request also fires a WordPress action, `attendant_lead_captured`, with the visitor's validated email and the optional details (name, phone, preferred time, topic). Any developer or newsletter plugin can hook it:
+
+`add_action( 'attendant_lead_captured', function ( $email, $lead ) { my_newsletter_subscribe( $email, $lead['name'] ); }, 10, 2 );`
+
+The hook fires only after validation and rate-limit checks pass, so you only ever receive real, consented requests.
+
 = Can I keep a record of the conversations? =
 
 Yes, optionally. File logging is off by default. When enabled, each exchange is written to a dated file in a protected folder in your uploads directory, kept for 30 days, and downloadable only by an administrator. IP addresses are never stored and session identifiers are one-way hashed. See the Privacy section.
@@ -152,6 +160,9 @@ You are responsible for disclosing these features in your own privacy policy if 
 * New: Setup wizard recommends the free Gemini key with a direct link; OpenAI remains fully supported for existing users — nothing changes on update.
 * New: Keyword-search fallback — if the key used for content matching is removed after a provider switch, search falls back to fast keyword matching instead of going silent.
 * Improved: switching providers is safe — search keeps using your existing index until you choose to re-index (free with Gemini).
+* New: `attendant_lead_captured` action — connect captured callback requests to your newsletter or CRM plugin.
+* New: chat stays in sync across browser tabs — a conversation started in one tab appears live in the others.
+* Improved: API costs are tracked per provider and clearly labeled as estimates; on the Gemini free tier the dashboard reminds you Google bills $0.
 
 = 2.0.0 =
 * Rebuilt as a structured-search-first site assistant.

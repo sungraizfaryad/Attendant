@@ -176,6 +176,34 @@ class ATTENDANT_Leads {
 		set_transient( $session_key, 1, DAY_IN_SECONDS );
 		set_transient( self::DAILY_TRANSIENT, $today + 1, self::seconds_until_midnight() );
 
+		/**
+		 * Fires after a lead was validated and the notification email sent.
+		 *
+		 * Lets newsletter / CRM plugins subscribe the visitor — e.g.:
+		 *
+		 *     add_action( 'attendant_lead_captured', function ( $email, $lead ) {
+		 *         my_newsletter_subscribe( $email, $lead['name'] );
+		 *     }, 10, 2 );
+		 *
+		 * All values are already sanitised; $email passed is_email().
+		 *
+		 * @since 2.1.0
+		 *
+		 * @param string $email The visitor's validated email address.
+		 * @param array  $lead  { name, phone, preferred_time, topic, session_id }.
+		 */
+		do_action(
+			'attendant_lead_captured',
+			$email,
+			array(
+				'name'           => $name,
+				'phone'          => $phone,
+				'preferred_time' => $time,
+				'topic'          => $topic,
+				'session_id'     => $session_id,
+			)
+		);
+
 		return array(
 			'success' => true,
 			'message' => 'Callback request recorded and sent to the team. Confirm to the visitor that they will be contacted' . ( '' !== $time ? ' at their preferred time.' : ' soon.' ),
