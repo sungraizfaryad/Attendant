@@ -1173,11 +1173,13 @@ class ATTENDANT_REST_API {
 	 */
 	public function handle_slack_channels(): WP_REST_Response {
 		$channels = ATTENDANT_Slack::list_channels();
+		$error    = ATTENDANT_Slack::last_list_error();
 
 		return new WP_REST_Response(
 			array(
 				'channels' => $channels,
-				'error'    => ATTENDANT_Slack::last_list_error(),
+				'error'    => $error,
+				'friendly' => '' !== $error ? ATTENDANT_Slack::friendly_error( $error ) : null,
 			),
 			200
 		);
@@ -1191,24 +1193,54 @@ class ATTENDANT_REST_API {
 	 * @return WP_REST_Response
 	 */
 	public function handle_slack_test(): WP_REST_Response {
+		// 1) Is the token itself valid?
 		$auth = ATTENDANT_Slack::test_auth();
 		if ( empty( $auth['ok'] ) ) {
+			$code = (string) ( $auth['error'] ?? 'unknown' );
 			return new WP_REST_Response(
 				array(
-					'ok'    => false,
-					'error' => (string) ( $auth['error'] ?? 'unknown' ),
+					'ok'       => false,
+					'error'    => $code,
+					'friendly' => ATTENDANT_Slack::friendly_error( $code ),
 				),
 				200
 			);
 		}
 
+		// 2) Is a channel chosen?
+		if ( '' === ATTENDANT_Slack::channel() ) {
+			return new WP_REST_Response(
+				array(
+					'ok'       => false,
+					'error'    => 'no_channel',
+					'friendly' => array(
+						'message' => __( 'Pick a channel from the list above and click Save Settings, then send the test again.', 'attendant' ),
+					),
+				),
+				200
+			);
+		}
+
+		// 3) Can we actually post to it?
 		$ts = ATTENDANT_Slack::post_message(
 			__( 'Attendant is connected. Visitor handoffs will appear in this channel as threads.', 'attendant' )
 		);
 
+		if ( '' === $ts ) {
+			$code = ATTENDANT_Slack::last_post_error();
+			return new WP_REST_Response(
+				array(
+					'ok'       => false,
+					'error'    => $code,
+					'friendly' => ATTENDANT_Slack::friendly_error( $code ),
+				),
+				200
+			);
+		}
+
 		return new WP_REST_Response(
 			array(
-				'ok'   => '' !== $ts,
+				'ok'   => true,
 				'team' => (string) ( $auth['team'] ?? '' ),
 			),
 			200

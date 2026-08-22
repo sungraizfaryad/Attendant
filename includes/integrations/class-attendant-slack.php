@@ -310,7 +310,9 @@ final class ATTENDANT_Slack {
 	}
 
 	/**
-	 * chat.postMessage. Returns the message ts, '' on failure.
+	 * chat.postMessage. Returns the message ts, '' on failure. The Slack
+	 * error from a failed post is kept in last_post_error() so the test
+	 * button can explain WHY (bad channel, app not invited, …).
 	 *
 	 * @param string $text      Message text (mrkdwn).
 	 * @param string $thread_ts Optional thread to reply into.
@@ -327,7 +329,26 @@ final class ATTENDANT_Slack {
 
 		$response = self::api_call( 'chat.postMessage', $body );
 
-		return empty( $response['ok'] ) ? '' : (string) ( $response['ts'] ?? '' );
+		if ( empty( $response['ok'] ) ) {
+			self::$last_post_error = (string) ( $response['error'] ?? 'unreachable' );
+			return '';
+		}
+
+		self::$last_post_error = '';
+
+		return (string) ( $response['ts'] ?? '' );
+	}
+
+	/** Slack error from the most recent failed post_message(), '' otherwise. */
+	private static string $last_post_error = '';
+
+	/**
+	 * The Slack error from the last failed post_message().
+	 *
+	 * @return string
+	 */
+	public static function last_post_error(): string {
+		return self::$last_post_error;
 	}
 
 	// -------------------------------------------------------------------------
@@ -512,6 +533,76 @@ final class ATTENDANT_Slack {
 			'ok'    => false,
 			'error' => (string) ( $response['error'] ?? 'unreachable' ),
 		);
+	}
+
+	/**
+	 * Turn a raw Slack error code into a plain-language explanation with a
+	 * concrete fix and, where one helps, a link the owner can click. Keeps
+	 * every setup failure legible to a non-technical site owner instead of
+	 * leaking codes like "not_in_channel".
+	 *
+	 * @param string $code Raw Slack `error` value (or 'unreachable').
+	 * @return array{message: string, link?: string, link_label?: string}
+	 */
+	public static function friendly_error( string $code ): array {
+		$apps    = 'https://api.slack.com/apps';
+		$recreate = self::manifest_url();
+
+		switch ( $code ) {
+			case 'invalid_auth':
+			case 'not_authed':
+			case 'token_revoked':
+			case 'token_expired':
+			case 'account_inactive':
+				return array(
+					'message'    => __( 'The Bot Token is missing, wrong, or was reset in Slack. Open your app, copy the Bot User OAuth Token (it starts with xoxb-), and paste it into the Bot Token field above.', 'attendant' ),
+					'link'       => $apps,
+					'link_label' => __( 'Open your Slack apps', 'attendant' ),
+				);
+
+			case 'missing_scope':
+			case 'not_allowed_token_type':
+				return array(
+					'message'    => __( 'Your Slack app is missing a permission it needs. The simplest fix is to re-create the app from the button below (it comes with every permission pre-set), then reinstall it and paste the new Bot Token.', 'attendant' ),
+					'link'       => $recreate,
+					'link_label' => __( 'Re-create the Slack app', 'attendant' ),
+				);
+
+			case 'channel_not_found':
+				return array(
+					'message' => __( 'That channel could not be found — it may have been deleted or renamed. Click "Reload channels" and pick your channel again.', 'attendant' ),
+				);
+
+			case 'not_in_channel':
+			case 'is_archived':
+				return array(
+					'message' => __( 'The app is not in that channel yet. Open the channel in Slack, type /invite @Attendant Chat, then click "Reload channels" and choose it again.', 'attendant' ),
+				);
+
+			case 'restricted_action':
+			case 'no_permission':
+				return array(
+					'message' => __( 'Slack blocked this action. Ask a Slack workspace admin to allow the Attendant Chat app, then try again.', 'attendant' ),
+				);
+
+			case 'ratelimited':
+				return array(
+					'message' => __( 'Slack is temporarily rate-limiting requests. Wait about a minute and try again.', 'attendant' ),
+				);
+
+			case 'unreachable':
+				return array(
+					'message' => __( 'Could not reach Slack. Check that your server can make outbound web requests, then try again.', 'attendant' ),
+				);
+
+			default:
+				return array(
+					/* translators: %s: raw Slack error code */
+					'message' => sprintf( __( 'Slack reported a problem (%s). Re-check your Bot Token and Signing Secret, and that the app is installed and invited to your channel.', 'attendant' ), $code ),
+					'link'       => $apps,
+					'link_label' => __( 'Open your Slack apps', 'attendant' ),
+				);
+		}
 	}
 
 	/**

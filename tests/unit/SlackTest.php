@@ -261,6 +261,38 @@ final class SlackTest extends TestCase {
 		$this->assertContains( 'message.groups', $manifest['settings']['event_subscriptions']['bot_events'] );
 	}
 
+	public function test_friendly_error_maps_common_codes(): void {
+		// Bad token → points at the apps page.
+		$bad = ATTENDANT_Slack::friendly_error( 'invalid_auth' );
+		$this->assertStringContainsString( 'Bot Token', $bad['message'] );
+		$this->assertSame( 'https://api.slack.com/apps', $bad['link'] );
+
+		// Missing scope → recreate-app link (manifest url).
+		$scope = ATTENDANT_Slack::friendly_error( 'missing_scope' );
+		$this->assertStringContainsString( 'permission', $scope['message'] );
+		$this->assertStringContainsString( 'new_app=1', $scope['link'] );
+
+		// Not invited → /invite instruction, no link needed.
+		$invite = ATTENDANT_Slack::friendly_error( 'not_in_channel' );
+		$this->assertStringContainsString( '/invite', $invite['message'] );
+		$this->assertArrayNotHasKey( 'link', $invite );
+
+		// Unknown code → still human, echoes the code, has a fallback link.
+		$unknown = ATTENDANT_Slack::friendly_error( 'some_new_code' );
+		$this->assertStringContainsString( 'some_new_code', $unknown['message'] );
+		$this->assertArrayHasKey( 'link', $unknown );
+	}
+
+	public function test_post_message_records_error_for_diagnostics(): void {
+		$this->store_credentials();
+		$this->api_response = array( 'ok' => false, 'error' => 'not_in_channel' );
+
+		$ts = ATTENDANT_Slack::post_message( 'hello' );
+
+		$this->assertSame( '', $ts );
+		$this->assertSame( 'not_in_channel', ATTENDANT_Slack::last_post_error() );
+	}
+
 	public function test_debug_log_roundtrips(): void {
 		ATTENDANT_Slack::log_debug( 'forwarded_to_visitor', array( 'channel' => 'C0ABC' ) );
 		$dbg = ATTENDANT_Slack::get_debug();

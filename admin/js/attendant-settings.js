@@ -193,10 +193,27 @@
 	const slackTestBtn = document.getElementById( 'attendant-slack-test' );
 	const slackSelect  = document.getElementById( 'attendant-slack-channel' );
 
-	function slackSay( text, ok ) {
-		if ( slackStatus ) {
-			slackStatus.textContent = ' ' + ( ok ? '✓ ' : '✗ ' ) + text;
-			slackStatus.style.color = ok ? '#00a32a' : '#d63638';
+	// Render a status line. `friendly` (optional) is {message, link, link_label}
+	// from the server — shown as plain language with a clickable fix link.
+	function slackSay( text, ok, friendly ) {
+		if ( ! slackStatus ) {
+			return;
+		}
+		slackStatus.textContent = '';
+		slackStatus.style.color = ok ? '#00a32a' : '#d63638';
+		slackStatus.style.display = 'block';
+		slackStatus.style.marginTop = '8px';
+
+		var msg = friendly && friendly.message ? friendly.message : text;
+		slackStatus.appendChild( document.createTextNode( ( ok ? '✓ ' : '✗ ' ) + msg + ' ' ) );
+
+		if ( friendly && friendly.link ) {
+			var a = document.createElement( 'a' );
+			a.href = friendly.link;
+			a.target = '_blank';
+			a.rel = 'noopener noreferrer';
+			a.textContent = ( friendly.link_label || 'Open' ) + ' ↗';
+			slackStatus.appendChild( a );
 		}
 	}
 
@@ -214,12 +231,11 @@
 			const channels = ( json && json.channels ) || [];
 			const err      = json && json.error;
 			if ( ! channels.length ) {
-				if ( 'missing_scope' === err ) {
-					slackSay( 'The app is missing permission to see channels. Re-create it from "Create the Slack app" above, or re-install it, then try again.', false );
-				} else if ( err ) {
-					slackSay( 'Slack said: ' + err + '. Add the app to a channel (/invite @Attendant Chat), then Reload.', false );
+				if ( err && json.friendly ) {
+					slackSay( '', false, json.friendly );
 				} else {
-					slackSay( 'No channels yet. In Slack, type /invite @Attendant Chat in your channel, then Reload channels.', false );
+					// No error, just no channels the app has joined yet.
+					slackSay( 'No channels found yet. In Slack, open the channel you want and type /invite @Attendant Chat — for a private channel this is required — then click Reload channels.', false );
 				}
 				return;
 			}
@@ -267,7 +283,7 @@
 				if ( json && json.ok ) {
 					slackSay( 'Test message sent' + ( json.team ? ' to ' + json.team : '' ) + ' — check your channel.', true );
 				} else {
-					slackSay( 'Slack said: ' + ( ( json && json.error ) || 'unknown error' ) + '. Check token and channel.', false );
+					slackSay( '', false, ( json && json.friendly ) || { message: 'Something went wrong. Check your token and channel.' } );
 				}
 			} )
 			.catch( function () {
