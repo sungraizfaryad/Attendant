@@ -1,9 +1,9 @@
 # Attendant — Progress
 
-_Last updated: 2026-07-23 (v2.1.0 "Gemini free" complete + live-verified, NOT deployed)._
+_Last updated: 2026-08-22 (v2.1.0 SHIPPED to WP.org + GitHub)._
 _Rolling status only. Detail lives in `CLAUDE.md` and the cloud memory entries._
 
-## Done (branch `gemini-only` @ a54ff94)
+## Done (main @ 47eae11 = tag 2.1.0, deployed)
 
 - Google Gemini added as second provider: FREE chat + FREE embeddings, one no-card key. OpenAI untouched for existing installs. Old 6-provider/OpenRouter/Slack/debug direction abandoned — parked on `backup/v2.2.0-full`.
 - LIVE-VERIFIED with a real free key on mui: 113 chunks embedded via Gemini ($0, 0 failures), RAG retrieval + search_posts tool call + reply working in the widget.
@@ -25,11 +25,12 @@ _Rolling status only. Detail lives in `CLAUDE.md` and the cloud memory entries._
 - Per-model free-tier quotas are separate buckets — Flash-Lite has the biggest daily allowance, hence default.
 - Old local tags 2.1.0/2.2.0 point into the backup branch — delete before tagging the release.
 
-## Next steps
+## Next steps (post-ship)
 
-- Sungraiz: final look at mui (chat live on Gemini) → say "ship".
-- Ship: merge `gemini-only` → main, push GitHub, deploy.sh to WP.org as 2.1.0 (delete stale tags first; re-check readme screenshots/captions).
-- Post-ship: FLP has dead 2.2.0-era options (handoff_*, slack placeholder) — harmless; clean whenever.
+- SHIPPED 2026-08-22: WP.org SVN r3660619 (trunk+assets+tag 2.1.0), GitHub main 47eae11 + tag. `gemini-only` merged & deleted; `backup/v2.2.0-full` kept for parts.
+- v2.2.0 plan: Slack handoff — port one-way notify from backup branch (half session), build two-way reply path (3-4 sessions: Slack app, events endpoint, widget polling, mode UX).
+- Screenshots on WP.org still show 2.0.0-era UI — captions accurate; refresh via assets-only deploy whenever.
+- FLP has dead 2.2.0-era options (handoff_*, slack placeholder) — harmless; clean whenever.
 
 ## Key files
 
