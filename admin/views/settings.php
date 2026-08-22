@@ -739,38 +739,63 @@ $logging         = ! empty( $settings['logging_enabled'] );
 				<td>
 					<ol style="max-width:640px;margin:0 0 8px;line-height:1.9;">
 						<li>
-							<a href="<?php echo esc_url( ATTENDANT_Slack::manifest_url() ); ?>" target="_blank" rel="noopener noreferrer" class="button button-primary" style="margin:2px 0;">
-								<?php echo esc_html__( 'Create the Slack app', 'attendant' ); ?> ↗
-							</a><br>
-							<?php echo esc_html__( 'Everything is pre-filled for you. On the Slack page: pick your workspace, click Next, then Create.', 'attendant' ); ?>
+							<?php
+							printf(
+								/* translators: %s: link that opens Slack sign-in */
+								esc_html__( 'First, %s (open it in a new tab). If you do not have a Slack workspace yet, create one there. Being signed in first matters — otherwise the next step loses its pre-filled settings.', 'attendant' ),
+								'<a href="https://slack.com/signin" target="_blank" rel="noopener noreferrer"><strong>' . esc_html__( 'sign in to Slack', 'attendant' ) . '</strong> ↗</a>'
+							);
+							?>
+						</li>
+						<li>
+							<?php
+							printf(
+								/* translators: %s: link that creates the pre-filled Slack app */
+								esc_html__( 'Now %s. Everything is pre-filled — just pick your workspace, click Next, then Create.', 'attendant' ),
+								'<a href="' . esc_url( ATTENDANT_Slack::manifest_url() ) . '" target="_blank" rel="noopener noreferrer"><strong>' . esc_html__( 'create the Attendant app', 'attendant' ) . '</strong> ↗</a>'
+							);
+							?>
 						</li>
 						<li>
 							<?php echo esc_html__( 'On the app page that opens, click "Install to Workspace", then "Allow".', 'attendant' ); ?>
 						</li>
 						<li>
-							<?php
-							printf(
-								/* translators: %s: link to the Slack apps list */
-								esc_html__( 'Copy the Bot Token: in the left menu open "OAuth & Permissions" and copy the token that starts with xoxb. Paste it below. (Lost the page? Find your app at %s.)', 'attendant' ),
-								'<a href="https://api.slack.com/apps" target="_blank" rel="noopener noreferrer">api.slack.com/apps</a>'
-							);
-							?>
+							<?php echo esc_html__( 'Copy the two values below into the fields — the Signing Secret first, then the Bot Token. Each field has a link that takes you straight to the right Slack page.', 'attendant' ); ?>
 						</li>
 						<li>
-							<?php echo esc_html__( 'Copy the Signing Secret: open "Basic Information", scroll to App Credentials, click Show next to Signing Secret. Paste it below.', 'attendant' ); ?>
+							<?php echo esc_html__( 'In Slack, open the channel your team will answer in (a private one works great) and type: /invite @Attendant Chat', 'attendant' ); ?>
 						</li>
 						<li>
-							<?php echo esc_html__( 'In Slack, create a channel for chats (a private one works great, e.g. #website-chat) and invite the teammates who will answer. Then type this in the channel: /invite @Attendant Chat', 'attendant' ); ?>
-						</li>
-						<li>
-							<?php echo esc_html__( 'Click Save Settings below. Your channels then load automatically in the Channel row — pick yours and Save again. (Only channels the app has joined appear; for a private channel, /invite it first, then click Reload channels.)', 'attendant' ); ?>
-						</li>
-						<li>
-							<?php echo esc_html__( 'Click "Send test message" — it should pop up in your channel. Done.', 'attendant' ); ?>
+							<?php echo esc_html__( 'Click Save Settings. Your channels load automatically below — pick yours and Save again, then Send test message.', 'attendant' ); ?>
 						</li>
 					</ol>
 					<p class="description" style="max-width:640px;">
-						<?php echo esc_html__( 'If Slack showed "URL verification failed" while creating the app: finish steps 3 and 4, click Save Settings, then open the app\'s "Event Subscriptions" page and click "Retry". Note: Slack must be able to reach your website, so this does not work on a local development site.', 'attendant' ); ?>
+						<?php echo esc_html__( 'If Slack showed "URL verification failed" while creating the app: paste both values below, click Save Settings, then open the app\'s "Event Subscriptions" page and click "Retry". Slack must be able to reach your website, so this does not work on a local development site.', 'attendant' ); ?>
+					</p>
+				</td>
+			</tr>
+
+			<tr>
+				<th scope="row">
+					<label for="attendant-slack-secret"><?php echo esc_html__( 'Signing Secret', 'attendant' ); ?></label>
+				</th>
+				<td>
+					<input
+						type="password"
+						id="attendant-slack-secret"
+						name="slack_signing_secret"
+						class="regular-text"
+						autocomplete="off"
+						placeholder="<?php echo esc_attr( $attendant_has_slack_secret ? '••••••••  (' . __( 'secret stored', 'attendant' ) . ')' : '' ); ?>"
+					>
+					<p class="description" style="max-width:520px;">
+						<?php
+						printf(
+							/* translators: %s: link to the Slack apps list */
+							esc_html__( 'On your app\'s %s page, under App Credentials, click Show next to Signing Secret and copy it.', 'attendant' ),
+							'<a href="https://api.slack.com/apps" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Basic Information', 'attendant' ) . ' ↗</a>'
+						);
+						?>
 					</p>
 				</td>
 			</tr>
@@ -788,22 +813,15 @@ $logging         = ! empty( $settings['logging_enabled'] );
 						autocomplete="off"
 						placeholder="<?php echo esc_attr( $attendant_has_slack_token ? '••••••••  (' . __( 'token stored', 'attendant' ) . ')' : 'xoxb-…' ); ?>"
 					>
-				</td>
-			</tr>
-
-			<tr>
-				<th scope="row">
-					<label for="attendant-slack-secret"><?php echo esc_html__( 'Signing Secret', 'attendant' ); ?></label>
-				</th>
-				<td>
-					<input
-						type="password"
-						id="attendant-slack-secret"
-						name="slack_signing_secret"
-						class="regular-text"
-						autocomplete="off"
-						placeholder="<?php echo esc_attr( $attendant_has_slack_secret ? '••••••••  (' . __( 'secret stored', 'attendant' ) . ')' : '' ); ?>"
-					>
+					<p class="description" style="max-width:520px;">
+						<?php
+						printf(
+							/* translators: %s: link to the Slack apps list */
+							esc_html__( 'On your app\'s %s page, copy the Bot User OAuth Token (it starts with xoxb-).', 'attendant' ),
+							'<a href="https://api.slack.com/apps" target="_blank" rel="noopener noreferrer">' . esc_html__( 'OAuth & Permissions', 'attendant' ) . ' ↗</a>'
+						);
+						?>
+					</p>
 				</td>
 			</tr>
 
