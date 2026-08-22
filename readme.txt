@@ -8,79 +8,70 @@ Requires PHP:      8.0
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
-Free AI chatbot for your site — powered by Google Gemini's free tier. Visitors ask questions, Attendant searches your own posts, pages, and products.
+Free AI chatbot and smart site search for WordPress. Runs on Google Gemini's free plan. No credit card, no subscription, no monthly fees.
 
 == Description ==
 
-**Completely free to run.** Attendant works with Google Gemini's free tier: one free API key (no credit card, ever) powers both the chat and the AI training on your own content. Prefer OpenAI? That works too.
+Attendant adds a free AI chatbot to your WordPress site. Visitors ask questions in the chat, and it answers using your own posts, pages, and products, with buttons that take them straight to the right page. It is a chatbot, an AI assistant, and a smart site search in one chat widget.
 
-Attendant is an AI-powered site search chatbot that helps your visitors find content on your website. When someone asks a question in plain language, Attendant searches your own posts, pages, products, and listings, then answers right in the chat — so visitors reach the right page without digging through menus. It combines **conversational search** with **knowledge Q&A** in one chat widget.
+It runs on Google Gemini's free plan. One free key, no credit card, ever. Prefer OpenAI, the company behind ChatGPT? That works too.
 
-Replies stay short and scannable: the assistant links to matching pages as clickable buttons, offers tappable choices when the next step is a selection, and guides the visitor with one question at a time when a search comes up empty. The conversation is remembered in the visitor's own browser so it survives page changes and refreshes. When the assistant genuinely cannot help, you can optionally let it offer a callback and email the request to your team.
+= What it does for your visitors =
 
-**Mode 1 — Smart Search (for sites with listings)**
-A visitor says: "Find me apartments in Lisbon under €500K with 3 bedrooms" → Attendant extracts the parameters, searches your WordPress database, and answers in the chat with clickable buttons to the matching listings.
+* Answers questions instantly, day and night, in plain language
+* Finds the right post, page, or product and shows it as a clickable button
+* Understands detailed requests like "3 bedroom apartments in Lisbon under 500K"
+* Answers questions about your business, like "what is your return policy?"
+* Shows tap-to-answer buttons so visitors can choose instead of typing
+* Suggests real alternatives from your site when nothing matches
+* Remembers the conversation while they browse, even across open tabs
 
-**Mode 2 — Knowledge Q&A (for all sites)**
-A visitor says: "What is your return policy?" → Attendant searches your indexed content and answers the question with source citations.
+= What it does for you =
 
-**The AI automatically picks the right mode** based on what the visitor is asking.
+* Free to run with a Google Gemini key. No credit card, no monthly fee
+* Answers the repeat customer support questions so you do not have to
+* Sets itself up: a short wizard, then it learns your content on its own
+* Works with WooCommerce products, custom fields (ACF, MetaBox), and any post type
+* Collects leads: it can offer a callback, take the visitor's email, and send it to you. Off by default
+* Passes captured leads to your newsletter or CRM plugin if you use one
+* Lets you add your own questions and answers that the chatbot always uses first
+* Spending limits you control, so the chat can never run up a surprise bill
+* Private by design: chats stay in the visitor's browser and IP addresses are never stored
 
-= Key Features =
+= Great for =
 
-* **Auto-discovers your site** — scans post types, taxonomies, and custom fields (ACF, MetaBox, WooCommerce) automatically
-* **Function calling** — uses OpenAI's tools API for guaranteed structured search parameters, not fragile text guessing
-* **Direct database access** — queries WordPress directly (no HTTP crawling = faster, more accurate)
-* **Clickable source buttons** — every answer links to the matching pages as buttons, so replies stay short and scannable
-* **Tap-to-answer chips** — when the next step is a choice (refine the search, pick a time), the visitor taps an option instead of typing
-* **Guided help on no results** — when nothing matches, the assistant offers real alternatives drawn from your own content and asks one question at a time to narrow things down
-* **Conversation history** — the chat is remembered in the visitor's own browser, so it survives page changes and refreshes; a "New chat" button and a "Previous chats" list are built in
-* **Callback / lead capture (optional, off by default)** — when the assistant cannot help, it can offer a callback, collect the email the visitor provides (and optionally a phone number and preferred time), and email the request to you
-* **RAG Q&A** — embeds your content, searches by cosine similarity, answers with source links
-* **Custom Q&A pairs** — admins can add specific answers that always take priority
-* **About-this-site context** — a short description you write that helps the assistant understand what your site is for
-* **Manual or background indexing** — index on demand with a live activity log, or let it run in the background; the widget stays hidden until the first index completes so visitors never see half-indexed answers
-* **Bring Your Own Key** — works with your own OpenAI API key, no SaaS subscription required
-* **Privacy-first** — conversation logging and lead capture are both OFF by default; IP addresses are never stored
-
-= Who It's For =
-
-* Real estate directories (find properties by price, bedrooms, location)
-* Job boards (find jobs by type, salary, location, remote)
-* WooCommerce stores (find products by price, category, attributes)
-* Event sites (find events by date, location, category)
-* Doctor/medical directories
-* Any WordPress site with custom post types
+* Online stores: help shoppers find products by price, category, or feature
+* Real estate sites: find properties by price, bedrooms, and location
+* Job boards, event sites, directories, and listing sites
+* Business and service sites that get the same questions every day
+* Blogs and content sites with a big archive to search
 
 = Requirements =
 
-* PHP 8.0 or higher
-* WordPress 6.0 or higher
-* A free Google Gemini API key (no credit card) — or an OpenAI API key if you prefer
+* WordPress 6.0 or higher and PHP 8.0 or higher
+* A free Google Gemini key (no credit card), or an OpenAI key if you prefer
 
 == Installation ==
 
-1. Upload the `attendant` folder to `/wp-content/plugins/`
-2. Activate the plugin in **Plugins → Installed Plugins**
-3. Go to **Attendant → Settings**
-4. Enter your OpenAI API key and click **Save Settings**
-5. Click **Test Connection** to confirm your key is working
-6. Go to **Attendant → Content Indexing** and click **Start Indexing**
-7. Add the chat widget with the shortcode `[attendant]` or enable the floating widget (appears automatically in the footer on every page)
+1. Install and activate the plugin
+2. Open **Attendant** in your dashboard. A short setup wizard starts
+3. Paste your free Google Gemini key. The wizard links you to the page where you create one in two clicks
+4. Go to **Attendant → Content Indexing** and click **Start Indexing** so the chatbot learns your site
+5. Done. The chat button appears on your site by itself. You can also place it anywhere with the shortcode `[attendant]`
 
 == Frequently Asked Questions ==
 
 = Is it really free? =
 
-Yes, with Google Gemini. Sign in to aistudio.google.com with any Google account, create an API key in two clicks — no credit card is ever asked — and paste it into the setup wizard. Both the chat and the content training (embeddings) run on Google's free tier at $0. Because no payment method exists on the account, you cannot be charged accidentally: heavy usage just pauses until the daily free quota resets.
+Yes, with Google Gemini. Sign in to aistudio.google.com with any Google account and create a free key in two clicks. No credit card is ever asked. Paste the key into the setup wizard and everything runs at no cost, both the chat and the learning of your content. Because there is no payment method on the account, you can never be charged by accident. On a very busy day the chat simply pauses until the free daily allowance resets.
 
 = Do I need an OpenAI account? =
 
-No. OpenAI is an optional alternative provider. If you use it, each conversation turn with gpt-4o-mini costs approximately $0.005 USD — 1,000 conversations per month ≈ $5–10, billed by OpenAI to your account.
+No. OpenAI is an optional alternative. If you use it, a typical conversation costs well under one cent, so around $5 to $10 per month for 1,000 conversations, billed by OpenAI to your account.
 
 = Are there limits on the free tier? =
 
-Google's free tier allows hundreds to ~1,500 chat requests per day depending on the model and region — plenty for a typical site. Embedding (training) is free of charge and only rate-limited per minute, so a large first index simply takes a little longer.
+Google's free plan allows hundreds of chat messages per day, plenty for a typical site. Teaching the chatbot your content is also free, so a large site simply takes a little longer to index the first time.
 
 = Is my data sent to OpenAI? =
 
@@ -88,11 +79,11 @@ Only the user's chat message and relevant content excerpts (for Q&A mode) are se
 
 = Will it slow down my site? =
 
-No. The chat widget JS is less than 10KB gzipped and loads asynchronously. Admin scripts only load on plugin admin pages. All AI processing happens via REST API calls triggered by the visitor — never on page load.
+No. The chat widget is tiny and loads in the background without holding up your pages. All AI work happens only when a visitor actually sends a message, never while your pages load.
 
 = Does it work with ACF, MetaBox, WooCommerce? =
 
-Yes. The schema discovery engine automatically detects custom fields from ACF, MetaBox, and WooCommerce product attributes.
+Yes. The plugin automatically finds your custom fields from ACF, MetaBox, and WooCommerce product attributes. Nothing to configure.
 
 = Is the chat history saved on my server? =
 
@@ -116,18 +107,18 @@ Yes, optionally. File logging is off by default. When enabled, each exchange is 
 
 == External services ==
 
-This plugin connects to the AI provider you choose in Settings — Google Gemini (recommended, free tier) or OpenAI. This is required for the AI chat features: the provider turns a visitor's natural-language question into a structured search of your own content and writes the answer.
+This plugin connects to the AI provider you choose in Settings: Google Gemini (recommended, free tier) or OpenAI. This is required for the AI chat features: the provider turns a visitor's natural-language question into a structured search of your own content and writes the answer.
 
-What is sent, and when: only when a visitor sends a chat message, the plugin sends that message text plus the titles and short excerpts of the matching content from your own site to your chosen provider. If you enable the optional Semantic Q&A mode, the text of your selected content is also sent to that provider during indexing to generate embeddings. Your API key, your full database, and IP addresses are never sent. Nothing is sent until you add your own API key and turn the chat widget on — both are off by default. The plugin only ever talks to the one provider you configure.
+What is sent, and when: only when a visitor sends a chat message, the plugin sends that message text plus the titles and short excerpts of the matching content from your own site to your chosen provider. If you enable the optional Semantic Q&A mode, the text of your selected content is also sent to that provider during indexing to generate embeddings. Your API key, your full database, and IP addresses are never sent. Nothing is sent until you add your own API key and turn the chat widget on. Both are off by default. The plugin only ever talks to the one provider you configure.
 
-Note on Google's free tier: Google's terms allow content submitted on the free tier to be used to improve their services. Attendant only sends your public website content and visitor chat messages — review Google's terms if that matters for your site.
+Note on Google's free tier: Google's terms allow content submitted on the free tier to be used to improve their services. Attendant only sends your public website content and visitor chat messages. Review Google's terms if that matters for your site.
 
-Google Gemini API — provided by Google LLC:
+Google Gemini API, provided by Google LLC:
 
 * Terms: https://ai.google.dev/gemini-api/terms
 * Privacy Policy: https://policies.google.com/privacy
 
-OpenAI API — provided by OpenAI, L.L.C.:
+OpenAI API, provided by OpenAI, L.L.C.:
 
 * Terms of Use: https://openai.com/policies/terms-of-use
 * Privacy Policy: https://openai.com/policies/privacy-policy
@@ -147,21 +138,21 @@ You are responsible for disclosing these features in your own privacy policy if 
 
 == Screenshots ==
 
-1. Settings page — configure your API key and AI provider
-2. Chat widget — visitor view with search results and preview cards
-3. Content indexing — select post types and monitor indexing progress
-4. Schema review — inspect auto-discovered post types and fields
-5. Q&A Manager — add custom question-answer pairs
+1. Settings page: choose your AI provider and add your key
+2. Chat widget: what visitors see, with answers and page buttons
+3. Content indexing: pick what the chatbot learns and watch progress
+4. Schema review: see what the plugin found on your site
+5. Q&A Manager: add your own questions and answers
 
 == Changelog ==
 
 = 2.1.0 =
-* New: Google Gemini support — run the entire plugin on Google's FREE tier. One free API key (no credit card) powers both the chat and the content training.
-* New: Setup wizard recommends the free Gemini key with a direct link; OpenAI remains fully supported for existing users — nothing changes on update.
-* New: Keyword-search fallback — if the key used for content matching is removed after a provider switch, search falls back to fast keyword matching instead of going silent.
-* Improved: switching providers is safe — search keeps using your existing index until you choose to re-index (free with Gemini).
-* New: `attendant_lead_captured` action — connect captured callback requests to your newsletter or CRM plugin.
-* New: chat stays in sync across browser tabs — a conversation started in one tab appears live in the others.
+* New: Google Gemini support. Run the whole plugin on Google's free plan with one free key, no credit card.
+* New: setup wizard recommends the free Gemini key with a direct link. OpenAI keeps working exactly as before, nothing changes on update.
+* New: if a key is removed after switching providers, search falls back to fast keyword matching instead of going silent.
+* Improved: switching providers is safe. Search keeps using your existing index until you choose to re-index (free with Gemini).
+* New: `attendant_lead_captured` action to connect captured callback requests to your newsletter or CRM plugin.
+* New: chat stays in sync across browser tabs. A conversation started in one tab appears live in the others.
 * Improved: API costs are tracked per provider and clearly labeled as estimates; on the Gemini free tier the dashboard reminds you Google bills $0.
 
 = 2.0.0 =
@@ -180,14 +171,14 @@ You are responsible for disclosing these features in your own privacy policy if 
 
 = 1.0.0 =
 * Initial release.
-* Settings page — encrypted API key storage, model selection, widget configuration, privacy/GDPR controls.
-* OpenAI provider — chat completion (gpt-4o-mini / gpt-4o) and embeddings (text-embedding-3-small).
-* Schema discovery — auto-detects post types, taxonomies, and custom fields (ACF, MetaBox, WooCommerce).
-* Content indexing — chunker, embedder, background queue (WP-Cron), auto-sync on post save/delete.
-* Chat engine — RAG retrieval (cosine similarity), OpenAI function-calling (search_posts), conversation handler with session history and token budgeting.
-* Frontend chat widget — floating launcher, accessible dialog, brand colour + position overrides, [attendant] shortcode.
-* Analytics page — monthly API cost history, index health stats, conversation stats (when logging enabled).
-* Q&A Manager — admin-configured question/answer pairs matched semantically before RAG (threshold 0.92); REST CRUD API.
+* Settings page: encrypted API key storage, model selection, widget configuration, privacy/GDPR controls.
+* OpenAI provider: chat completion (gpt-4o-mini / gpt-4o) and embeddings (text-embedding-3-small).
+* Schema discovery: auto-detects post types, taxonomies, and custom fields (ACF, MetaBox, WooCommerce).
+* Content indexing: chunker, embedder, background queue (WP-Cron), auto-sync on post save/delete.
+* Chat engine: RAG retrieval (cosine similarity), OpenAI function-calling (search_posts), conversation handler with session history and token budgeting.
+* Frontend chat widget: floating launcher, accessible dialog, brand colour + position overrides, [attendant] shortcode.
+* Analytics page: monthly API cost history, index health stats, conversation stats (when logging enabled).
+* Q&A Manager: admin-configured question/answer pairs matched semantically before RAG (threshold 0.92); REST CRUD API.
 
 == Upgrade Notice ==
 
