@@ -252,6 +252,7 @@ class ATTENDANT_Frontend {
 					'humanRequested'  => __( 'Our team has been notified. Replies will appear right here — you can keep browsing, this chat follows you.', 'attendant' ),
 					'humanFailed'     => __( 'Could not reach the team right now. Please try again in a moment.', 'attendant' ),
 					'backToAi'        => __( 'You are back with the AI assistant.', 'attendant' ),
+					'pollExpired'     => __( 'Please refresh the page to keep chatting with our team.', 'attendant' ),
 				),
 			)
 		);

@@ -128,6 +128,16 @@
 				if ( ! mine.session && tc.session ) {
 					mine.session = tc.session;
 				}
+				// Live-handoff state only ever propagates FORWARD in a merge
+				// (never downgrade — a stale on-disk copy must not cancel a
+				// handoff this tab just started). Ending is detected per tab by
+				// the next poll returning live:false, so no downgrade is needed.
+				if ( tc.live && ! mine.live ) {
+					mine.live = true;
+				}
+				if ( tc.handoffSecret && ! mine.handoffSecret ) {
+					mine.handoffSecret = tc.handoffSecret;
+				}
 			} );
 			store.chats.sort( function ( a, b ) {
 				return ( b.started || 0 ) - ( a.started || 0 );
@@ -399,6 +409,7 @@
 				return;
 			}
 
+			endHandoff( activeChat() );
 			createChat();
 			sessionId            = '';
 			messagesEl.innerHTML = '';
@@ -484,13 +495,7 @@
 			// logged-in users). Without it WordPress downgrades the request to
 			// logged-out, and the user-bound X-Attendant-Nonce can never verify for
 			// logged-in visitors.
-			var headers = {
-				'Content-Type': 'application/json',
-				'X-Attendant-Nonce': nonce,
-			};
-			if ( restNonce ) {
-				headers['X-WP-Nonce'] = restNonce;
-			}
+			var headers = Object.assign( { 'Content-Type': 'application/json' }, chatHeaders() );
 
 			fetch( restBase + '/chat', {
 				method:  'POST',
@@ -624,6 +629,12 @@
 			if ( widget.classList.contains( 'is-history' ) ) {
 				renderHistoryList();
 			}
+			// A handoff may have started or ended in the other tab.
+			if ( chat.live && chat.handoffSecret ) {
+				startPolling();
+			} else {
+				stopPolling();
+			}
 		} );
 
 		// ── Live-agent handoff (Slack) ────────────────────────────────────────
@@ -638,6 +649,12 @@
 			var h = { 'X-Attendant-Nonce': nonce };
 			if ( restNonce ) {
 				h['X-WP-Nonce'] = restNonce;
+			}
+			// The per-session handoff secret is the credential the server checks
+			// before touching a live session — send it when the open chat has one.
+			var live = activeChat();
+			if ( live && live.handoffSecret ) {
+				h['X-Attendant-Handoff'] = live.handoffSecret;
 			}
 			return h;
 		}
@@ -658,31 +675,77 @@
 
 		function pollAgent() {
 			var chat = activeChat();
-			if ( ! chat.live || document.hidden ) {
+			if ( ! chat.live || ! chat.handoffSecret || document.hidden ) {
 				return;
 			}
 
-			fetch( restBase + '/chat/poll?session_id=' + encodeURIComponent( sessionId ), {
+			// Bind this request to the chat it was issued for — the visitor may
+			// switch conversations before it resolves.
+			var pollSession = sessionId;
+			var pollChatId  = chat.id;
+
+			var pollFailed = false;
+
+			fetch( restBase + '/chat/poll?session_id=' + encodeURIComponent( pollSession ), {
 				headers: chatHeaders()
 			} )
-			.then( function ( r ) { return r.ok ? r.json() : null; } )
+			.then( function ( r ) {
+				// A dead security token (nonce expires after ~12-24h) would
+				// otherwise make polling fail forever in silence. Stop and tell
+				// the visitor to refresh instead of stranding them.
+				if ( 401 === r.status || 403 === r.status ) {
+					pollFailed = true;
+					return null;
+				}
+				return r.ok ? r.json() : null;
+			} )
 			.then( function ( data ) {
+				if ( pollFailed ) {
+					stopPolling();
+					appendMessage( i18n.pollExpired || 'Please refresh the page to keep chatting with our team.', 'bot', [] );
+					return;
+				}
 				if ( ! data ) {
 					return;
 				}
-				( data.messages || [] ).forEach( function ( m ) {
-					if ( m && m.text ) {
+
+				var target = null;
+				for ( var i = 0; i < store.chats.length; i++ ) {
+					if ( store.chats[ i ].id === pollChatId ) {
+						target = store.chats[ i ];
+						break;
+					}
+				}
+				if ( ! target ) {
+					return;
+				}
+				var isOpen = ( store.active === pollChatId );
+
+				var got = ( data.messages || [] );
+				got.forEach( function ( m ) {
+					if ( ! m || ! m.text ) {
+						return;
+					}
+					// Always persist to the chat the poll belonged to; only
+					// paint when that chat is the one on screen.
+					target.messages.push( { r: 'a', t: String( m.text ), s: [] } );
+					if ( isOpen ) {
 						appendMessage( m.text, 'agent', [] );
-						persistMessage( 'a', m.text, [] );
 					}
 				} );
-				if ( ! data.live ) {
-					// Thread expired on the server — hand back to the AI.
-					chat.live = false;
+				if ( got.length ) {
 					saveStore();
-					stopPolling();
-					appendMessage( i18n.backToAi || 'You are back with the AI assistant.', 'bot', [] );
-					persistMessage( 'b', i18n.backToAi || 'You are back with the AI assistant.', [] );
+				}
+
+				if ( ! data.live ) {
+					target.live = false;
+					target.handoffSecret = '';
+					saveStore();
+					if ( isOpen ) {
+						stopPolling();
+						appendMessage( i18n.backToAi || 'You are back with the AI assistant.', 'bot', [] );
+						persistMessage( 'b', i18n.backToAi || 'You are back with the AI assistant.', [] );
+					}
 				}
 			} )
 			.catch( function () { /* transient network issue — next tick retries */ } );
@@ -718,8 +781,9 @@
 				appendMessage( text, 'bot', [] );
 				persistMessage( 'b', text, [] );
 
-				if ( res.ok ) {
+				if ( res.ok && res.body && res.body.secret ) {
 					chat.live = true;
+					chat.handoffSecret = res.body.secret;
 					saveStore();
 					startPolling();
 				}
@@ -727,6 +791,25 @@
 			.catch( function () {
 				appendMessage( i18n.humanFailed || 'Could not reach the team.', 'bot', [] );
 			} );
+		}
+
+		// Tell the server to close the Slack thread when the visitor abandons a
+		// live chat (starting a new one). Fire-and-forget.
+		function endHandoff( chat ) {
+			if ( ! chat || ! chat.live || ! chat.handoffSecret ) {
+				return;
+			}
+			var h = { 'Content-Type': 'application/json', 'X-Attendant-Nonce': nonce, 'X-Attendant-Handoff': chat.handoffSecret };
+			if ( restNonce ) {
+				h['X-WP-Nonce'] = restNonce;
+			}
+			fetch( restBase + '/chat/handoff', {
+				method:  'POST',
+				headers: h,
+				body: JSON.stringify( { session_id: chat.session || chat.id, end: true } )
+			} ).catch( function () {} );
+			chat.live = false;
+			chat.handoffSecret = '';
 		}
 
 		if ( humanBtn ) {

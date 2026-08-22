@@ -447,6 +447,18 @@ class ATTENDANT_REST_API {
 			);
 		}
 
+		// A verified live handoff bypasses the AI budget and message caps:
+		// those exist to protect the API bill, and a human conversation makes
+		// no API calls. The secret is checked so this bypass can't be abused
+		// to dodge the rate limit on ordinary AI chat.
+		$session_id = (string) $request->get_param( 'session_id' );
+		if ( '' !== $session_id && '' !== ATTENDANT_Slack::thread_for_session( $session_id ) ) {
+			$secret = sanitize_text_field( wp_unslash( $request->get_header( 'X-Attendant-Handoff' ) ?? '' ) );
+			if ( ATTENDANT_Slack::verify_session_secret( $session_id, $secret ) ) {
+				return true;
+			}
+		}
+
 		// Budget kill-switch: once the active provider's spend reaches the daily
 		// or monthly budget, the bot pauses until the period rolls over.
 		if ( ATTENDANT_Billing::daily_budget_reached() || ATTENDANT_Billing::monthly_budget_reached() ) {
@@ -853,8 +865,24 @@ class ATTENDANT_REST_API {
 		$session_id = (string) $request->get_param( 'session_id' );
 
 		// Live-agent mode: while a Slack handoff is active for this session,
-		// messages go to the team's thread — the AI stays out of the way.
+		// messages go to the team's thread — the AI stays out of the way. The
+		// per-session secret must match, so a stranger who guessed a live
+		// session id cannot post into someone else's support thread.
 		if ( '' !== $session_id && '' !== ATTENDANT_Slack::thread_for_session( $session_id ) ) {
+			$secret = sanitize_text_field( wp_unslash( $request->get_header( 'X-Attendant-Handoff' ) ?? '' ) );
+
+			if ( ! ATTENDANT_Slack::verify_session_secret( $session_id, $secret ) ) {
+				return new WP_REST_Response(
+					array(
+						'reply'      => __( 'This conversation is being handled by our team in another window.', 'attendant' ),
+						'session_id' => $session_id,
+						'sources'    => array(),
+						'options'    => array(),
+					),
+					200
+				);
+			}
+
 			ATTENDANT_Slack::forward_visitor_message( $session_id, $message );
 			ATTENDANT_Chat_Log::record( $session_id, $message, array( 'reply' => '[forwarded to live agent]' ) );
 
@@ -955,9 +983,22 @@ class ATTENDANT_REST_API {
 			);
 		}
 
-		$started = ATTENDANT_Slack::start_handoff( $session_id, $transcript );
+		// A visitor ending the handoff from their side (e.g. "New chat").
+		if ( ! empty( $request->get_json_params()['end'] ) ) {
+			$secret = sanitize_text_field( wp_unslash( $request->get_header( 'X-Attendant-Handoff' ) ?? '' ) );
+			if ( ATTENDANT_Slack::verify_session_secret( $session_id, $secret ) ) {
+				ATTENDANT_Slack::post_message(
+					__( 'The visitor closed this conversation.', 'attendant' ),
+					ATTENDANT_Slack::thread_for_session( $session_id )
+				);
+				ATTENDANT_Slack::end_handoff( $session_id );
+			}
+			return new WP_REST_Response( array( 'ok' => true, 'ended' => true ), 200 );
+		}
 
-		if ( ! $started ) {
+		$secret = ATTENDANT_Slack::start_handoff( $session_id, $transcript );
+
+		if ( '' === $secret ) {
 			return new WP_Error(
 				'attendant_handoff_failed',
 				__( 'Could not reach the team right now. Please try again shortly.', 'attendant' ),
@@ -968,6 +1009,10 @@ class ATTENDANT_REST_API {
 		return new WP_REST_Response(
 			array(
 				'ok'      => true,
+				// The capability secret binds this live chat to THIS browser.
+				// Every poll and live message must present it; without it a
+				// known session id grants nothing.
+				'secret'  => $secret,
 				'message' => __( 'Our team has been notified. Replies will appear right here — you can keep this window open.', 'attendant' ),
 			),
 			200
@@ -978,13 +1023,30 @@ class ATTENDANT_REST_API {
 	 * GET /chat/poll
 	 *
 	 * Returns agent messages queued for this session since the last poll,
-	 * plus whether the handoff is still live.
+	 * plus whether the handoff is still live. Requires the per-session secret
+	 * issued at handoff — the session id alone is not a credential.
 	 *
 	 * @param WP_REST_Request $request Incoming REST request.
 	 * @return WP_REST_Response
 	 */
 	public function handle_poll( WP_REST_Request $request ): WP_REST_Response {
+		nocache_headers();
+
 		$session_id = (string) $request->get_param( 'session_id' );
+		$secret     = sanitize_text_field( wp_unslash( $request->get_header( 'X-Attendant-Handoff' ) ?? '' ) );
+
+		// Ownership gate: only the browser that started the handoff (and holds
+		// the secret) may read its agent replies. A mismatch reads as "not
+		// live" so an enumerator learns nothing about which ids exist.
+		if ( ! ATTENDANT_Slack::verify_session_secret( $session_id, $secret ) ) {
+			return new WP_REST_Response(
+				array(
+					'messages' => array(),
+					'live'     => false,
+				),
+				200
+			);
+		}
 
 		$messages = array();
 		foreach ( ATTENDANT_Slack::drain_agent_messages( $session_id ) as $m ) {

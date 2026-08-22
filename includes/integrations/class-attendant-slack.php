@@ -160,9 +160,53 @@ final class ATTENDANT_Slack {
 	public static function end_handoff( string $session_id ): void {
 		$ts = self::thread_for_session( $session_id );
 		delete_transient( 'attendant_slack_thread_' . md5( $session_id ) );
+		delete_transient( 'attendant_slack_auth_' . md5( $session_id ) );
+		delete_transient( 'attendant_agent_q_' . md5( $session_id ) );
 		if ( '' !== $ts ) {
 			delete_transient( 'attendant_slack_session_' . str_replace( '.', '_', $ts ) );
 		}
+	}
+
+	// -------------------------------------------------------------------------
+	// Per-session capability secret
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Mint a high-entropy secret that ties a live handoff to the ONE browser
+	 * that started it, and return the plaintext (stored only as a hash).
+	 *
+	 * The visitor's chat session id travels in URLs and localStorage and is
+	 * therefore not a credential — this secret is. It is sent back only in
+	 * the handoff response body, kept in that browser, and presented as a
+	 * header on every poll / live message. Without it, knowing a session id
+	 * grants nothing: no reading another visitor's agent replies, no posting
+	 * into their Slack thread.
+	 *
+	 * @param string $session_id Chat session id.
+	 * @return string Plaintext secret to hand to the browser.
+	 */
+	public static function issue_session_secret( string $session_id ): string {
+		$secret = wp_generate_password( 48, false );
+		set_transient( 'attendant_slack_auth_' . md5( $session_id ), wp_hash( $secret ), self::THREAD_TTL );
+
+		return $secret;
+	}
+
+	/**
+	 * Constant-time check that a presented secret owns this session.
+	 *
+	 * @param string $session_id Chat session id.
+	 * @param string $secret     Secret presented by the caller.
+	 * @return bool
+	 */
+	public static function verify_session_secret( string $session_id, string $secret ): bool {
+		if ( '' === $secret ) {
+			return false;
+		}
+
+		$stored = (string) get_transient( 'attendant_slack_auth_' . md5( $session_id ) );
+
+		return '' !== $stored && hash_equals( $stored, wp_hash( $secret ) );
 	}
 
 	// -------------------------------------------------------------------------
@@ -175,16 +219,18 @@ final class ATTENDANT_Slack {
 	 *
 	 * @param string $session_id Chat session id.
 	 * @param array  $transcript Recent messages: array of ['role','text'].
-	 * @return bool Whether the thread was created.
+	 * @return string The capability secret to hand to the browser, or '' on
+	 *                failure. A caller with an already-live session gets a
+	 *                freshly re-issued secret so a reload can rebind.
 	 */
-	public static function start_handoff( string $session_id, array $transcript ): bool {
+	public static function start_handoff( string $session_id, array $transcript ): string {
 		if ( ! self::is_configured() ) {
-			return false;
+			return '';
 		}
 
-		// Already live — nothing to do.
+		// Already live — re-issue the secret (the browser may have lost it).
 		if ( '' !== self::thread_for_session( $session_id ) ) {
-			return true;
+			return self::issue_session_secret( $session_id );
 		}
 
 		$lines   = array();
@@ -200,12 +246,12 @@ final class ATTENDANT_Slack {
 
 		$ts = self::post_message( implode( "\n", $lines ) );
 		if ( '' === $ts ) {
-			return false;
+			return '';
 		}
 
 		self::map( $session_id, $ts );
 
-		return true;
+		return self::issue_session_secret( $session_id );
 	}
 
 	/**
@@ -252,25 +298,35 @@ final class ATTENDANT_Slack {
 	/**
 	 * Queue an agent reply for the visitor's widget.
 	 *
+	 * The append and the drain both run under a per-session MySQL advisory
+	 * lock: two agent replies landing within the same poll interval, or a
+	 * reply landing exactly as the widget drains, would otherwise race on the
+	 * read-modify-write and lose a message.
+	 *
 	 * @param string $session_id Chat session id.
 	 * @param string $text       Agent message (already cleaned).
 	 */
 	public static function queue_agent_message( string $session_id, string $text ): void {
-		$key   = 'attendant_agent_q_' . md5( $session_id );
-		$queue = get_transient( $key );
-		$queue = is_array( $queue ) ? $queue : array();
+		$key = 'attendant_agent_q_' . md5( $session_id );
 
-		$queue[] = array(
-			'text' => $text,
-			't'    => time(),
+		self::with_session_lock(
+			$session_id,
+			static function () use ( $key, $text ) {
+				$queue   = get_transient( $key );
+				$queue   = is_array( $queue ) ? $queue : array();
+				$queue[] = array(
+					'text' => $text,
+					't'    => time(),
+				);
+
+				// A visitor that never polls again must not grow this unbounded.
+				if ( count( $queue ) > 50 ) {
+					$queue = array_slice( $queue, -50 );
+				}
+
+				set_transient( $key, $queue, self::QUEUE_TTL );
+			}
 		);
-
-		// A visitor that never polls again must not grow this unbounded.
-		if ( count( $queue ) > 50 ) {
-			$queue = array_slice( $queue, -50 );
-		}
-
-		set_transient( $key, $queue, self::QUEUE_TTL );
 	}
 
 	/**
@@ -280,16 +336,54 @@ final class ATTENDANT_Slack {
 	 * @return array[] Each: ['text' => string, 't' => int].
 	 */
 	public static function drain_agent_messages( string $session_id ): array {
-		$key   = 'attendant_agent_q_' . md5( $session_id );
-		$queue = get_transient( $key );
+		$key = 'attendant_agent_q_' . md5( $session_id );
 
-		if ( ! is_array( $queue ) || array() === $queue ) {
-			return array();
+		return self::with_session_lock(
+			$session_id,
+			static function () use ( $key ) {
+				$queue = get_transient( $key );
+				if ( ! is_array( $queue ) || array() === $queue ) {
+					return array();
+				}
+				delete_transient( $key );
+
+				return $queue;
+			}
+		);
+	}
+
+	/**
+	 * Run a callback holding a per-session MySQL advisory lock. Falls back to
+	 * running unlocked if the lock cannot be acquired (never blocks delivery).
+	 *
+	 * @param string   $session_id Chat session id.
+	 * @param callable $fn         Work to run under the lock.
+	 * @return mixed The callback's return value.
+	 */
+	private static function with_session_lock( string $session_id, callable $fn ) {
+		global $wpdb;
+
+		$name   = substr( 'att_q_' . md5( $session_id ), 0, 60 );
+		$locked = false;
+
+		if ( isset( $wpdb ) && is_object( $wpdb )
+			&& method_exists( $wpdb, 'get_var' ) && method_exists( $wpdb, 'prepare' ) ) {
+			try {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$locked = 1 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, %d)', $name, 3 ) );
+			} catch ( \Throwable $e ) {
+				$locked = false;
+			}
 		}
 
-		delete_transient( $key );
-
-		return $queue;
+		try {
+			return $fn();
+		} finally {
+			if ( $locked ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $name ) );
+			}
+		}
 	}
 
 	// -------------------------------------------------------------------------
@@ -302,26 +396,39 @@ final class ATTENDANT_Slack {
 	 * @return array[] Each: ['id' => string, 'name' => string, 'private' => bool].
 	 */
 	public static function list_channels(): array {
-		$response = self::api_call(
-			'conversations.list',
-			array(
+		$out    = array();
+		$cursor = '';
+
+		// conversations.list is cursor-paginated; a workspace with more than
+		// one page of channels would otherwise silently hide the rest. Cap the
+		// page count so a huge workspace can't spin here forever.
+		for ( $page = 0; $page < 10; $page++ ) {
+			$args = array(
 				'types'            => 'public_channel,private_channel',
 				'exclude_archived' => true,
 				'limit'            => 200,
-			)
-		);
-
-		if ( empty( $response['ok'] ) || empty( $response['channels'] ) ) {
-			return array();
-		}
-
-		$out = array();
-		foreach ( (array) $response['channels'] as $ch ) {
-			$out[] = array(
-				'id'      => (string) ( $ch['id'] ?? '' ),
-				'name'    => (string) ( $ch['name'] ?? '' ),
-				'private' => ! empty( $ch['is_private'] ),
 			);
+			if ( '' !== $cursor ) {
+				$args['cursor'] = $cursor;
+			}
+
+			$response = self::api_call( 'conversations.list', $args );
+			if ( empty( $response['ok'] ) ) {
+				break;
+			}
+
+			foreach ( (array) ( $response['channels'] ?? array() ) as $ch ) {
+				$out[] = array(
+					'id'      => (string) ( $ch['id'] ?? '' ),
+					'name'    => (string) ( $ch['name'] ?? '' ),
+					'private' => ! empty( $ch['is_private'] ),
+				);
+			}
+
+			$cursor = (string) ( $response['response_metadata']['next_cursor'] ?? '' );
+			if ( '' === $cursor ) {
+				break;
+			}
 		}
 
 		return $out;
@@ -430,6 +537,11 @@ final class ATTENDANT_Slack {
 		$text = (string) preg_replace( '/<@[A-Z0-9]+>/', '', $text );
 		$text = (string) preg_replace( '/<!([a-z]+)>/', '', $text );
 		$text = str_replace( array( '<', '>' ), '', $text );
+
+		// Slack entity-escapes exactly &, < and > in event text — decode them
+		// LAST (after mrkdwn stripping) so "5 &lt; 10 &amp; up" reads normally
+		// in the widget instead of showing the raw entities.
+		$text = str_replace( array( '&lt;', '&gt;', '&amp;' ), array( '<', '>', '&' ), $text );
 
 		return trim( $text );
 	}

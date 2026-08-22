@@ -39,6 +39,15 @@ final class SlackTest extends TestCase {
 		);
 
 		Functions\when( 'wp_salt' )->alias( static fn( $scheme = 'auth' ) => "salt-{$scheme}" );
+		Functions\when( 'wp_hash' )->alias( static fn( $v, $scheme = 'auth' ) => hash_hmac( 'sha256', (string) $v, "salt-{$scheme}" ) );
+		Functions\when( 'wp_generate_password' )->alias(
+			static function ( $len = 12 ) {
+				// Deterministic-enough for tests: unique per call.
+				static $n = 0;
+				++$n;
+				return substr( str_repeat( 'abcdefghijklmnop', 4 ), 0, (int) $len ) . $n;
+			}
+		);
 		Functions\when( '__' )->returnArg();
 		Functions\when( 'wp_json_encode' )->alias( static fn( $v ) => json_encode( $v ) );
 		Functions\when( 'rest_url' )->alias( static fn( $path = '' ) => 'https://example.test/wp-json/' . $path );
@@ -132,10 +141,10 @@ final class SlackTest extends TestCase {
 
 	// ── Handoff lifecycle ────────────────────────────────────────────────
 
-	public function test_start_handoff_maps_session_both_ways(): void {
+	public function test_start_handoff_maps_session_both_ways_and_issues_secret(): void {
 		$this->store_credentials();
 
-		$ok = ATTENDANT_Slack::start_handoff(
+		$secret = ATTENDANT_Slack::start_handoff(
 			'sess-1',
 			array(
 				array( 'role' => 'user', 'text' => 'I need help' ),
@@ -143,14 +152,34 @@ final class SlackTest extends TestCase {
 			)
 		);
 
-		$this->assertTrue( $ok );
+		$this->assertNotSame( '', $secret );
 		$this->assertSame( '111.222', ATTENDANT_Slack::thread_for_session( 'sess-1' ) );
 		$this->assertSame( 'sess-1', ATTENDANT_Slack::session_for_thread( '111.222' ) );
+
+		// The issued secret owns the session; a wrong one does not.
+		$this->assertTrue( ATTENDANT_Slack::verify_session_secret( 'sess-1', $secret ) );
+		$this->assertFalse( ATTENDANT_Slack::verify_session_secret( 'sess-1', 'wrong' ) );
+		$this->assertFalse( ATTENDANT_Slack::verify_session_secret( 'other-sess', $secret ) );
 
 		// The parent message carries the transcript.
 		$sent = json_decode( $this->posts[0]['args']['body'], true );
 		$this->assertStringContainsString( 'I need help', $sent['text'] );
 		$this->assertSame( 'C0TESTCHAN', $sent['channel'] );
+	}
+
+	public function test_secret_is_a_bearer_credential_not_the_session_id(): void {
+		$this->store_credentials();
+		ATTENDANT_Slack::start_handoff( 'sess-1', array() );
+
+		// Knowing the session id but not the secret grants nothing.
+		$this->assertFalse( ATTENDANT_Slack::verify_session_secret( 'sess-1', '' ) );
+		$this->assertFalse( ATTENDANT_Slack::verify_session_secret( 'sess-1', 'sess-1' ) );
+
+		// end_handoff revokes the secret.
+		$secret = ATTENDANT_Slack::issue_session_secret( 'sess-1' );
+		$this->assertTrue( ATTENDANT_Slack::verify_session_secret( 'sess-1', $secret ) );
+		ATTENDANT_Slack::end_handoff( 'sess-1' );
+		$this->assertFalse( ATTENDANT_Slack::verify_session_secret( 'sess-1', $secret ) );
 	}
 
 	public function test_visitor_message_goes_into_the_thread(): void {
@@ -178,7 +207,7 @@ final class SlackTest extends TestCase {
 		$this->store_credentials();
 		$this->api_response = array( 'ok' => false, 'error' => 'channel_not_found' );
 
-		$this->assertFalse( ATTENDANT_Slack::start_handoff( 'sess-1', array() ) );
+		$this->assertSame( '', ATTENDANT_Slack::start_handoff( 'sess-1', array() ) );
 		$this->assertSame( '', ATTENDANT_Slack::thread_for_session( 'sess-1' ) );
 	}
 
