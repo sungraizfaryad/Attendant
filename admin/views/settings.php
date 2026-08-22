@@ -813,9 +813,15 @@ $logging         = ! empty( $settings['logging_enabled'] );
 				</th>
 				<td>
 					<select id="attendant-slack-channel" name="slack_channel">
-						<option value="<?php echo esc_attr( $attendant_slack_channel ); ?>" selected>
-							<?php echo esc_html( '' !== $attendant_slack_channel ? $attendant_slack_channel : __( '— save your token first, then load channels —', 'attendant' ) ); ?>
-						</option>
+						<?php if ( '' !== $attendant_slack_channel ) : ?>
+							<option value="<?php echo esc_attr( $attendant_slack_channel ); ?>" selected>
+								<?php echo esc_html( $attendant_slack_channel ); ?>
+							</option>
+						<?php else : ?>
+							<option value="" selected disabled>
+								<?php echo esc_html__( '— click "Load channels" to choose —', 'attendant' ); ?>
+							</option>
+						<?php endif; ?>
 					</select>
 					<button type="button" class="button" id="attendant-slack-load-channels">
 						<?php echo esc_html__( 'Load channels', 'attendant' ); ?>
@@ -824,10 +830,53 @@ $logging         = ! empty( $settings['logging_enabled'] );
 						<?php echo esc_html__( 'Send test message', 'attendant' ); ?>
 					</button>
 					<span id="attendant-slack-status" aria-live="polite"></span>
+					<p class="description" style="margin-top:8px;">
+						<?php echo esc_html__( 'Order: paste the token above and Save Settings, then Load channels, pick one, Save again, and finally Send test message. Private channels appear only after you /invite the app into them.', 'attendant' ); ?>
+					</p>
 				</td>
 			</tr>
 
 		</table>
+
+		<?php
+		$attendant_slack_debug = ATTENDANT_Slack::get_debug();
+		if ( ! empty( $attendant_slack_debug['outcome'] ) ) :
+			$attendant_dbg_ok = ( 'forwarded_to_visitor' === $attendant_slack_debug['outcome'] );
+			?>
+			<h3><?php echo esc_html__( 'Slack connection status', 'attendant' ); ?></h3>
+			<p class="description" style="max-width:660px;">
+				<?php echo esc_html__( 'The last message Slack sent to your website. Use this to check the Slack-to-website direction: if replies in a thread are not reaching the chat, the reason shows here.', 'attendant' ); ?>
+			</p>
+			<table class="widefat striped" style="max-width:660px;">
+				<tbody>
+					<tr>
+						<th style="width:35%;"><?php echo esc_html__( 'Last event', 'attendant' ); ?></th>
+						<td>
+							<strong style="color:<?php echo $attendant_dbg_ok ? '#00a32a' : '#d63638'; ?>;">
+								<?php echo esc_html( $attendant_slack_debug['outcome'] ); ?>
+							</strong>
+						</td>
+					</tr>
+					<tr>
+						<th><?php echo esc_html__( 'When', 'attendant' ); ?></th>
+						<td><?php echo esc_html( (string) ( $attendant_slack_debug['time'] ?? '' ) ); ?></td>
+					</tr>
+					<?php if ( isset( $attendant_slack_debug['event_channel'] ) ) : ?>
+						<tr>
+							<th><?php echo esc_html__( 'Channel in the event vs. saved', 'attendant' ); ?></th>
+							<td>
+								<code><?php echo esc_html( (string) $attendant_slack_debug['event_channel'] ); ?></code>
+								&nbsp;vs&nbsp;
+								<code><?php echo esc_html( (string) ( $attendant_slack_debug['saved_channel'] ?? '' ) ); ?></code>
+							</td>
+						</tr>
+					<?php endif; ?>
+				</tbody>
+			</table>
+			<p class="description" style="max-width:660px;">
+				<?php echo esc_html__( 'forwarded_to_visitor means it is working. rejected_signature_mismatch means the Signing Secret is wrong. rejected_no_signing_secret_saved means you have not saved the secret yet. skipped_wrong_channel means the saved Channel does not match where the reply was posted. If this box never changes after a teammate replies, Slack is not reaching your site — open the app\'s Event Subscriptions page and make sure the request URL is verified.', 'attendant' ); ?>
+			</p>
+		<?php endif; ?>
 
 		</div><!-- /integrations panel -->
 

@@ -66,6 +66,7 @@ function attendant_uninstall_single_site(): void {
 		'attendant_api_key_google',
 		'attendant_slack_bot_token',
 		'attendant_slack_signing_secret',
+		'attendant_slack_debug',
 		'attendant_embedding_provider',
 		'attendant_monthly_usage',
 		'attendant_field_config',

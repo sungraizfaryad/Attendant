@@ -1092,6 +1092,10 @@ class ATTENDANT_REST_API {
 		}
 
 		if ( ! ATTENDANT_Slack::verify_signature( $timestamp, $signature, $raw_body ) ) {
+			$why = '' === (string) get_option( 'attendant_slack_signing_secret', '' )
+				? 'no_signing_secret_saved'
+				: 'signature_mismatch';
+			ATTENDANT_Slack::log_debug( 'rejected_' . $why );
 			return new WP_REST_Response( array( 'error' => 'bad signature' ), 401 );
 		}
 
@@ -1111,17 +1115,19 @@ class ATTENDANT_REST_API {
 			set_transient( $dedup, 1, 5 * MINUTE_IN_SECONDS );
 		}
 
-		$event = is_array( $body['event'] ?? null ) ? $body['event'] : array();
+		$event   = is_array( $body['event'] ?? null ) ? $body['event'] : array();
+		$ev_chan = (string) ( $event['channel'] ?? '' );
+		$subtype = (string) ( $event['subtype'] ?? '' );
 
 		// Only human thread replies in OUR channel count. Everything else
 		// (bot echoes, channel joins, edits, other channels) is ignored.
-		$is_reply = 'message' === ( $event['type'] ?? '' )
-			&& '' !== (string) ( $event['thread_ts'] ?? '' )
-			&& ( $event['channel'] ?? '' ) === ATTENDANT_Slack::channel()
-			&& empty( $event['bot_id'] )
-			&& empty( $event['app_id'] )
-			&& empty( $event['bot_profile'] )
-			&& in_array( (string) ( $event['subtype'] ?? '' ), array( '', 'me_message' ), true );
+		$from_bot   = ! empty( $event['bot_id'] ) || ! empty( $event['app_id'] ) || ! empty( $event['bot_profile'] );
+		$is_message = 'message' === ( $event['type'] ?? '' );
+		$in_thread  = '' !== (string) ( $event['thread_ts'] ?? '' );
+		$our_chan   = $ev_chan === ATTENDANT_Slack::channel();
+		$ok_subtype = in_array( $subtype, array( '', 'me_message' ), true );
+
+		$is_reply = $is_message && $in_thread && $our_chan && ! $from_bot && $ok_subtype;
 
 		if ( $is_reply ) {
 			$session_id = ATTENDANT_Slack::session_for_thread( (string) $event['thread_ts'] );
@@ -1129,13 +1135,32 @@ class ATTENDANT_REST_API {
 
 			if ( '' !== $session_id && '' !== $text ) {
 				ATTENDANT_Slack::queue_agent_message( $session_id, $text );
+				ATTENDANT_Slack::log_debug( 'forwarded_to_visitor', array( 'channel' => $ev_chan ) );
 			} elseif ( '' === $session_id ) {
+				ATTENDANT_Slack::log_debug( 'thread_not_mapped_or_expired', array( 'channel' => $ev_chan ) );
 				// Thread expired or unknown — tell the agent in the thread.
 				ATTENDANT_Slack::post_message(
 					__( 'This conversation has expired — the visitor can no longer receive replies.', 'attendant' ),
 					(string) $event['thread_ts']
 				);
+			} else {
+				ATTENDANT_Slack::log_debug( 'empty_after_cleaning', array( 'channel' => $ev_chan ) );
 			}
+		} else {
+			// Record WHY a delivered event was skipped — the usual live-site
+			// culprits are a channel mismatch or a non-thread message.
+			$reason = ! $is_message ? 'not_a_message'
+				: ( $from_bot ? 'from_bot_ignored'
+				: ( ! $in_thread ? 'not_in_a_thread'
+				: ( ! $our_chan ? 'wrong_channel'
+				: ( ! $ok_subtype ? ( 'subtype_' . $subtype ) : 'other' ) ) ) );
+			ATTENDANT_Slack::log_debug(
+				'skipped_' . $reason,
+				array(
+					'event_channel'  => $ev_chan,
+					'saved_channel'  => ATTENDANT_Slack::channel(),
+				)
+			);
 		}
 
 		return new WP_REST_Response( array( 'ok' => true ), 200 );

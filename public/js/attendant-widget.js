@@ -355,9 +355,17 @@
 			welcomeShown         = chat.messages.length > 0;
 
 			chat.messages.forEach( function ( m ) {
+				var role = 'bot';
+				if ( 'u' === m.r ) {
+					role = 'user';
+				} else if ( 'a' === m.r ) {
+					role = 'agent';
+				} else if ( 'y' === m.r ) {
+					role = 'sys';
+				}
 				appendMessage(
 					m.t,
-					'u' === m.r ? 'user' : ( 'a' === m.r ? 'agent' : 'bot' ),
+					role,
 					( m.s || [] ).map( function ( s ) {
 						return { title: s.t, url: s.u };
 					} )
@@ -391,8 +399,10 @@
 
 			// Polling follows the OPEN conversation only.
 			if ( chat.live ) {
+				setLivePlaceholder( true );
 				startPolling();
 			} else {
+				setLivePlaceholder( false );
 				stopPolling();
 			}
 		}
@@ -415,6 +425,7 @@
 			messagesEl.innerHTML = '';
 			welcomeShown         = false;
 			stopPolling();
+			setLivePlaceholder( false );
 			closeHistory();
 
 			if ( isOpen && '' !== welcomeMsg ) {
@@ -743,8 +754,10 @@
 					saveStore();
 					if ( isOpen ) {
 						stopPolling();
-						appendMessage( i18n.backToAi || 'You are back with the AI assistant.', 'bot', [] );
-						persistMessage( 'b', i18n.backToAi || 'You are back with the AI assistant.', [] );
+						setLivePlaceholder( false );
+						var back = i18n.backToAi || 'You are back with the AI assistant.';
+						appendMessage( back, 'sys', [] );
+						persistMessage( 'y', back, [] );
 					}
 				}
 			} )
@@ -774,23 +787,36 @@
 			} )
 			.then( function ( r ) { return r.json().then( function ( b ) { return { ok: r.ok, body: b }; } ); } )
 			.then( function ( res ) {
-				var text = res.ok
-					? ( ( res.body && res.body.message ) || i18n.humanRequested || 'Our team has been notified.' )
-					: ( ( res.body && res.body.message ) || i18n.humanFailed || 'Could not reach the team.' );
-
-				appendMessage( text, 'bot', [] );
-				persistMessage( 'b', text, [] );
-
 				if ( res.ok && res.body && res.body.secret ) {
+					// Clear state change: a divider, not a chat bubble, so the
+					// visitor plainly sees they are now with a person.
+					var connected = i18n.connectedDivider || 'Connected to our team';
+					appendMessage( connected, 'sys', [] );
+					persistMessage( 'y', connected, [] );
+
+					var note = ( res.body && res.body.message ) || i18n.humanRequested || 'Our team has been notified.';
+					appendMessage( note, 'agent', [] );
+					persistMessage( 'a', note, [] );
+
 					chat.live = true;
 					chat.handoffSecret = res.body.secret;
 					saveStore();
+					setLivePlaceholder( true );
 					startPolling();
+				} else {
+					var fail = ( res.body && res.body.message ) || i18n.humanFailed || 'Could not reach the team.';
+					appendMessage( fail, 'bot', [] );
+					persistMessage( 'b', fail, [] );
 				}
 			} )
 			.catch( function () {
 				appendMessage( i18n.humanFailed || 'Could not reach the team.', 'bot', [] );
 			} );
+		}
+
+		// Swap the input hint so it is obvious messages go to a person now.
+		function setLivePlaceholder( live ) {
+			inputEl.setAttribute( 'placeholder', live ? ( i18n.livePlaceholder || 'Message the team…' ) : placeholder );
 		}
 
 		// Tell the server to close the Slack thread when the visitor abandons a
@@ -823,6 +849,7 @@
 		// Resume polling for a conversation that was already live (page
 		// navigation, reopened tab), and pause it while the tab is hidden.
 		if ( activeChat().live ) {
+			setLivePlaceholder( true );
 			startPolling();
 		}
 		document.addEventListener( 'visibilitychange', function () {
@@ -842,6 +869,19 @@
 		 * @returns {Element}
 		 */
 		function appendMessage( text, role, sources ) {
+			// A system divider marks a change of who the visitor is talking to
+			// (handed to the team / back to the AI). Centered rule, not a bubble.
+			if ( 'sys' === role ) {
+				var div       = document.createElement( 'div' );
+				div.className = 'attendant-divider';
+				var span      = document.createElement( 'span' );
+				span.textContent = text;
+				div.appendChild( span );
+				messagesEl.appendChild( div );
+				scrollToBottom();
+				return div;
+			}
+
 			var wrap   = document.createElement( 'div' );
 			wrap.className = 'attendant-msg attendant-msg--' + role;
 

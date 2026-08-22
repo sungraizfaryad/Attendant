@@ -50,6 +50,7 @@ final class SlackTest extends TestCase {
 		);
 		Functions\when( '__' )->returnArg();
 		Functions\when( 'wp_json_encode' )->alias( static fn( $v ) => json_encode( $v ) );
+		Functions\when( 'current_time' )->justReturn( '2026-08-22 12:00:00' );
 		Functions\when( 'rest_url' )->alias( static fn( $path = '' ) => 'https://example.test/wp-json/' . $path );
 
 		Functions\when( 'get_option' )->alias( fn( $k, $d = false ) => $this->options[ $k ] ?? $d );
@@ -258,6 +259,55 @@ final class SlackTest extends TestCase {
 		$this->assertContains( 'chat:write', $manifest['oauth_config']['scopes']['bot'] );
 		$this->assertContains( 'groups:history', $manifest['oauth_config']['scopes']['bot'] );
 		$this->assertContains( 'message.groups', $manifest['settings']['event_subscriptions']['bot_events'] );
+	}
+
+	public function test_debug_log_roundtrips(): void {
+		ATTENDANT_Slack::log_debug( 'forwarded_to_visitor', array( 'channel' => 'C0ABC' ) );
+		$dbg = ATTENDANT_Slack::get_debug();
+
+		$this->assertSame( 'forwarded_to_visitor', $dbg['outcome'] );
+		$this->assertSame( 'C0ABC', $dbg['channel'] );
+		$this->assertArrayHasKey( 'time', $dbg );
+	}
+
+	public function test_channel_list_paginates_and_flags_private(): void {
+		// First page returns a cursor; second page finishes.
+		$page = 0;
+		Functions\when( 'wp_remote_post' )->alias(
+			function ( $url, $args ) use ( &$page ) {
+				$this->posts[] = array( 'url' => $url, 'args' => $args );
+				++$page;
+				if ( 1 === $page ) {
+					return array(
+						'body' => json_encode(
+							array(
+								'ok'                => true,
+								'channels'          => array( array( 'id' => 'C1', 'name' => 'general', 'is_private' => false ) ),
+								'response_metadata' => array( 'next_cursor' => 'CURSOR2' ),
+							)
+						),
+					);
+				}
+				return array(
+					'body' => json_encode(
+						array(
+							'ok'       => true,
+							'channels' => array( array( 'id' => 'G2', 'name' => 'secret-room', 'is_private' => true ) ),
+						)
+					),
+				);
+			}
+		);
+		$this->store_credentials();
+
+		$channels = ATTENDANT_Slack::list_channels();
+
+		$this->assertCount( 2, $channels );
+		$this->assertSame( 'G2', $channels[1]['id'] );
+		$this->assertTrue( $channels[1]['private'] );
+		// Second request carried the cursor.
+		$second = json_decode( $this->posts[1]['args']['body'], true );
+		$this->assertSame( 'CURSOR2', $second['cursor'] );
 	}
 
 	public function test_is_configured_requires_everything(): void {

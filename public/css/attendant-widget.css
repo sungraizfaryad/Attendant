@@ -230,6 +230,28 @@
 	margin-bottom: 2px;
 }
 
+/* System divider — marks the switch to/from a live human */
+.attendant-divider {
+	display:     flex;
+	align-items: center;
+	text-align:  center;
+	gap:         10px;
+	margin:      14px 4px;
+	color:       #646970;
+	font-size:   12px;
+	font-weight: 600;
+}
+.attendant-divider::before,
+.attendant-divider::after {
+	content:    "";
+	flex:       1;
+	height:     1px;
+	background: rgba(0, 0, 0, 0.12);
+}
+.attendant-divider span {
+	white-space: nowrap;
+}
+
 /* Inline formatting rendered by JS formatText() */
 .attendant-msg__bubble strong { font-weight: 600; }
 .attendant-msg__bubble br     { display: block; margin-bottom: 2px; }

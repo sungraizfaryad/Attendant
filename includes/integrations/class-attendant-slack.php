@@ -43,6 +43,45 @@ final class ATTENDANT_Slack {
 	/** Slack Web API base. */
 	private const API = 'https://slack.com/api/';
 
+	/** Option holding a summary of the last inbound event (debug panel). */
+	private const DEBUG_OPTION = 'attendant_slack_debug';
+
+	// -------------------------------------------------------------------------
+	// Inbound-event debug trail
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Record what the last inbound Slack request looked like and how it was
+	 * handled. Surfaced on the settings page so a site owner can see whether
+	 * Slack is reaching the site and why a reply was or was not forwarded —
+	 * the fastest way to diagnose the Slack→site direction on a live server.
+	 *
+	 * @param string $outcome Short status, e.g. 'forwarded', 'bad_signature'.
+	 * @param array  $extra   Extra fields to show (channel, subtype, …).
+	 */
+	public static function log_debug( string $outcome, array $extra = array() ): void {
+		update_option(
+			self::DEBUG_OPTION,
+			array_merge(
+				array(
+					'time'    => current_time( 'mysql' ),
+					'outcome' => $outcome,
+				),
+				$extra
+			),
+			false
+		);
+	}
+
+	/**
+	 * The last recorded inbound-event summary ('' fields when never hit).
+	 *
+	 * @return array
+	 */
+	public static function get_debug(): array {
+		return (array) get_option( self::DEBUG_OPTION, array() );
+	}
+
 	// -------------------------------------------------------------------------
 	// Configuration
 	// -------------------------------------------------------------------------
