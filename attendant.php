@@ -184,6 +184,7 @@ final class Attendant_Plugin {
 		require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-conversation-handler.php';
 		require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-chat-log.php';
 		require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-leads.php';
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/integrations/class-attendant-slack.php';
 
 		// REST API (always needed — REST is active on all requests).
 		require_once ATTENDANT_PLUGIN_DIR . 'includes/class-attendant-rest-api.php';

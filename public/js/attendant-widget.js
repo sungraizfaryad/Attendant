@@ -347,7 +347,7 @@
 			chat.messages.forEach( function ( m ) {
 				appendMessage(
 					m.t,
-					'u' === m.r ? 'user' : 'bot',
+					'u' === m.r ? 'user' : ( 'a' === m.r ? 'agent' : 'bot' ),
 					( m.s || [] ).map( function ( s ) {
 						return { title: s.t, url: s.u };
 					} )
@@ -378,6 +378,13 @@
 			renderChat( chat );
 			closeHistory();
 			inputEl.focus();
+
+			// Polling follows the OPEN conversation only.
+			if ( chat.live ) {
+				startPolling();
+			} else {
+				stopPolling();
+			}
 		}
 
 		function startNewChat() {
@@ -396,6 +403,7 @@
 			sessionId            = '';
 			messagesEl.innerHTML = '';
 			welcomeShown         = false;
+			stopPolling();
 			closeHistory();
 
 			if ( isOpen && '' !== welcomeMsg ) {
@@ -513,6 +521,19 @@
 					rememberSession( data.session_id );
 				}
 
+				// Live-agent mode: the message went to the team's Slack thread,
+				// not the AI — there is no bot reply to show. Their answer
+				// arrives via polling.
+				if ( data.live ) {
+					var liveChat = activeChat();
+					if ( ! liveChat.live ) {
+						liveChat.live = true;
+						saveStore();
+					}
+					startPolling();
+					return;
+				}
+
 				var reply   = ( data.reply && '' !== data.reply )
 					? data.reply
 					: 'Sorry, I could not generate a response. Please try again.';
@@ -605,6 +626,128 @@
 			}
 		} );
 
+		// ── Live-agent handoff (Slack) ────────────────────────────────────────
+		// "Talk to a human" posts the transcript to the site team; while the
+		// handoff is live the widget polls for their replies and the visitor's
+		// messages are forwarded instead of going to the AI.
+
+		var humanBtn  = document.getElementById( 'attendant-human-btn' );
+		var pollTimer = null;
+
+		function chatHeaders() {
+			var h = { 'X-Attendant-Nonce': nonce };
+			if ( restNonce ) {
+				h['X-WP-Nonce'] = restNonce;
+			}
+			return h;
+		}
+
+		function startPolling() {
+			if ( pollTimer ) {
+				return;
+			}
+			pollTimer = window.setInterval( pollAgent, 4000 );
+		}
+
+		function stopPolling() {
+			if ( pollTimer ) {
+				window.clearInterval( pollTimer );
+				pollTimer = null;
+			}
+		}
+
+		function pollAgent() {
+			var chat = activeChat();
+			if ( ! chat.live || document.hidden ) {
+				return;
+			}
+
+			fetch( restBase + '/chat/poll?session_id=' + encodeURIComponent( sessionId ), {
+				headers: chatHeaders()
+			} )
+			.then( function ( r ) { return r.ok ? r.json() : null; } )
+			.then( function ( data ) {
+				if ( ! data ) {
+					return;
+				}
+				( data.messages || [] ).forEach( function ( m ) {
+					if ( m && m.text ) {
+						appendMessage( m.text, 'agent', [] );
+						persistMessage( 'a', m.text, [] );
+					}
+				} );
+				if ( ! data.live ) {
+					// Thread expired on the server — hand back to the AI.
+					chat.live = false;
+					saveStore();
+					stopPolling();
+					appendMessage( i18n.backToAi || 'You are back with the AI assistant.', 'bot', [] );
+					persistMessage( 'b', i18n.backToAi || 'You are back with the AI assistant.', [] );
+				}
+			} )
+			.catch( function () { /* transient network issue — next tick retries */ } );
+		}
+
+		function requestHuman() {
+			var chat = activeChat();
+			if ( chat.live ) {
+				return; // already waiting/live
+			}
+
+			// A conversation that never reached the server has no session id
+			// yet — the chat's own id works as the stable key in that case.
+			if ( '' === sessionId ) {
+				rememberSession( chat.id );
+			}
+
+			var transcript = chat.messages.slice( -10 ).map( function ( m ) {
+				return { role: 'u' === m.r ? 'user' : 'bot', text: m.t };
+			} );
+
+			fetch( restBase + '/chat/handoff', {
+				method:  'POST',
+				headers: Object.assign( { 'Content-Type': 'application/json' }, chatHeaders() ),
+				body: JSON.stringify( { session_id: sessionId, transcript: transcript } )
+			} )
+			.then( function ( r ) { return r.json().then( function ( b ) { return { ok: r.ok, body: b }; } ); } )
+			.then( function ( res ) {
+				var text = res.ok
+					? ( ( res.body && res.body.message ) || i18n.humanRequested || 'Our team has been notified.' )
+					: ( ( res.body && res.body.message ) || i18n.humanFailed || 'Could not reach the team.' );
+
+				appendMessage( text, 'bot', [] );
+				persistMessage( 'b', text, [] );
+
+				if ( res.ok ) {
+					chat.live = true;
+					saveStore();
+					startPolling();
+				}
+			} )
+			.catch( function () {
+				appendMessage( i18n.humanFailed || 'Could not reach the team.', 'bot', [] );
+			} );
+		}
+
+		if ( humanBtn ) {
+			humanBtn.addEventListener( 'click', function () {
+				closeHistory();
+				requestHuman();
+				inputEl.focus();
+			} );
+		}
+
+		// Resume polling for a conversation that was already live (page
+		// navigation, reopened tab), and pause it while the tab is hidden.
+		if ( activeChat().live ) {
+			startPolling();
+		}
+		document.addEventListener( 'visibilitychange', function () {
+			if ( ! document.hidden && activeChat().live ) {
+				startPolling();
+			}
+		} );
+
 		// ── DOM helpers ───────────────────────────────────────────────────────
 
 		/**
@@ -618,6 +761,15 @@
 		function appendMessage( text, role, sources ) {
 			var wrap   = document.createElement( 'div' );
 			wrap.className = 'attendant-msg attendant-msg--' + role;
+
+			// A human teammate's reply carries a small name label so the
+			// visitor can tell it apart from the assistant.
+			if ( 'agent' === role ) {
+				var nameEl        = document.createElement( 'div' );
+				nameEl.className  = 'attendant-msg__agent-name';
+				nameEl.textContent = i18n.agent || 'Support team';
+				wrap.appendChild( nameEl );
+			}
 
 			var bubble = document.createElement( 'div' );
 			bubble.className = 'attendant-msg__bubble';

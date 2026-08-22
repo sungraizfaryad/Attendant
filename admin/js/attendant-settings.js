@@ -63,7 +63,7 @@
 
 	// Checkboxes that must be sent as explicit booleans: unchecked boxes are
 	// absent from FormData, so without this they could never be turned off.
-	const CHECKBOXES = [ 'logging_enabled', 'auto_sync', 'file_logging', 'lead_capture' ];
+	const CHECKBOXES = [ 'logging_enabled', 'auto_sync', 'file_logging', 'lead_capture', 'slack_enabled' ];
 
 	// -----------------------------------------------------------------
 	// Helper: show an admin notice banner.
@@ -184,5 +184,79 @@
 			} );
 		} );
 	} );
+
+	// -----------------------------------------------------------------
+	// Slack integration: channel loader + test message.
+	// -----------------------------------------------------------------
+	const slackStatus  = document.getElementById( 'attendant-slack-status' );
+	const slackLoadBtn = document.getElementById( 'attendant-slack-load-channels' );
+	const slackTestBtn = document.getElementById( 'attendant-slack-test' );
+	const slackSelect  = document.getElementById( 'attendant-slack-channel' );
+
+	function slackSay( text, ok ) {
+		if ( slackStatus ) {
+			slackStatus.textContent = ' ' + ( ok ? '✓ ' : '✗ ' ) + text;
+			slackStatus.style.color = ok ? '#00a32a' : '#d63638';
+		}
+	}
+
+	if ( slackLoadBtn && slackSelect ) {
+		slackLoadBtn.addEventListener( 'click', function () {
+			slackLoadBtn.disabled = true;
+			fetch( attendantAdmin.restUrl + '/slack/channels', {
+				headers: { 'X-WP-Nonce': attendantAdmin.nonce },
+			} )
+			.then( function ( res ) { return res.json(); } )
+			.then( function ( json ) {
+				const channels = ( json && json.channels ) || [];
+				if ( ! channels.length ) {
+					slackSay( 'No channels found. Save the bot token first and /invite the app into the channel.', false );
+					return;
+				}
+				const current = slackSelect.value;
+				slackSelect.innerHTML = '';
+				channels.forEach( function ( ch ) {
+					const opt = document.createElement( 'option' );
+					opt.value = ch.id;
+					opt.textContent = '#' + ch.name + ( ch.private ? ' (private)' : '' );
+					if ( ch.id === current ) {
+						opt.selected = true;
+					}
+					slackSelect.appendChild( opt );
+				} );
+				slackSay( channels.length + ' channels loaded — pick one and Save.', true );
+			} )
+			.catch( function () {
+				slackSay( attendantAdmin.i18n.error, false );
+			} )
+			.finally( function () {
+				slackLoadBtn.disabled = false;
+			} );
+		} );
+	}
+
+	if ( slackTestBtn ) {
+		slackTestBtn.addEventListener( 'click', function () {
+			slackTestBtn.disabled = true;
+			fetch( attendantAdmin.restUrl + '/slack/test', {
+				method:  'POST',
+				headers: { 'X-WP-Nonce': attendantAdmin.nonce },
+			} )
+			.then( function ( res ) { return res.json(); } )
+			.then( function ( json ) {
+				if ( json && json.ok ) {
+					slackSay( 'Test message sent' + ( json.team ? ' to ' + json.team : '' ) + ' — check your channel.', true );
+				} else {
+					slackSay( 'Slack said: ' + ( ( json && json.error ) || 'unknown error' ) + '. Check token and channel.', false );
+				}
+			} )
+			.catch( function () {
+				slackSay( attendantAdmin.i18n.error, false );
+			} )
+			.finally( function () {
+				slackTestBtn.disabled = false;
+			} );
+		} );
+	}
 
 }() );

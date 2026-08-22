@@ -96,6 +96,7 @@ $logging         = ! empty( $settings['logging_enabled'] );
 		<a href="#limits" class="nav-tab" data-tab="limits"><?php echo esc_html__( 'Limits & Budget', 'attendant' ); ?></a>
 		<a href="#indexing" class="nav-tab" data-tab="indexing"><?php echo esc_html__( 'Indexing', 'attendant' ); ?></a>
 		<a href="#privacy" class="nav-tab" data-tab="privacy"><?php echo esc_html__( 'Privacy', 'attendant' ); ?></a>
+		<a href="#integrations" class="nav-tab" data-tab="integrations"><?php echo esc_html__( 'Integrations', 'attendant' ); ?></a>
 	</h2>
 
 	<form id="attendant-settings-form" novalidate>
@@ -695,6 +696,140 @@ $logging         = ! empty( $settings['logging_enabled'] );
 		</table>
 
 		</div><!-- /privacy panel -->
+
+		<!-- ================================================================ -->
+		<!-- Section 7: Integrations (Slack live-agent handoff)               -->
+		<!-- ================================================================ -->
+		<?php
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/integrations/class-attendant-slack.php';
+		$attendant_has_slack_token  = '' !== (string) get_option( 'attendant_slack_bot_token', '' );
+		$attendant_has_slack_secret = '' !== (string) get_option( 'attendant_slack_signing_secret', '' );
+		$attendant_slack_channel    = (string) ( $settings['slack_channel'] ?? '' );
+		?>
+		<div class="attendant-tab-panel" data-tab="integrations">
+		<h2 class="title"><?php echo esc_html__( 'Slack — talk to visitors as a real human', 'attendant' ); ?></h2>
+
+		<p class="description" style="max-width:640px;">
+			<?php echo esc_html__( 'When a visitor asks for a human, the conversation appears as a thread in a Slack channel of your choice. Anything your team types in that thread shows up in the visitor\'s chat within seconds. Each conversation is one thread, so nothing gets mixed up.', 'attendant' ); ?>
+		</p>
+
+		<table class="form-table" role="presentation">
+
+			<tr>
+				<th scope="row"><?php echo esc_html__( 'Enable Slack handoff', 'attendant' ); ?></th>
+				<td>
+					<label for="attendant-slack-enabled">
+						<input
+							type="checkbox"
+							id="attendant-slack-enabled"
+							name="slack_enabled"
+							value="1"
+							<?php checked( ! empty( $settings['slack_enabled'] ?? false ) ); ?>
+						>
+						<?php echo esc_html__( 'Show a "Talk to a human" button in the chat widget', 'attendant' ); ?>
+					</label>
+					<p class="description">
+						<?php echo esc_html__( 'The button only appears once every step below is complete.', 'attendant' ); ?>
+					</p>
+				</td>
+			</tr>
+
+			<tr>
+				<th scope="row"><?php echo esc_html__( 'Setup guide', 'attendant' ); ?></th>
+				<td>
+					<ol style="max-width:640px;margin:0 0 8px;line-height:1.9;">
+						<li>
+							<a href="<?php echo esc_url( ATTENDANT_Slack::manifest_url() ); ?>" target="_blank" rel="noopener noreferrer" class="button button-primary" style="margin:2px 0;">
+								<?php echo esc_html__( 'Create the Slack app', 'attendant' ); ?> ↗
+							</a><br>
+							<?php echo esc_html__( 'Everything is pre-filled for you. On the Slack page: pick your workspace, click Next, then Create.', 'attendant' ); ?>
+						</li>
+						<li>
+							<?php echo esc_html__( 'On the app page that opens, click "Install to Workspace", then "Allow".', 'attendant' ); ?>
+						</li>
+						<li>
+							<?php
+							printf(
+								/* translators: %s: link to the Slack apps list */
+								esc_html__( 'Copy the Bot Token: in the left menu open "OAuth & Permissions" and copy the token that starts with xoxb. Paste it below. (Lost the page? Find your app at %s.)', 'attendant' ),
+								'<a href="https://api.slack.com/apps" target="_blank" rel="noopener noreferrer">api.slack.com/apps</a>'
+							);
+							?>
+						</li>
+						<li>
+							<?php echo esc_html__( 'Copy the Signing Secret: open "Basic Information", scroll to App Credentials, click Show next to Signing Secret. Paste it below.', 'attendant' ); ?>
+						</li>
+						<li>
+							<?php echo esc_html__( 'In Slack, create a channel for chats (a private one works great, e.g. #website-chat) and invite the teammates who will answer. Then type this in the channel: /invite @Attendant Chat', 'attendant' ); ?>
+						</li>
+						<li>
+							<?php echo esc_html__( 'Click Save Settings below, then "Load channels", pick your channel, and Save again.', 'attendant' ); ?>
+						</li>
+						<li>
+							<?php echo esc_html__( 'Click "Send test message" — it should pop up in your channel. Done.', 'attendant' ); ?>
+						</li>
+					</ol>
+					<p class="description" style="max-width:640px;">
+						<?php echo esc_html__( 'If Slack showed "URL verification failed" while creating the app: finish steps 3 and 4, click Save Settings, then open the app\'s "Event Subscriptions" page and click "Retry". Note: Slack must be able to reach your website, so this does not work on a local development site.', 'attendant' ); ?>
+					</p>
+				</td>
+			</tr>
+
+			<tr>
+				<th scope="row">
+					<label for="attendant-slack-token"><?php echo esc_html__( 'Bot Token', 'attendant' ); ?></label>
+				</th>
+				<td>
+					<input
+						type="password"
+						id="attendant-slack-token"
+						name="slack_bot_token"
+						class="regular-text"
+						autocomplete="off"
+						placeholder="<?php echo esc_attr( $attendant_has_slack_token ? '••••••••  (' . __( 'token stored', 'attendant' ) . ')' : 'xoxb-…' ); ?>"
+					>
+				</td>
+			</tr>
+
+			<tr>
+				<th scope="row">
+					<label for="attendant-slack-secret"><?php echo esc_html__( 'Signing Secret', 'attendant' ); ?></label>
+				</th>
+				<td>
+					<input
+						type="password"
+						id="attendant-slack-secret"
+						name="slack_signing_secret"
+						class="regular-text"
+						autocomplete="off"
+						placeholder="<?php echo esc_attr( $attendant_has_slack_secret ? '••••••••  (' . __( 'secret stored', 'attendant' ) . ')' : '' ); ?>"
+					>
+				</td>
+			</tr>
+
+			<tr>
+				<th scope="row">
+					<label for="attendant-slack-channel"><?php echo esc_html__( 'Channel', 'attendant' ); ?></label>
+				</th>
+				<td>
+					<select id="attendant-slack-channel" name="slack_channel">
+						<option value="<?php echo esc_attr( $attendant_slack_channel ); ?>" selected>
+							<?php echo esc_html( '' !== $attendant_slack_channel ? $attendant_slack_channel : __( '— save your token first, then load channels —', 'attendant' ) ); ?>
+						</option>
+					</select>
+					<button type="button" class="button" id="attendant-slack-load-channels">
+						<?php echo esc_html__( 'Load channels', 'attendant' ); ?>
+					</button>
+					<button type="button" class="button" id="attendant-slack-test">
+						<?php echo esc_html__( 'Send test message', 'attendant' ); ?>
+					</button>
+					<span id="attendant-slack-status" aria-live="polite"></span>
+				</td>
+			</tr>
+
+		</table>
+
+		</div><!-- /integrations panel -->
 
 		<p class="submit">
 			<button type="submit" id="attendant-save-settings" class="button button-primary">

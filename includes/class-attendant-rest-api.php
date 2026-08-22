@@ -83,6 +83,78 @@ class ATTENDANT_REST_API {
 			)
 		);
 
+		// Public: ask for a human (Slack handoff).
+		register_rest_route(
+			self::NAMESPACE,
+			'/chat/handoff',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'handle_handoff' ),
+				'permission_callback' => array( $this, 'widget_permission_check' ),
+				'args'                => array(
+					'session_id' => array(
+						'required'          => true,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+						'validate_callback' => static fn( string $v ): bool => '' !== trim( $v ),
+					),
+				),
+			)
+		);
+
+		// Public: poll for live-agent replies during a handoff.
+		register_rest_route(
+			self::NAMESPACE,
+			'/chat/poll',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'handle_poll' ),
+				'permission_callback' => array( $this, 'widget_permission_check' ),
+				'args'                => array(
+					'session_id' => array(
+						'required'          => true,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+						'validate_callback' => static fn( string $v ): bool => '' !== trim( $v ),
+					),
+				),
+			)
+		);
+
+		// Public: Slack Events API callback. Authenticated by Slack's request
+		// signature inside the handler, not by a WordPress nonce.
+		register_rest_route(
+			self::NAMESPACE,
+			'/slack/events',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'handle_slack_events' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+
+		// Admin: channels the Slack bot can see (settings dropdown).
+		register_rest_route(
+			self::NAMESPACE,
+			'/slack/channels',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'handle_slack_channels' ),
+				'permission_callback' => array( $this, 'admin_permission_check' ),
+			)
+		);
+
+		// Admin: post a test message to the configured channel.
+		register_rest_route(
+			self::NAMESPACE,
+			'/slack/test',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'handle_slack_test' ),
+				'permission_callback' => array( $this, 'admin_permission_check' ),
+			)
+		);
+
 		// Admin: API key + model settings.
 		register_rest_route(
 			self::NAMESPACE,
@@ -402,6 +474,39 @@ class ATTENDANT_REST_API {
 	}
 
 	/**
+	 * Light permission check for the handoff/poll endpoints.
+	 *
+	 * Same widget gate and nonce as /chat, but WITHOUT the per-IP message
+	 * rate limit and budget kill-switch: polling every few seconds must not
+	 * eat the visitor's message allowance, and a $0 human conversation must
+	 * not be blocked because the AI budget ran out.
+	 *
+	 * @param WP_REST_Request $request Incoming REST request.
+	 * @return bool|WP_Error
+	 */
+	public function widget_permission_check( WP_REST_Request $request ): bool|WP_Error {
+		if ( ! (bool) Attendant_Plugin::get_setting( 'widget_enabled', false ) ) {
+			return new WP_Error(
+				'attendant_chat_disabled',
+				__( 'The chat assistant is not enabled on this site.', 'attendant' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		$nonce = sanitize_text_field( wp_unslash( $request->get_header( 'X-Attendant-Nonce' ) ?? '' ) );
+
+		if ( ! wp_verify_nonce( $nonce, 'attendant_chat_nonce' ) ) {
+			return new WP_Error(
+				'attendant_invalid_nonce',
+				__( 'Security check failed.', 'attendant' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		return true;
+	}
+
+	/**
 	 * Permission check for all admin-only endpoints.
 	 *
 	 * Requires the `manage_options` capability, which is restricted to
@@ -459,8 +564,10 @@ class ATTENDANT_REST_API {
 			array(
 				'settings'       => $settings,
 				// Indicate whether a key is stored without revealing it.
-				'has_key_google' => '' !== (string) get_option( 'attendant_api_key_google', '' ),
-				'has_key_openai' => '' !== (string) get_option( 'attendant_api_key_openai', '' ),
+				'has_key_google'   => '' !== (string) get_option( 'attendant_api_key_google', '' ),
+				'has_key_openai'   => '' !== (string) get_option( 'attendant_api_key_openai', '' ),
+				'has_slack_token'  => '' !== (string) get_option( 'attendant_slack_bot_token', '' ),
+				'has_slack_secret' => '' !== (string) get_option( 'attendant_slack_signing_secret', '' ),
 			),
 			200
 		);
@@ -491,8 +598,10 @@ class ATTENDANT_REST_API {
 		// options with encryption, never mixed with general settings.
 		// -----------------------------------------------------------
 		$key_map = array(
-			'api_key_google' => 'attendant_api_key_google',
-			'api_key_openai' => 'attendant_api_key_openai',
+			'api_key_google'       => 'attendant_api_key_google',
+			'api_key_openai'       => 'attendant_api_key_openai',
+			'slack_bot_token'      => 'attendant_slack_bot_token',
+			'slack_signing_secret' => 'attendant_slack_signing_secret',
 		);
 
 		foreach ( $key_map as $param_name => $option_name ) {
@@ -622,6 +731,14 @@ class ATTENDANT_REST_API {
 		if ( isset( $params['lead_capture'] ) ) {
 			$updated['lead_capture'] = (bool) $params['lead_capture'];
 		}
+		if ( isset( $params['slack_enabled'] ) ) {
+			$updated['slack_enabled'] = (bool) $params['slack_enabled'];
+		}
+		if ( isset( $params['slack_channel'] ) ) {
+			$channel = strtoupper( sanitize_text_field( (string) $params['slack_channel'] ) );
+			// Slack conversation ids: C/G/D prefix + alphanumerics.
+			$updated['slack_channel'] = preg_match( '/^[A-Z][A-Z0-9]{5,}$/', $channel ) ? $channel : '';
+		}
 		if ( isset( $params['lead_email'] ) ) {
 			$lead_email              = sanitize_email( (string) $params['lead_email'] );
 			$updated['lead_email']   = is_email( $lead_email ) ? $lead_email : '';
@@ -735,6 +852,26 @@ class ATTENDANT_REST_API {
 		$message    = (string) $request->get_param( 'message' );
 		$session_id = (string) $request->get_param( 'session_id' );
 
+		// Live-agent mode: while a Slack handoff is active for this session,
+		// messages go to the team's thread — the AI stays out of the way.
+		if ( '' !== $session_id && '' !== ATTENDANT_Slack::thread_for_session( $session_id ) ) {
+			ATTENDANT_Slack::forward_visitor_message( $session_id, $message );
+			ATTENDANT_Chat_Log::record( $session_id, $message, array( 'reply' => '[forwarded to live agent]' ) );
+
+			return new WP_REST_Response(
+				array(
+					'reply'         => '',
+					'session_id'    => $session_id,
+					'sources'       => array(),
+					'options'       => array(),
+					'live'          => true,
+					'preview_cards' => null,
+					'results_url'   => null,
+				),
+				200
+			);
+		}
+
 		$result = ATTENDANT_Conversation_Handler::handle( $message, $session_id );
 
 		// Optional file-based usage log (Settings → Privacy; off by default).
@@ -763,6 +900,221 @@ class ATTENDANT_REST_API {
 				'options'       => array_values( array_map( 'strval', (array) ( $result['options'] ?? array() ) ) ),
 				'preview_cards' => null,
 				'results_url'   => null,
+			),
+			200
+		);
+	}
+
+	// -------------------------------------------------------------------------
+	// Slack live-agent handoff
+	// -------------------------------------------------------------------------
+
+	/**
+	 * POST /chat/handoff
+	 *
+	 * The visitor asked for a human. Posts the recent transcript to the
+	 * configured Slack channel as a new thread and switches the session to
+	 * live mode. The transcript comes from the widget (client-side history);
+	 * every entry is sanitised and capped here.
+	 *
+	 * @param WP_REST_Request $request Incoming REST request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function handle_handoff( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		if ( ! ATTENDANT_Slack::is_configured() ) {
+			return new WP_Error(
+				'attendant_handoff_unavailable',
+				__( 'Talking to a human is not available on this site.', 'attendant' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		// Modest per-IP guard — a handoff pings a real team's Slack.
+		$ip_hash = md5( (string) ( $_SERVER['REMOTE_ADDR'] ?? '' ) . wp_salt( 'nonce' ) );
+		$guard   = 'attendant_handoff_ip_' . $ip_hash;
+		if ( (int) get_transient( $guard ) >= 5 ) {
+			return new WP_Error(
+				'attendant_handoff_limited',
+				__( 'Please wait a moment before asking again.', 'attendant' ),
+				array( 'status' => 429 )
+			);
+		}
+		set_transient( $guard, (int) get_transient( $guard ) + 1, 10 * MINUTE_IN_SECONDS );
+
+		$session_id = (string) $request->get_param( 'session_id' );
+
+		$transcript = array();
+		$raw        = $request->get_json_params()['transcript'] ?? array();
+		foreach ( array_slice( (array) $raw, -10 ) as $entry ) {
+			if ( ! is_array( $entry ) ) {
+				continue;
+			}
+			$transcript[] = array(
+				'role' => 'user' === ( $entry['role'] ?? '' ) ? 'user' : 'bot',
+				'text' => mb_substr( sanitize_text_field( (string) ( $entry['text'] ?? '' ) ), 0, 500 ),
+			);
+		}
+
+		$started = ATTENDANT_Slack::start_handoff( $session_id, $transcript );
+
+		if ( ! $started ) {
+			return new WP_Error(
+				'attendant_handoff_failed',
+				__( 'Could not reach the team right now. Please try again shortly.', 'attendant' ),
+				array( 'status' => 502 )
+			);
+		}
+
+		return new WP_REST_Response(
+			array(
+				'ok'      => true,
+				'message' => __( 'Our team has been notified. Replies will appear right here — you can keep this window open.', 'attendant' ),
+			),
+			200
+		);
+	}
+
+	/**
+	 * GET /chat/poll
+	 *
+	 * Returns agent messages queued for this session since the last poll,
+	 * plus whether the handoff is still live.
+	 *
+	 * @param WP_REST_Request $request Incoming REST request.
+	 * @return WP_REST_Response
+	 */
+	public function handle_poll( WP_REST_Request $request ): WP_REST_Response {
+		$session_id = (string) $request->get_param( 'session_id' );
+
+		$messages = array();
+		foreach ( ATTENDANT_Slack::drain_agent_messages( $session_id ) as $m ) {
+			$messages[] = array( 'text' => (string) ( $m['text'] ?? '' ) );
+		}
+
+		return new WP_REST_Response(
+			array(
+				'messages' => $messages,
+				'live'     => '' !== ATTENDANT_Slack::thread_for_session( $session_id ),
+			),
+			200
+		);
+	}
+
+	/**
+	 * POST /slack/events
+	 *
+	 * Slack Events API callback. Verifies Slack's request signature, answers
+	 * the one-time url_verification challenge, and queues thread replies from
+	 * the configured channel for the matching visitor session.
+	 *
+	 * @param WP_REST_Request $request Incoming REST request.
+	 * @return WP_REST_Response
+	 */
+	public function handle_slack_events( WP_REST_Request $request ): WP_REST_Response {
+		$raw_body  = (string) $request->get_body();
+		$timestamp = sanitize_text_field( wp_unslash( $request->get_header( 'X-Slack-Request-Timestamp' ) ?? '' ) );
+		$signature = sanitize_text_field( wp_unslash( $request->get_header( 'X-Slack-Signature' ) ?? '' ) );
+		$body      = json_decode( $raw_body, true );
+		$body      = is_array( $body ) ? $body : array();
+
+		// One-time URL verification. Before a signing secret is saved (the
+		// app is created from our manifest BEFORE setup finishes) the only
+		// possible response is echoing Slack's own challenge — harmless.
+		// Once a secret exists, even the challenge must be signed.
+		if ( 'url_verification' === ( $body['type'] ?? '' ) ) {
+			$secret_saved = '' !== (string) get_option( 'attendant_slack_signing_secret', '' );
+			if ( $secret_saved && ! ATTENDANT_Slack::verify_signature( $timestamp, $signature, $raw_body ) ) {
+				return new WP_REST_Response( array( 'error' => 'bad signature' ), 401 );
+			}
+			return new WP_REST_Response( array( 'challenge' => (string) ( $body['challenge'] ?? '' ) ), 200 );
+		}
+
+		if ( ! ATTENDANT_Slack::verify_signature( $timestamp, $signature, $raw_body ) ) {
+			return new WP_REST_Response( array( 'error' => 'bad signature' ), 401 );
+		}
+
+		// Slack retries on slow responses — processing them again would
+		// duplicate messages in the visitor's chat.
+		if ( '' !== (string) ( $request->get_header( 'X-Slack-Retry-Num' ) ?? '' ) ) {
+			return new WP_REST_Response( array( 'ok' => true ), 200 );
+		}
+
+		// Belt-and-braces dedup by event id.
+		$event_id = sanitize_text_field( (string) ( $body['event_id'] ?? '' ) );
+		if ( '' !== $event_id ) {
+			$dedup = 'attendant_slack_evt_' . $event_id;
+			if ( get_transient( $dedup ) ) {
+				return new WP_REST_Response( array( 'ok' => true ), 200 );
+			}
+			set_transient( $dedup, 1, 5 * MINUTE_IN_SECONDS );
+		}
+
+		$event = is_array( $body['event'] ?? null ) ? $body['event'] : array();
+
+		// Only human thread replies in OUR channel count. Everything else
+		// (bot echoes, channel joins, edits, other channels) is ignored.
+		$is_reply = 'message' === ( $event['type'] ?? '' )
+			&& '' !== (string) ( $event['thread_ts'] ?? '' )
+			&& ( $event['channel'] ?? '' ) === ATTENDANT_Slack::channel()
+			&& empty( $event['bot_id'] )
+			&& empty( $event['app_id'] )
+			&& empty( $event['bot_profile'] )
+			&& in_array( (string) ( $event['subtype'] ?? '' ), array( '', 'me_message' ), true );
+
+		if ( $is_reply ) {
+			$session_id = ATTENDANT_Slack::session_for_thread( (string) $event['thread_ts'] );
+			$text       = ATTENDANT_Slack::clean_from_slack( (string) ( $event['text'] ?? '' ) );
+
+			if ( '' !== $session_id && '' !== $text ) {
+				ATTENDANT_Slack::queue_agent_message( $session_id, $text );
+			} elseif ( '' === $session_id ) {
+				// Thread expired or unknown — tell the agent in the thread.
+				ATTENDANT_Slack::post_message(
+					__( 'This conversation has expired — the visitor can no longer receive replies.', 'attendant' ),
+					(string) $event['thread_ts']
+				);
+			}
+		}
+
+		return new WP_REST_Response( array( 'ok' => true ), 200 );
+	}
+
+	/**
+	 * GET /slack/channels
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function handle_slack_channels(): WP_REST_Response {
+		return new WP_REST_Response( array( 'channels' => ATTENDANT_Slack::list_channels() ), 200 );
+	}
+
+	/**
+	 * POST /slack/test
+	 *
+	 * Validates the token and posts a test message to the configured channel.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function handle_slack_test(): WP_REST_Response {
+		$auth = ATTENDANT_Slack::test_auth();
+		if ( empty( $auth['ok'] ) ) {
+			return new WP_REST_Response(
+				array(
+					'ok'    => false,
+					'error' => (string) ( $auth['error'] ?? 'unknown' ),
+				),
+				200
+			);
+		}
+
+		$ts = ATTENDANT_Slack::post_message(
+			__( 'Attendant is connected. Visitor handoffs will appear in this channel as threads.', 'attendant' )
+		);
+
+		return new WP_REST_Response(
+			array(
+				'ok'   => '' !== $ts,
+				'team' => (string) ( $auth['team'] ?? '' ),
 			),
 			200
 		);
