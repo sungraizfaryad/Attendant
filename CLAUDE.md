@@ -160,6 +160,7 @@ rm -f "$ZIP"                       # zip APPENDS to an existing archive — stal
 rm -rf "$BUILD" && mkdir -p "$BUILD/attendant"
 cp -R "$SRC"/. "$BUILD/attendant"/
 ( cd "$BUILD/attendant" && rm -rf .git .github .gitignore .distignore \
+    .svnignore .wordpress-org CLAUDE.md progress.md \
     composer.json composer.lock phpunit.xml.dist phpcs.xml phpcs.xml.dist \
     vendor tests node_modules .phpunit.result.cache docs )
 find "$BUILD" \( -name '.DS_Store' -o -name '.playwright-mcp' \) -exec rm -rf {} +
