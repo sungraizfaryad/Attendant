@@ -3,7 +3,7 @@
 _Last updated: 2026-07-23 (v2.1.0 "Gemini free" complete + live-verified, NOT deployed)._
 _Rolling status only. Detail lives in `CLAUDE.md` and the cloud memory entries._
 
-## Done (branch `gemini-only` @ 9fb4a3f)
+## Done (branch `gemini-only` @ a54ff94)
 
 - Google Gemini added as second provider: FREE chat + FREE embeddings, one no-card key. OpenAI untouched for existing installs. Old 6-provider/OpenRouter/Slack/debug direction abandoned — parked on `backup/v2.2.0-full`.
 - LIVE-VERIFIED with a real free key on mui: 113 chunks embedded via Gemini ($0, 0 failures), RAG retrieval + search_posts tool call + reply working in the widget.
@@ -14,7 +14,8 @@ _Rolling status only. Detail lives in `CLAUDE.md` and the cloud memory entries._
 - Per-provider spend ledgers (`ATTENDANT_Billing`, options nested [slug => [date => usd]]): switch provider → analytics shows that provider's history only ($0 fresh for Gemini); budget kill-switch watches ACTIVE provider; monthly budget now actually gates /chat (was display-only). Legacy flat maps migrate to openai bucket; normalize_map() heals mixed shapes per key; migrate_from_aicm no longer clobbers existing attendant_* options. Costs labeled "estimated" + "$0 on free tier" notes for Gemini.
 - Model dropdown: "fixed version" wording + layman bullets. Analytics logging notice deep-links to Settings #privacy (tabs follow hashchange now).
 - Cross-tab chat sync in widget: storage event repaints other tabs live, saveStore() merges before write (append-only tail merge) so concurrent tabs can't lose messages. Live-verified 2 tabs on mui.
-- 90 tests / 208 assertions green. Plugin Check 0 production errors. Two adversarial review rounds, all confirmed findings fixed. Both installs (mui + FLP) run this build; FLP 9,284 chunks intact. Build: `~/Desktop/attendant-2.1.0-gemini.zip`.
+- `attendant_lead_captured` action fires after validated lead + send (email, name/phone/time/topic/session) — newsletter/CRM plugins hook it; readme FAQ documents. E2E-verified on mui (full chat flow → hook payload captured via mu-plugin).
+- 92 tests / 212 assertions green. Plugin Check 0 production errors. Two adversarial review rounds, all confirmed findings fixed. Both installs (mui + FLP) run this build; FLP 9,284 chunks intact. Build: `~/Desktop/attendant-2.1.0-gemini.zip`.
 
 ## Decisions (durable)
 
