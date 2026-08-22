@@ -763,7 +763,7 @@ $logging         = ! empty( $settings['logging_enabled'] );
 							<?php echo esc_html__( 'In Slack, create a channel for chats (a private one works great, e.g. #website-chat) and invite the teammates who will answer. Then type this in the channel: /invite @Attendant Chat', 'attendant' ); ?>
 						</li>
 						<li>
-							<?php echo esc_html__( 'Click Save Settings below, then "Load channels", pick your channel, and Save again.', 'attendant' ); ?>
+							<?php echo esc_html__( 'Click Save Settings below. Your channels then load automatically in the Channel row — pick yours and Save again. (Only channels the app has joined appear; for a private channel, /invite it first, then click Reload channels.)', 'attendant' ); ?>
 						</li>
 						<li>
 							<?php echo esc_html__( 'Click "Send test message" — it should pop up in your channel. Done.', 'attendant' ); ?>
@@ -807,7 +807,8 @@ $logging         = ! empty( $settings['logging_enabled'] );
 				</td>
 			</tr>
 
-			<tr>
+			<?php if ( $attendant_has_slack_token && $attendant_has_slack_secret ) : ?>
+			<tr id="attendant-slack-channel-row" data-autoload="<?php echo esc_attr( '' === $attendant_slack_channel ? '1' : '0' ); ?>">
 				<th scope="row">
 					<label for="attendant-slack-channel"><?php echo esc_html__( 'Channel', 'attendant' ); ?></label>
 				</th>
@@ -819,22 +820,32 @@ $logging         = ! empty( $settings['logging_enabled'] );
 							</option>
 						<?php else : ?>
 							<option value="" selected disabled>
-								<?php echo esc_html__( '— click "Load channels" to choose —', 'attendant' ); ?>
+								<?php echo esc_html__( '— loading your channels… —', 'attendant' ); ?>
 							</option>
 						<?php endif; ?>
 					</select>
 					<button type="button" class="button" id="attendant-slack-load-channels">
-						<?php echo esc_html__( 'Load channels', 'attendant' ); ?>
+						<?php echo esc_html__( 'Reload channels', 'attendant' ); ?>
 					</button>
 					<button type="button" class="button" id="attendant-slack-test">
 						<?php echo esc_html__( 'Send test message', 'attendant' ); ?>
 					</button>
 					<span id="attendant-slack-status" aria-live="polite"></span>
 					<p class="description" style="margin-top:8px;">
-						<?php echo esc_html__( 'Order: paste the token above and Save Settings, then Load channels, pick one, Save again, and finally Send test message. Private channels appear only after you /invite the app into them.', 'attendant' ); ?>
+						<?php echo esc_html__( 'Pick your channel and click Save Settings, then Send test message. Only channels the app has been added to appear here — for a private channel, type /invite @Attendant Chat in it first, then Reload channels.', 'attendant' ); ?>
 					</p>
 				</td>
 			</tr>
+			<?php else : ?>
+			<tr>
+				<th scope="row"><?php echo esc_html__( 'Channel', 'attendant' ); ?></th>
+				<td>
+					<p class="description" style="max-width:640px;margin-top:4px;">
+						<?php echo esc_html__( 'Paste your Bot Token and Signing Secret above and click Save Settings. Your Slack channels will then load here automatically so you can pick one.', 'attendant' ); ?>
+					</p>
+				</td>
+			</tr>
+			<?php endif; ?>
 
 		</table>
 

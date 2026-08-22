@@ -429,18 +429,37 @@ final class ATTENDANT_Slack {
 	// Admin helpers (settings screen)
 	// -------------------------------------------------------------------------
 
+	/** Last error from list_channels(), '' on success. */
+	private static string $last_list_error = '';
+
 	/**
-	 * Channels the bot can see, for the settings dropdown.
+	 * The Slack error from the most recent list_channels() call, '' on success.
+	 * 'missing_scope' means the app needs private-channel permission and must
+	 * be reinstalled.
+	 *
+	 * @return string
+	 */
+	public static function last_list_error(): string {
+		return self::$last_list_error;
+	}
+
+	/**
+	 * Channels the bot is a MEMBER of — both public and private — for the
+	 * settings dropdown.
+	 *
+	 * Uses users.conversations rather than conversations.list: it returns the
+	 * exact set the bot can post to (a private channel only appears once the
+	 * app is /invite-d in), so the picker never lists a channel the handoff
+	 * would then fail to post into, and it surfaces private channels reliably.
 	 *
 	 * @return array[] Each: ['id' => string, 'name' => string, 'private' => bool].
 	 */
 	public static function list_channels(): array {
+		self::$last_list_error = '';
 		$out    = array();
 		$cursor = '';
 
-		// conversations.list is cursor-paginated; a workspace with more than
-		// one page of channels would otherwise silently hide the rest. Cap the
-		// page count so a huge workspace can't spin here forever.
+		// Cursor-paginated; cap pages so a huge workspace can't spin forever.
 		for ( $page = 0; $page < 10; $page++ ) {
 			$args = array(
 				'types'            => 'public_channel,private_channel',
@@ -451,8 +470,9 @@ final class ATTENDANT_Slack {
 				$args['cursor'] = $cursor;
 			}
 
-			$response = self::api_call( 'conversations.list', $args );
+			$response = self::api_call( 'users.conversations', $args );
 			if ( empty( $response['ok'] ) ) {
+				self::$last_list_error = (string) ( $response['error'] ?? 'unreachable' );
 				break;
 			}
 
@@ -460,7 +480,7 @@ final class ATTENDANT_Slack {
 				$out[] = array(
 					'id'      => (string) ( $ch['id'] ?? '' ),
 					'name'    => (string) ( $ch['name'] ?? '' ),
-					'private' => ! empty( $ch['is_private'] ),
+					'private' => ! empty( $ch['is_private'] ) || ! empty( $ch['is_group'] ),
 				);
 			}
 

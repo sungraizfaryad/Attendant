@@ -1172,7 +1172,15 @@ class ATTENDANT_REST_API {
 	 * @return WP_REST_Response
 	 */
 	public function handle_slack_channels(): WP_REST_Response {
-		return new WP_REST_Response( array( 'channels' => ATTENDANT_Slack::list_channels() ), 200 );
+		$channels = ATTENDANT_Slack::list_channels();
+
+		return new WP_REST_Response(
+			array(
+				'channels' => $channels,
+				'error'    => ATTENDANT_Slack::last_list_error(),
+			),
+			200
+		);
 	}
 
 	/**

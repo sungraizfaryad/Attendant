@@ -200,39 +200,59 @@
 		}
 	}
 
-	if ( slackLoadBtn && slackSelect ) {
-		slackLoadBtn.addEventListener( 'click', function () {
-			slackLoadBtn.disabled = true;
-			fetch( attendantAdmin.restUrl + '/slack/channels', {
-				headers: { 'X-WP-Nonce': attendantAdmin.nonce },
-			} )
-			.then( function ( res ) { return res.json(); } )
-			.then( function ( json ) {
-				const channels = ( json && json.channels ) || [];
-				if ( ! channels.length ) {
-					slackSay( 'No channels found. Save the bot token first and /invite the app into the channel.', false );
-					return;
+	function loadSlackChannels() {
+		if ( ! slackLoadBtn || ! slackSelect ) {
+			return;
+		}
+		slackLoadBtn.disabled = true;
+		slackSay( 'Loading…', true );
+		fetch( attendantAdmin.restUrl + '/slack/channels', {
+			headers: { 'X-WP-Nonce': attendantAdmin.nonce },
+		} )
+		.then( function ( res ) { return res.json(); } )
+		.then( function ( json ) {
+			const channels = ( json && json.channels ) || [];
+			const err      = json && json.error;
+			if ( ! channels.length ) {
+				if ( 'missing_scope' === err ) {
+					slackSay( 'The app is missing permission to see channels. Re-create it from "Create the Slack app" above, or re-install it, then try again.', false );
+				} else if ( err ) {
+					slackSay( 'Slack said: ' + err + '. Add the app to a channel (/invite @Attendant Chat), then Reload.', false );
+				} else {
+					slackSay( 'No channels yet. In Slack, type /invite @Attendant Chat in your channel, then Reload channels.', false );
 				}
-				const current = slackSelect.value;
-				slackSelect.innerHTML = '';
-				channels.forEach( function ( ch ) {
-					const opt = document.createElement( 'option' );
-					opt.value = ch.id;
-					opt.textContent = '#' + ch.name + ( ch.private ? ' (private)' : '' );
-					if ( ch.id === current ) {
-						opt.selected = true;
-					}
-					slackSelect.appendChild( opt );
-				} );
-				slackSay( channels.length + ' channels loaded — pick one and Save.', true );
-			} )
-			.catch( function () {
-				slackSay( attendantAdmin.i18n.error, false );
-			} )
-			.finally( function () {
-				slackLoadBtn.disabled = false;
+				return;
+			}
+			const current = slackSelect.value;
+			slackSelect.innerHTML = '';
+			channels.forEach( function ( ch ) {
+				const opt = document.createElement( 'option' );
+				opt.value = ch.id;
+				opt.textContent = '#' + ch.name + ( ch.private ? ' (private)' : '' );
+				if ( ch.id === current ) {
+					opt.selected = true;
+				}
+				slackSelect.appendChild( opt );
 			} );
+			slackSay( channels.length + ' channels loaded — pick one and Save.', true );
+		} )
+		.catch( function () {
+			slackSay( attendantAdmin.i18n.error, false );
+		} )
+		.finally( function () {
+			slackLoadBtn.disabled = false;
 		} );
+	}
+
+	if ( slackLoadBtn && slackSelect ) {
+		slackLoadBtn.addEventListener( 'click', loadSlackChannels );
+
+		// Auto-load the moment the picker appears with nothing chosen yet, so
+		// the flow is: save tokens → page reloads → channels populate here.
+		const chanRow = document.getElementById( 'attendant-slack-channel-row' );
+		if ( chanRow && '1' === chanRow.dataset.autoload ) {
+			loadSlackChannels();
+		}
 	}
 
 	if ( slackTestBtn ) {
