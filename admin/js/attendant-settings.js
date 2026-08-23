@@ -295,4 +295,88 @@
 		} );
 	}
 
+	// -----------------------------------------------------------------
+	// Slack: create a channel (bot auto-joins) + optional invites.
+	// -----------------------------------------------------------------
+	const slackCreateBtn    = document.getElementById( 'attendant-slack-create-channel' );
+	const slackCreateStatus = document.getElementById( 'attendant-slack-create-status' );
+
+	function createStatus( text, ok, friendly ) {
+		if ( ! slackCreateStatus ) {
+			return;
+		}
+		slackCreateStatus.textContent = '';
+		slackCreateStatus.style.color = ok ? '#00a32a' : '#d63638';
+		slackCreateStatus.style.marginLeft = '8px';
+		var msg = friendly && friendly.message ? friendly.message : text;
+		slackCreateStatus.appendChild( document.createTextNode( ( ok ? '✓ ' : '✗ ' ) + msg ) );
+	}
+
+	if ( slackCreateBtn && slackSelect ) {
+		slackCreateBtn.addEventListener( 'click', function () {
+			const nameEl    = document.getElementById( 'attendant-slack-new-name' );
+			const privateEl = document.getElementById( 'attendant-slack-new-private' );
+			const emailsEl  = document.getElementById( 'attendant-slack-new-emails' );
+			const name      = nameEl ? nameEl.value.trim() : '';
+
+			if ( '' === name ) {
+				createStatus( 'Type a channel name first.', false );
+				return;
+			}
+
+			const emails = emailsEl
+				? emailsEl.value.split( /[\n,]/ ).map( function ( e ) { return e.trim(); } ).filter( Boolean )
+				: [];
+
+			slackCreateBtn.disabled = true;
+			createStatus( 'Creating…', true );
+
+			fetch( attendantAdmin.restUrl + '/slack/create-channel', {
+				method:  'POST',
+				headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': attendantAdmin.nonce },
+				body: JSON.stringify( { name: name, private: !! ( privateEl && privateEl.checked ), emails: emails } ),
+			} )
+			.then( function ( res ) { return res.json(); } )
+			.then( function ( json ) {
+				if ( ! json || ! json.ok ) {
+					createStatus( '', false, ( json && json.friendly ) || { message: 'Could not create the channel.' } );
+					return;
+				}
+
+				// Select the new channel in the dropdown (already saved server-side).
+				const label = '#' + json.name + ( json.private ? ' (private)' : '' );
+				let opt = null;
+				for ( let i = 0; i < slackSelect.options.length; i++ ) {
+					if ( slackSelect.options[ i ].value === json.id ) {
+						opt = slackSelect.options[ i ];
+						break;
+					}
+				}
+				if ( ! opt ) {
+					opt = document.createElement( 'option' );
+					opt.value = json.id;
+					slackSelect.appendChild( opt );
+				}
+				opt.textContent = label;
+				opt.selected = true;
+
+				let msg = 'Channel #' + json.name + ' created and selected.';
+				if ( json.invited && json.invited.length ) {
+					msg += ' Invited: ' + json.invited.join( ', ' ) + '.';
+				}
+				if ( json.failed && json.failed.length ) {
+					msg += ' Could not find: ' + json.failed.join( ', ' ) + '.';
+				}
+				msg += ' Click "Send test message" to confirm.';
+				createStatus( msg, true );
+			} )
+			.catch( function () {
+				createStatus( attendantAdmin.i18n.error, false );
+			} )
+			.finally( function () {
+				slackCreateBtn.disabled = false;
+			} );
+		} );
+	}
+
 }() );

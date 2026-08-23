@@ -515,6 +515,114 @@ final class ATTENDANT_Slack {
 	}
 
 	/**
+	 * Create a channel the bot owns (so it is automatically a member — no
+	 * manual /invite needed) and, optionally, invite teammates by email.
+	 *
+	 * @param string   $name    Desired channel name (sanitised to Slack rules).
+	 * @param bool     $private Whether to make it private.
+	 * @param string[] $emails  Optional teammate emails to invite.
+	 * @return array{ok: bool, id?: string, name?: string, error?: string,
+	 *               invited?: string[], failed?: string[]}
+	 */
+	public static function create_channel( string $name, bool $private, array $emails = array() ): array {
+		$clean = self::normalize_channel_name( $name );
+		if ( '' === $clean ) {
+			return array( 'ok' => false, 'error' => 'invalid_name' );
+		}
+
+		$resp = self::api_call(
+			'conversations.create',
+			array(
+				'name'       => $clean,
+				'is_private' => $private,
+			)
+		);
+
+		if ( empty( $resp['ok'] ) ) {
+			return array( 'ok' => false, 'error' => (string) ( $resp['error'] ?? 'unreachable' ) );
+		}
+
+		$channel_id = (string) ( $resp['channel']['id'] ?? '' );
+
+		$result = array(
+			'ok'   => true,
+			'id'   => $channel_id,
+			'name' => (string) ( $resp['channel']['name'] ?? $clean ),
+		);
+
+		if ( '' !== $channel_id && ! empty( $emails ) ) {
+			$invite            = self::invite_by_emails( $channel_id, $emails );
+			$result['invited'] = $invite['invited'];
+			$result['failed']  = $invite['failed'];
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Invite teammates to a channel by email address.
+	 *
+	 * Each email is resolved to a Slack user id (users.lookupByEmail) and
+	 * invited (conversations.invite). "already in the channel" counts as
+	 * success; anything else lands in `failed` so the UI can report it.
+	 *
+	 * @param string   $channel_id Channel id.
+	 * @param string[] $emails     Teammate emails.
+	 * @return array{invited: string[], failed: string[]}
+	 */
+	public static function invite_by_emails( string $channel_id, array $emails ): array {
+		$invited = array();
+		$failed  = array();
+
+		foreach ( $emails as $email ) {
+			$email = sanitize_email( (string) $email );
+			if ( '' === $email ) {
+				continue;
+			}
+
+			$lookup = self::api_call( 'users.lookupByEmail', array( 'email' => $email ) );
+			$uid    = ! empty( $lookup['ok'] ) ? (string) ( $lookup['user']['id'] ?? '' ) : '';
+			if ( '' === $uid ) {
+				$failed[] = $email;
+				continue;
+			}
+
+			$invite = self::api_call(
+				'conversations.invite',
+				array(
+					'channel' => $channel_id,
+					'users'   => $uid,
+				)
+			);
+			if ( ! empty( $invite['ok'] ) || 'already_in_channel' === ( $invite['error'] ?? '' ) ) {
+				$invited[] = $email;
+			} else {
+				$failed[] = $email;
+			}
+		}
+
+		return array(
+			'invited' => $invited,
+			'failed'  => $failed,
+		);
+	}
+
+	/**
+	 * Coerce a display name into a valid Slack channel name: lowercase, only
+	 * letters/digits/hyphen/underscore, no leading/trailing hyphen, ≤80 chars.
+	 *
+	 * @param string $name Raw name.
+	 * @return string '' when nothing usable remains.
+	 */
+	public static function normalize_channel_name( string $name ): string {
+		$name = strtolower( trim( $name ) );
+		$name = (string) preg_replace( '/[^a-z0-9_-]+/', '-', $name );
+		$name = trim( $name, '-' );
+
+		return substr( $name, 0, 80 );
+	}
+
+	/**
 	 * auth.test — is the saved token valid?
 	 *
 	 * @return array{ok: bool, team?: string, error?: string}
@@ -571,6 +679,19 @@ final class ATTENDANT_Slack {
 			case 'channel_not_found':
 				return array(
 					'message' => __( 'That channel could not be found — it may have been deleted or renamed. Click "Reload channels" and pick your channel again.', 'attendant' ),
+				);
+
+			case 'name_taken':
+				return array(
+					'message' => __( 'A channel with that name already exists. Pick a different name, or switch to "Choose an existing channel" and select it from the list.', 'attendant' ),
+				);
+
+			case 'invalid_name':
+			case 'invalid_name_specials':
+			case 'invalid_name_maxlength':
+			case 'invalid_name_required':
+				return array(
+					'message' => __( 'That channel name is not allowed. Use lowercase letters, numbers, and hyphens (for example: website-chat).', 'attendant' ),
 				);
 
 			case 'not_in_channel':
@@ -634,6 +755,13 @@ final class ATTENDANT_Slack {
 						'groups:history',
 						'channels:read',
 						'groups:read',
+						// Lets the wizard create the channel for the owner and
+						// invite teammates, so nobody has to make a channel and
+						// /invite the bot by hand.
+						'channels:manage',
+						'groups:write',
+						'users:read',
+						'users:read.email',
 					),
 				),
 			),

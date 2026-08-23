@@ -826,9 +826,38 @@ $logging         = ! empty( $settings['logging_enabled'] );
 			</tr>
 
 			<?php if ( $attendant_has_slack_token && $attendant_has_slack_secret ) : ?>
+			<tr>
+				<th scope="row"><?php echo esc_html__( 'Create a channel', 'attendant' ); ?></th>
+				<td>
+					<p class="description" style="max-width:640px;margin:0 0 8px;">
+						<?php echo esc_html__( 'Let Attendant make the channel for you — the bot joins it automatically, so there is nothing to invite by hand.', 'attendant' ); ?>
+					</p>
+					<input
+						type="text"
+						id="attendant-slack-new-name"
+						class="regular-text"
+						placeholder="<?php echo esc_attr__( 'website-chat', 'attendant' ); ?>"
+					>
+					<label style="margin-left:10px;">
+						<input type="checkbox" id="attendant-slack-new-private" checked>
+						<?php echo esc_html__( 'Make it private', 'attendant' ); ?>
+					</label>
+					<p style="margin:8px 0 0;">
+						<label for="attendant-slack-new-emails"><?php echo esc_html__( 'Invite teammates (optional) — one email per line:', 'attendant' ); ?></label><br>
+						<textarea id="attendant-slack-new-emails" rows="2" class="large-text" placeholder="teammate@example.com"></textarea>
+					</p>
+					<p style="margin:8px 0 0;">
+						<button type="button" class="button button-primary" id="attendant-slack-create-channel">
+							<?php echo esc_html__( 'Create channel', 'attendant' ); ?>
+						</button>
+						<span id="attendant-slack-create-status" aria-live="polite"></span>
+					</p>
+				</td>
+			</tr>
+
 			<tr id="attendant-slack-channel-row" data-autoload="<?php echo esc_attr( '' === $attendant_slack_channel ? '1' : '0' ); ?>">
 				<th scope="row">
-					<label for="attendant-slack-channel"><?php echo esc_html__( 'Channel', 'attendant' ); ?></label>
+					<label for="attendant-slack-channel"><?php echo esc_html__( 'Or choose an existing channel', 'attendant' ); ?></label>
 				</th>
 				<td>
 					<select id="attendant-slack-channel" name="slack_channel">
@@ -850,7 +879,7 @@ $logging         = ! empty( $settings['logging_enabled'] );
 					</button>
 					<span id="attendant-slack-status" aria-live="polite"></span>
 					<p class="description" style="margin-top:8px;">
-						<?php echo esc_html__( 'Pick your channel and click Save Settings, then Send test message. Only channels the app has been added to appear here — for a private channel, type /invite @Attendant Chat in it first, then Reload channels.', 'attendant' ); ?>
+						<?php echo esc_html__( 'Already have a channel? Pick it here and click Save Settings, then Send test message. For a private channel to appear, type /invite @Attendant Chat in it first, then Reload channels.', 'attendant' ); ?>
 					</p>
 				</td>
 			</tr>

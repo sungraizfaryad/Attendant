@@ -51,6 +51,7 @@ final class SlackTest extends TestCase {
 		Functions\when( '__' )->returnArg();
 		Functions\when( 'wp_json_encode' )->alias( static fn( $v ) => json_encode( $v ) );
 		Functions\when( 'current_time' )->justReturn( '2026-08-22 12:00:00' );
+		Functions\when( 'sanitize_email' )->alias( static fn( $v ) => trim( (string) $v ) );
 		Functions\when( 'rest_url' )->alias( static fn( $path = '' ) => 'https://example.test/wp-json/' . $path );
 
 		Functions\when( 'get_option' )->alias( fn( $k, $d = false ) => $this->options[ $k ] ?? $d );
@@ -259,6 +260,63 @@ final class SlackTest extends TestCase {
 		$this->assertContains( 'chat:write', $manifest['oauth_config']['scopes']['bot'] );
 		$this->assertContains( 'groups:history', $manifest['oauth_config']['scopes']['bot'] );
 		$this->assertContains( 'message.groups', $manifest['settings']['event_subscriptions']['bot_events'] );
+	}
+
+	public function test_normalize_channel_name(): void {
+		$this->assertSame( 'website-chat', ATTENDANT_Slack::normalize_channel_name( 'Website Chat' ) );
+		$this->assertSame( 'sales-2026', ATTENDANT_Slack::normalize_channel_name( '  Sales 2026!!  ' ) );
+		$this->assertSame( 'a-b', ATTENDANT_Slack::normalize_channel_name( '--a  b--' ) );
+		$this->assertSame( '', ATTENDANT_Slack::normalize_channel_name( '@@@' ) );
+	}
+
+	public function test_create_channel_returns_id_and_marks_bot_member(): void {
+		$this->store_credentials();
+		$this->api_response = array( 'ok' => true, 'channel' => array( 'id' => 'C0NEW', 'name' => 'website-chat' ) );
+
+		$r = ATTENDANT_Slack::create_channel( 'Website Chat', true );
+
+		$this->assertTrue( $r['ok'] );
+		$this->assertSame( 'C0NEW', $r['id'] );
+		$sent = json_decode( $this->posts[0]['args']['body'], true );
+		$this->assertSame( 'website-chat', $sent['name'] );
+		$this->assertTrue( $sent['is_private'] );
+	}
+
+	public function test_create_channel_reports_name_taken(): void {
+		$this->store_credentials();
+		$this->api_response = array( 'ok' => false, 'error' => 'name_taken' );
+
+		$r = ATTENDANT_Slack::create_channel( 'general', false );
+
+		$this->assertFalse( $r['ok'] );
+		$this->assertSame( 'name_taken', $r['error'] );
+		$this->assertStringContainsString( 'already exists', ATTENDANT_Slack::friendly_error( 'name_taken' )['message'] );
+	}
+
+	public function test_invite_by_emails_splits_found_and_missing(): void {
+		$this->store_credentials();
+		// lookupByEmail then conversations.invite, per email; alternate found/not.
+		$calls = 0;
+		Functions\when( 'wp_remote_post' )->alias(
+			function ( $url, $args ) use ( &$calls ) {
+				$this->posts[] = array( 'url' => $url, 'args' => $args );
+				++$calls;
+				if ( false !== strpos( $url, 'users.lookupByEmail' ) ) {
+					// First email resolves, second does not.
+					$body = json_decode( $args['body'], true );
+					if ( 'known@example.com' === ( $body['email'] ?? '' ) ) {
+						return array( 'body' => json_encode( array( 'ok' => true, 'user' => array( 'id' => 'U1' ) ) ) );
+					}
+					return array( 'body' => json_encode( array( 'ok' => false, 'error' => 'users_not_found' ) ) );
+				}
+				return array( 'body' => json_encode( array( 'ok' => true ) ) );
+			}
+		);
+
+		$r = ATTENDANT_Slack::invite_by_emails( 'C0NEW', array( 'known@example.com', 'ghost@example.com' ) );
+
+		$this->assertSame( array( 'known@example.com' ), $r['invited'] );
+		$this->assertSame( array( 'ghost@example.com' ), $r['failed'] );
 	}
 
 	public function test_friendly_error_maps_common_codes(): void {

@@ -144,6 +144,25 @@ class ATTENDANT_REST_API {
 			)
 		);
 
+		// Admin: create a channel (and optionally invite teammates).
+		register_rest_route(
+			self::NAMESPACE,
+			'/slack/create-channel',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'handle_slack_create_channel' ),
+				'permission_callback' => array( $this, 'admin_permission_check' ),
+				'args'                => array(
+					'name' => array(
+						'required'          => true,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+						'validate_callback' => static fn( string $v ): bool => '' !== trim( $v ),
+					),
+				),
+			)
+		);
+
 		// Admin: post a test message to the configured channel.
 		register_rest_route(
 			self::NAMESPACE,
@@ -1180,6 +1199,61 @@ class ATTENDANT_REST_API {
 				'channels' => $channels,
 				'error'    => $error,
 				'friendly' => '' !== $error ? ATTENDANT_Slack::friendly_error( $error ) : null,
+			),
+			200
+		);
+	}
+
+	/**
+	 * POST /slack/create-channel
+	 *
+	 * Creates a Slack channel the bot owns (so it is already a member) and,
+	 * optionally, invites teammates by email. Saves it as the active channel
+	 * so the handoff is ready without a second Save.
+	 *
+	 * @param WP_REST_Request $request Incoming REST request.
+	 * @return WP_REST_Response
+	 */
+	public function handle_slack_create_channel( WP_REST_Request $request ): WP_REST_Response {
+		$name    = (string) $request->get_param( 'name' );
+		$private = (bool) $request->get_param( 'private' );
+
+		$emails = array();
+		foreach ( (array) ( $request->get_param( 'emails' ) ?? array() ) as $email ) {
+			$email = sanitize_email( (string) $email );
+			if ( '' !== $email ) {
+				$emails[] = $email;
+			}
+		}
+
+		$result = ATTENDANT_Slack::create_channel( $name, $private, $emails );
+
+		if ( empty( $result['ok'] ) ) {
+			$code = (string) ( $result['error'] ?? 'unknown' );
+			return new WP_REST_Response(
+				array(
+					'ok'       => false,
+					'error'    => $code,
+					'friendly' => ATTENDANT_Slack::friendly_error( $code ),
+				),
+				200
+			);
+		}
+
+		// Persist the new channel as the active one so the owner does not have
+		// to pick and Save again — the handoff is ready immediately.
+		$settings                  = (array) Attendant_Plugin::get_setting();
+		$settings['slack_channel'] = (string) $result['id'];
+		update_option( 'attendant_settings', $settings );
+
+		return new WP_REST_Response(
+			array(
+				'ok'      => true,
+				'id'      => (string) $result['id'],
+				'name'    => (string) $result['name'],
+				'private' => $private,
+				'invited' => array_values( (array) ( $result['invited'] ?? array() ) ),
+				'failed'  => array_values( (array) ( $result['failed'] ?? array() ) ),
 			),
 			200
 		);
