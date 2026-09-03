@@ -18,6 +18,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// The create-app step links to the pre-filled manifest URL, so this view
+// needs the Slack class whether or not the caller already loaded it.
+require_once ATTENDANT_PLUGIN_DIR . 'includes/integrations/class-attendant-slack.php';
+
 /**
  * Print a wizard screenshot when the file has been added, otherwise nothing.
  *
@@ -79,7 +83,7 @@ function attendant_wizard_shot( string $file, string $alt ): void {
 					<li><?php echo esc_html__( 'Click Create', 'attendant' ); ?></li>
 				</ol>
 				<p>
-					<a class="button button-hero button-primary" id="attendant-wiz-create-app" href="#" target="_blank" rel="noopener noreferrer">
+					<a class="button button-hero button-primary" id="attendant-wiz-create-app" href="<?php echo esc_url( ATTENDANT_Slack::manifest_url() ); ?>" target="_blank" rel="noopener noreferrer">
 						<?php echo esc_html__( 'Create the app in Slack', 'attendant' ); ?> ↗
 					</a>
 				</p>
