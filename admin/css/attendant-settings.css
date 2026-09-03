@@ -22,6 +22,13 @@
 	padding:         24px;
 }
 
+/* An author `display` rule beats the browser's [hidden] rule, so the overlay
+   must opt back out explicitly — without this the modal is always on screen
+   and closing it does nothing. */
+.attendant-wiz-overlay[hidden] {
+	display: none !important;
+}
+
 .attendant-wiz {
 	background:     #fff;
 	border-radius:  8px;

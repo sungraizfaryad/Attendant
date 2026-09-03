@@ -192,24 +192,27 @@ class ATTENDANT_Admin {
 
 		// ── Settings page (top-level) ─────────────────────────────────────
 		if ( str_contains( $hook_suffix, 'toplevel_page_' . self::MENU_SLUG ) ) {
+			// Version by file mtime, not plugin version: admin CSS/JS changes
+			// between releases and a cached stylesheet silently breaks the UI
+			// (a stale sheet is what made the wizard modal appear stuck open).
 			wp_enqueue_style(
 				'attendant-settings',
 				ATTENDANT_PLUGIN_URL . 'admin/css/attendant-settings.css',
 				array(),
-				ATTENDANT_VERSION
+				self::asset_version( 'admin/css/attendant-settings.css' )
 			);
 			wp_enqueue_script(
 				'attendant-settings',
 				ATTENDANT_PLUGIN_URL . 'admin/js/attendant-settings.js',
 				array( 'wp-api' ),
-				ATTENDANT_VERSION,
+				self::asset_version( 'admin/js/attendant-settings.js' ),
 				true
 			);
 			wp_enqueue_script(
 				'attendant-slack-wizard',
 				ATTENDANT_PLUGIN_URL . 'admin/js/attendant-slack-wizard.js',
 				array( 'wp-api' ),
-				ATTENDANT_VERSION,
+				self::asset_version( 'admin/js/attendant-slack-wizard.js' ),
 				true
 			);
 		}
@@ -513,6 +516,19 @@ class ATTENDANT_Admin {
 	 * @param string $hook_suffix The hook suffix from admin_enqueue_scripts.
 	 * @return bool
 	 */
+	/**
+	 * Cache-busting version for a plugin-relative asset: its modification
+	 * time, falling back to the plugin version when that is unavailable.
+	 *
+	 * @param string $relative_path Path inside the plugin folder.
+	 * @return string
+	 */
+	private static function asset_version( string $relative_path ): string {
+		$mtime = @filemtime( ATTENDANT_PLUGIN_DIR . $relative_path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- version fallback handles failure.
+
+		return (string) ( $mtime ?: ATTENDANT_VERSION );
+	}
+
 	private function is_plugin_page( string $hook_suffix ): bool {
 		// WordPress generates hook suffixes like:
 		// toplevel_page_attendant
