@@ -70,6 +70,34 @@ manual indexing controls, file-based chat logs, and email lead capture.
 - **Every model in the settings allowlist needs a PRICING row** in its
   provider class — `estimate_cost()` feeds the monthly-budget kill switch,
   and the fallback bills at the highest known rate (fail closed), never $0.
+- **A `hidden` attribute loses to your own `display` rule.** The wizard modal
+  shipped visible-on-load and un-closable because
+  `.attendant-wiz-overlay { display: flex }` outranks the UA's
+  `[hidden] { display: none }`. Any element you hide via the attribute needs an
+  explicit `[hidden] { display: none !important }` companion rule.
+- **Version admin CSS/JS by `filemtime()`, not `ATTENDANT_VERSION`** — same trap
+  the widget already had. Between releases the version never changes, so an
+  edited stylesheet keeps serving the old UI and you debug a fix that is
+  already applied.
+- **Slack: the chat session id is NOT a credential.** `wp_create_nonce` returns
+  the SAME value for every logged-out visitor, so a nonce + guessed session id
+  once let anyone read or post into another visitor's live handoff. Every
+  handoff mints a 48-char secret (stored as a hash) that must be presented as
+  `X-Attendant-Handoff` on poll / live send / end. Never gate a per-visitor
+  resource on the nonce alone.
+- **Slack setup is bring-your-own-app on purpose.** One shared app would need a
+  hosted OAuth broker (customer domains can't be pre-registered) plus a router
+  for inbound events — i.e. a SaaS backend. `apps.manifest.create` exists but
+  needs an obscure 12-hour config token AND still cannot mint the bot token, so
+  it makes setup harder, not easier. The pre-filled manifest URL is the
+  simplest path Slack offers; don't "improve" it into OAuth without deciding to
+  run a server.
+- **Private channels need `users.conversations`, not `conversations.list`** —
+  the latter does not reliably surface them. The bot must also be a member,
+  which is why the wizard creates the channel itself (creator = member, so no
+  manual `/invite`). Scopes for that: `channels:manage`, `groups:write`,
+  `users:read`, `users:read.email` — adding them means existing apps must be
+  reinstalled.
 - **Local-dev traps seen here:** macOS negative-caches a router DNS SERVFAIL
   (curl fails while nslookup works → `dscacheutil -flushcache`), and Local's
   PHP-FPM opcache can serve stale plugin code while WP-CLI runs fresh files —
@@ -148,7 +176,7 @@ stubbing `sanitize_text_field` for a new test, use
 `static fn( $v ) => trim( strip_tags( (string) $v ) )` — the pass-through stub
 HID the operator bug.
 
-81 tests / 191 assertions. Plugin Check on the zipped build must report **0 errors**.
+121 tests / 287 assertions. Plugin Check on the zipped build must report **0 errors**.
 
 ## Build & ship
 
