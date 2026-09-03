@@ -9,3 +9,149 @@
 .attendant-test-result   { margin-left: 10px; font-weight: 600; }
 .attendant-test-ok       { color: #46b450; }
 .attendant-test-fail     { color: #dc3232; }
+
+/* ── Slack setup wizard (modal) ─────────────────────────────────────────── */
+.attendant-wiz-overlay {
+	position:        fixed;
+	inset:           0;
+	z-index:         160000;
+	background:      rgba(0, 0, 0, 0.55);
+	display:         flex;
+	align-items:     center;
+	justify-content: center;
+	padding:         24px;
+}
+
+.attendant-wiz {
+	background:     #fff;
+	border-radius:  8px;
+	width:          100%;
+	max-width:      720px;
+	max-height:     88vh;
+	display:        flex;
+	flex-direction: column;
+	box-shadow:     0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.attendant-wiz__head {
+	display:         flex;
+	align-items:     center;
+	justify-content: space-between;
+	padding:         18px 24px;
+	border-bottom:   1px solid #dcdcde;
+}
+
+.attendant-wiz__head h2 { margin: 0; font-size: 20px; }
+
+.attendant-wiz__close {
+	background: none;
+	border:     0;
+	font-size:  26px;
+	line-height: 1;
+	cursor:     pointer;
+	color:      #646970;
+}
+
+.attendant-wiz__progress { padding: 14px 24px 0; }
+.attendant-wiz__count    { font-size: 12px; color: #646970; font-weight: 600; }
+.attendant-wiz__bar {
+	height:        6px;
+	background:    #f0f0f1;
+	border-radius: 3px;
+	overflow:      hidden;
+	margin-top:    6px;
+}
+.attendant-wiz__bar-fill {
+	height:     100%;
+	width:      0;
+	background: #2271b1;
+	transition: width 0.25s ease;
+}
+
+.attendant-wiz__body {
+	padding:    22px 24px;
+	overflow-y: auto;
+	flex:       1;
+}
+
+.attendant-wiz__step h3 {
+	margin:      0 0 10px;
+	font-size:   22px;
+	line-height: 1.3;
+}
+
+.attendant-wiz__lead  { font-size: 15px; line-height: 1.6; margin: 0 0 14px; max-width: 60ch; }
+.attendant-wiz__note  { font-size: 13px; color: #646970; max-width: 62ch; }
+.attendant-wiz__hint  { font-size: 13px; color: #646970; margin: 4px 0 6px; max-width: 62ch; }
+
+.attendant-wiz__label {
+	display:     block;
+	margin:      16px 0 2px;
+	font-weight: 600;
+	font-size:   14px;
+}
+
+.attendant-wiz__list        { font-size: 15px; line-height: 2; margin: 0 0 14px 20px; }
+.attendant-wiz__list--big li { font-size: 17px; }
+
+.attendant-wiz__shot {
+	margin:        16px 0 0;
+	border:        1px solid #dcdcde;
+	border-radius: 6px;
+	overflow:      hidden;
+}
+.attendant-wiz__shot img { display: block; max-width: 100%; height: auto; }
+
+.attendant-wiz__choices { display: flex; gap: 14px; flex-wrap: wrap; }
+
+.attendant-wiz__choice {
+	flex:          1 1 260px;
+	text-align:    left;
+	padding:       16px 18px;
+	border:        2px solid #dcdcde;
+	border-radius: 8px;
+	background:    #fff;
+	cursor:        pointer;
+	transition:    border-color 0.15s, background 0.15s;
+}
+.attendant-wiz__choice:hover { border-color: #2271b1; background: #f6fbff; }
+.attendant-wiz__choice strong { display: block; font-size: 16px; margin-bottom: 4px; }
+.attendant-wiz__choice span   { display: block; font-size: 13px; color: #646970; }
+
+.attendant-wiz__chan {
+	display:       block;
+	padding:       9px 12px;
+	border:        1px solid #dcdcde;
+	border-radius: 6px;
+	margin-bottom: 6px;
+	cursor:        pointer;
+}
+.attendant-wiz__chan:hover { background: #f6fbff; }
+.attendant-wiz__group {
+	font-size:     12px;
+	font-weight:   700;
+	text-transform: uppercase;
+	color:         #646970;
+	margin:        14px 0 6px;
+}
+
+.attendant-wiz__status { padding: 0 24px; font-size: 14px; min-height: 22px; }
+
+.attendant-wiz__foot {
+	display:         flex;
+	justify-content: space-between;
+	padding:         16px 24px;
+	border-top:      1px solid #dcdcde;
+}
+
+/* Integrations tab: first-run call to action */
+.attendant-slack-cta {
+	border:        1px solid #dcdcde;
+	border-left:   4px solid #2271b1;
+	background:    #fff;
+	padding:       20px 24px;
+	max-width:     680px;
+	border-radius: 4px;
+}
+.attendant-slack-cta h3 { margin: 0 0 8px; font-size: 18px; }
+.attendant-slack-cta p  { margin: 0 0 14px; font-size: 14px; max-width: 60ch; }

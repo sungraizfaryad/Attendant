@@ -205,6 +205,13 @@ class ATTENDANT_Admin {
 				ATTENDANT_VERSION,
 				true
 			);
+			wp_enqueue_script(
+				'attendant-slack-wizard',
+				ATTENDANT_PLUGIN_URL . 'admin/js/attendant-slack-wizard.js',
+				array( 'wp-api' ),
+				ATTENDANT_VERSION,
+				true
+			);
 		}
 
 		// ── Content Indexing page ─────────────────────────────────────────

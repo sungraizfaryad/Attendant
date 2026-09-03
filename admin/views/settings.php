@@ -705,12 +705,38 @@ $logging         = ! empty( $settings['logging_enabled'] );
 		$attendant_has_slack_token  = '' !== (string) get_option( 'attendant_slack_bot_token', '' );
 		$attendant_has_slack_secret = '' !== (string) get_option( 'attendant_slack_signing_secret', '' );
 		$attendant_slack_channel    = (string) ( $settings['slack_channel'] ?? '' );
+		// Fully wired means: both credentials stored AND a channel chosen. Until
+		// then the tab shows the wizard instead of a wall of fields.
+		$attendant_slack_ready      = $attendant_has_slack_token && $attendant_has_slack_secret && '' !== $attendant_slack_channel;
 		?>
 		<div class="attendant-tab-panel" data-tab="integrations">
 		<h2 class="title"><?php echo esc_html__( 'Slack — talk to visitors as a real human', 'attendant' ); ?></h2>
 
 		<p class="description" style="max-width:640px;">
 			<?php echo esc_html__( 'When a visitor asks for a human, the conversation appears as a thread in a Slack channel of your choice. Anything your team types in that thread shows up in the visitor\'s chat within seconds. Each conversation is one thread, so nothing gets mixed up.', 'attendant' ); ?>
+		</p>
+
+		<?php if ( ! $attendant_slack_ready ) : ?>
+
+			<!-- First run: one clear call to action, the wizard does the rest. -->
+			<div class="attendant-slack-cta">
+				<h3><?php echo esc_html__( 'Set up Slack in a few guided steps', 'attendant' ); ?></h3>
+				<p>
+					<?php echo esc_html__( 'The wizard walks you through signing in, creating the app (pre-filled for you), pasting two values, and picking or creating your channel. It finishes with a test message.', 'attendant' ); ?>
+				</p>
+				<p>
+					<button type="button" class="button button-primary button-hero attendant-open-slack-wizard">
+						<?php echo esc_html__( 'Start Slack setup', 'attendant' ); ?>
+					</button>
+				</p>
+			</div>
+
+		<?php else : ?>
+
+		<p>
+			<button type="button" class="button attendant-open-slack-wizard">
+				<?php echo esc_html__( 'Re-run Slack setup', 'attendant' ); ?>
+			</button>
 		</p>
 
 		<table class="form-table" role="presentation">
@@ -730,47 +756,6 @@ $logging         = ! empty( $settings['logging_enabled'] );
 					</label>
 					<p class="description">
 						<?php echo esc_html__( 'The button only appears once every step below is complete.', 'attendant' ); ?>
-					</p>
-				</td>
-			</tr>
-
-			<tr>
-				<th scope="row"><?php echo esc_html__( 'Setup guide', 'attendant' ); ?></th>
-				<td>
-					<ol style="max-width:640px;margin:0 0 8px;line-height:1.9;">
-						<li>
-							<?php
-							printf(
-								/* translators: %s: link that opens Slack sign-in */
-								esc_html__( 'First, %s (open it in a new tab). If you do not have a Slack workspace yet, create one there. Being signed in first matters — otherwise the next step loses its pre-filled settings.', 'attendant' ),
-								'<a href="https://slack.com/signin" target="_blank" rel="noopener noreferrer"><strong>' . esc_html__( 'sign in to Slack', 'attendant' ) . '</strong> ↗</a>'
-							);
-							?>
-						</li>
-						<li>
-							<?php
-							printf(
-								/* translators: %s: link that creates the pre-filled Slack app */
-								esc_html__( 'Now %s. Everything is pre-filled — just pick your workspace, click Next, then Create.', 'attendant' ),
-								'<a href="' . esc_url( ATTENDANT_Slack::manifest_url() ) . '" target="_blank" rel="noopener noreferrer"><strong>' . esc_html__( 'create the Attendant app', 'attendant' ) . '</strong> ↗</a>'
-							);
-							?>
-						</li>
-						<li>
-							<?php echo esc_html__( 'On the app page that opens, click "Install to Workspace", then "Allow".', 'attendant' ); ?>
-						</li>
-						<li>
-							<?php echo esc_html__( 'Copy the two values below into the fields — the Signing Secret first, then the Bot Token. Each field has a link that takes you straight to the right Slack page.', 'attendant' ); ?>
-						</li>
-						<li>
-							<?php echo esc_html__( 'In Slack, open the channel your team will answer in (a private one works great) and type: /invite @Attendant Chat', 'attendant' ); ?>
-						</li>
-						<li>
-							<?php echo esc_html__( 'Click Save Settings. Your channels load automatically below — pick yours and Save again, then Send test message.', 'attendant' ); ?>
-						</li>
-					</ol>
-					<p class="description" style="max-width:640px;">
-						<?php echo esc_html__( 'If Slack showed "URL verification failed" while creating the app: paste both values below, click Save Settings, then open the app\'s "Event Subscriptions" page and click "Retry". Slack must be able to reach your website, so this does not work on a local development site.', 'attendant' ); ?>
 					</p>
 				</td>
 			</tr>
@@ -855,7 +840,7 @@ $logging         = ! empty( $settings['logging_enabled'] );
 				</td>
 			</tr>
 
-			<tr id="attendant-slack-channel-row" data-autoload="<?php echo esc_attr( '' === $attendant_slack_channel ? '1' : '0' ); ?>">
+			<tr id="attendant-slack-channel-row" data-autoload="1">
 				<th scope="row">
 					<label for="attendant-slack-channel"><?php echo esc_html__( 'Or choose an existing channel', 'attendant' ); ?></label>
 				</th>
@@ -863,7 +848,10 @@ $logging         = ! empty( $settings['logging_enabled'] );
 					<select id="attendant-slack-channel" name="slack_channel">
 						<?php if ( '' !== $attendant_slack_channel ) : ?>
 							<option value="<?php echo esc_attr( $attendant_slack_channel ); ?>" selected>
-								<?php echo esc_html( $attendant_slack_channel ); ?>
+								<?php
+								/* translators: %s: Slack channel id */
+								printf( esc_html__( 'Saved channel (%s)', 'attendant' ), esc_html( $attendant_slack_channel ) );
+								?>
 							</option>
 						<?php else : ?>
 							<option value="" selected disabled>
@@ -895,6 +883,8 @@ $logging         = ! empty( $settings['logging_enabled'] );
 			<?php endif; ?>
 
 		</table>
+
+		<?php endif; ?>
 
 		<?php
 		$attendant_slack_debug = ATTENDANT_Slack::get_debug();
@@ -935,6 +925,8 @@ $logging         = ! empty( $settings['logging_enabled'] );
 				<?php echo esc_html__( 'forwarded_to_visitor means it is working. rejected_signature_mismatch means the Signing Secret is wrong. rejected_no_signing_secret_saved means you have not saved the secret yet. skipped_wrong_channel means the saved Channel does not match where the reply was posted. If this box never changes after a teammate replies, Slack is not reaching your site — open the app\'s Event Subscriptions page and make sure the request URL is verified.', 'attendant' ); ?>
 			</p>
 		<?php endif; ?>
+
+		<?php require ATTENDANT_PLUGIN_DIR . 'admin/views/partials/slack-wizard.php'; ?>
 
 		</div><!-- /integrations panel -->
 

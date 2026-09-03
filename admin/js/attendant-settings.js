@@ -240,6 +240,7 @@
 				return;
 			}
 			const current = slackSelect.value;
+			let matched   = false;
 			slackSelect.innerHTML = '';
 			channels.forEach( function ( ch ) {
 				const opt = document.createElement( 'option' );
@@ -247,9 +248,24 @@
 				opt.textContent = '#' + ch.name + ( ch.private ? ' (private)' : '' );
 				if ( ch.id === current ) {
 					opt.selected = true;
+					matched = true;
 				}
 				slackSelect.appendChild( opt );
 			} );
+
+			// Never silently swap the owner's saved channel for the first in the
+			// list — if it is not among them (bot removed, channel archived),
+			// keep it selected and say so.
+			if ( current && ! matched ) {
+				const keep = document.createElement( 'option' );
+				keep.value = current;
+				keep.textContent = current + ' — saved, but the app is no longer in it';
+				keep.selected = true;
+				slackSelect.insertBefore( keep, slackSelect.firstChild );
+				slackSay( 'Your saved channel is not in the list any more — the app may have been removed from it. Pick another, or re-invite the app and Reload.', false );
+				return;
+			}
+
 			slackSay( channels.length + ' channels loaded — pick one and Save.', true );
 		} )
 		.catch( function () {
