@@ -945,6 +945,9 @@ class ATTENDANT_REST_API {
 				'session_id'    => $result['session_id'],
 				'sources'       => $sources,
 				'options'       => array_values( array_map( 'strval', (array) ( $result['options'] ?? array() ) ) ),
+				// True when the assistant fell short — the widget then offers
+				// to bring in a real person.
+				'offer_human'   => ! empty( $result['offer_human'] ),
 				'preview_cards' => null,
 				'results_url'   => null,
 			),
@@ -1015,7 +1018,11 @@ class ATTENDANT_REST_API {
 			return new WP_REST_Response( array( 'ok' => true, 'ended' => true ), 200 );
 		}
 
-		$secret = ATTENDANT_Slack::start_handoff( $session_id, $transcript );
+		// Hand the agent a short AI-written brief so they can pick the
+		// conversation up without reading the whole transcript first.
+		$summary = ATTENDANT_Conversation_Handler::summarize_for_handoff( $session_id );
+
+		$secret = ATTENDANT_Slack::start_handoff( $session_id, $transcript, $summary );
 
 		if ( '' === $secret ) {
 			return new WP_Error(

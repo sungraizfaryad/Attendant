@@ -258,11 +258,12 @@ final class ATTENDANT_Slack {
 	 *
 	 * @param string $session_id Chat session id.
 	 * @param array  $transcript Recent messages: array of ['role','text'].
+	 * @param string $summary    Optional AI-written brief for the agent.
 	 * @return string The capability secret to hand to the browser, or '' on
 	 *                failure. A caller with an already-live session gets a
 	 *                freshly re-issued secret so a reload can rebind.
 	 */
-	public static function start_handoff( string $session_id, array $transcript ): string {
+	public static function start_handoff( string $session_id, array $transcript, string $summary = '' ): string {
 		if ( ! self::is_configured() ) {
 			return '';
 		}
@@ -276,6 +277,15 @@ final class ATTENDANT_Slack {
 		$lines[] = '*A website visitor asked to talk to a human.*';
 		$lines[] = '_Reply in this thread — the visitor sees your messages in the chat widget._';
 		$lines[] = '';
+
+		// Lead with the AI's brief so the agent knows the situation at a glance,
+		// then the raw exchange underneath for anyone who wants the detail.
+		if ( '' !== $summary ) {
+			$lines[] = '*What they need (AI summary):*';
+			$lines[] = self::clean_for_slack( $summary );
+			$lines[] = '';
+			$lines[] = '*Full conversation so far:*';
+		}
 
 		$recent = array_slice( $transcript, -10 );
 		foreach ( $recent as $m ) {

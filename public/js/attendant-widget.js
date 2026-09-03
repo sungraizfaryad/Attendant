@@ -565,6 +565,12 @@
 				if ( options.length > 0 ) {
 					renderChips( options );
 				}
+
+				// The assistant came up short (or this has dragged on) — offer
+				// a real person instead of leaving the visitor stuck.
+				if ( data.offer_human ) {
+					renderHumanOffer();
+				}
 			} )
 			.catch( function ( err ) {
 				removeEl( typingEl );
@@ -788,6 +794,10 @@
 			.then( function ( r ) { return r.json().then( function ( b ) { return { ok: r.ok, body: b }; } ); } )
 			.then( function ( res ) {
 				if ( res.ok && res.body && res.body.secret ) {
+					var pending = messagesEl.querySelector( '.attendant-human-offer' );
+					if ( pending ) {
+						removeEl( pending );
+					}
 					// Clear state change: a divider, not a chat bubble, so the
 					// visitor plainly sees they are now with a person.
 					var connected = i18n.connectedDivider || 'Connected to our team';
@@ -817,6 +827,44 @@
 		// Swap the input hint so it is obvious messages go to a person now.
 		function setLivePlaceholder( live ) {
 			inputEl.setAttribute( 'placeholder', live ? ( i18n.livePlaceholder || 'Message the team…' ) : placeholder );
+		}
+
+		// Offer a live person. Called only when the server says the assistant
+		// fell short, so the button is absent while the AI is doing its job.
+		function renderHumanOffer() {
+			if ( ! humanBtn ) {
+				return; // Slack handoff not configured on this site
+			}
+
+			// Keep it reachable from the header from now on.
+			humanBtn.classList.remove( 'attendant-is-hidden' );
+
+			// Never stack offers.
+			var existing = messagesEl.querySelector( '.attendant-human-offer' );
+			if ( existing ) {
+				removeEl( existing );
+			}
+
+			var wrap = document.createElement( 'div' );
+			wrap.className = 'attendant-human-offer';
+
+			var note = document.createElement( 'div' );
+			note.className = 'attendant-human-offer__note';
+			note.textContent = i18n.offerHuman || 'Would you like a person to help with this?';
+			wrap.appendChild( note );
+
+			var btn = document.createElement( 'button' );
+			btn.type = 'button';
+			btn.className = 'attendant-human-offer__btn';
+			btn.textContent = i18n.talkToHuman || 'Talk to a human';
+			btn.addEventListener( 'click', function () {
+				removeEl( wrap );
+				requestHuman();
+			} );
+			wrap.appendChild( btn );
+
+			messagesEl.appendChild( wrap );
+			scrollToBottom();
 		}
 
 		// Tell the server to close the Slack thread when the visitor abandons a

@@ -253,6 +253,8 @@ class ATTENDANT_Frontend {
 					'humanFailed'     => __( 'Could not reach the team right now. Please try again in a moment.', 'attendant' ),
 					'backToAi'        => __( 'You are back with the AI assistant.', 'attendant' ),
 					'connectedDivider' => __( 'Connected to our team', 'attendant' ),
+					'talkToHuman'      => __( 'Talk to a human', 'attendant' ),
+					'offerHuman'       => __( 'Would you like a person to help with this?', 'attendant' ),
 					'livePlaceholder'  => __( 'Message the team…', 'attendant' ),
 					'pollExpired'     => __( 'Please refresh the page to keep chatting with our team.', 'attendant' ),
 				),
@@ -310,7 +312,7 @@ class ATTENDANT_Frontend {
 				<?php if ( ATTENDANT_Slack::is_configured() ) : ?>
 				<button
 					type="button"
-					class="attendant-widget__hbtn"
+					class="attendant-widget__hbtn attendant-is-hidden"
 					id="attendant-human-btn"
 					aria-label="<?php esc_attr_e( 'Talk to a human', 'attendant' ); ?>"
 					title="<?php esc_attr_e( 'Talk to a human', 'attendant' ); ?>"
