@@ -3,7 +3,7 @@
  * Plugin Name: Attendant - Free AI Site Search & Chatbot
  * Plugin URI:  https://wordpress.org/plugins/attendant/
  * Description: Free AI search chatbot for your site, powered by Google Gemini's free tier (no credit card). Visitors ask plain-language questions; Attendant safely searches your own posts, pages, products, and listings and answers in a chat widget. OpenAI supported too.
- * Version:     2.1.0
+ * Version:     2.2.0
  * Requires at least: 6.0
  * Requires PHP: 8.0
  * Author:      Sungraiz Faryad
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Plugin version and path constants.
-define( 'ATTENDANT_VERSION', '2.1.0' );
+define( 'ATTENDANT_VERSION', '2.2.0' );
 define( 'ATTENDANT_PLUGIN_FILE', __FILE__ );
 define( 'ATTENDANT_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ATTENDANT_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

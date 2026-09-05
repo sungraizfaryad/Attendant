@@ -163,6 +163,17 @@ class ATTENDANT_REST_API {
 			)
 		);
 
+		// Admin: workspace members, for the "who should be in here" picker.
+		register_rest_route(
+			self::NAMESPACE,
+			'/slack/members',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'handle_slack_members' ),
+				'permission_callback' => array( $this, 'admin_permission_check' ),
+			)
+		);
+
 		// Admin: post a test message to the configured channel.
 		register_rest_route(
 			self::NAMESPACE,
@@ -769,6 +780,13 @@ class ATTENDANT_REST_API {
 			$channel = strtoupper( sanitize_text_field( (string) $params['slack_channel'] ) );
 			// Slack conversation ids: C/G/D prefix + alphanumerics.
 			$updated['slack_channel'] = preg_match( '/^[A-Z][A-Z0-9]{5,}$/', $channel ) ? $channel : '';
+
+			// The name is only a label. Drop a stale one rather than let the UI
+			// name one channel while messages go to another.
+			$name = sanitize_text_field( (string) ( $params['slack_channel_name'] ?? '' ) );
+			if ( '' === $name || $updated['slack_channel'] !== ( $current['slack_channel'] ?? '' ) ) {
+				$updated['slack_channel_name'] = $name;
+			}
 		}
 		if ( isset( $params['lead_email'] ) ) {
 			$lead_email              = sanitize_email( (string) $params['lead_email'] );
@@ -1233,7 +1251,25 @@ class ATTENDANT_REST_API {
 			}
 		}
 
-		$result = ATTENDANT_Slack::create_channel( $name, $private, $emails );
+		$user_ids = array();
+		foreach ( (array) ( $request->get_param( 'users' ) ?? array() ) as $user_id ) {
+			$user_id = preg_replace( '/[^A-Za-z0-9]/', '', (string) $user_id );
+			if ( '' !== $user_id ) {
+				$user_ids[] = $user_id;
+			}
+		}
+
+		// Nobody named means a channel with only the bot in it — which the
+		// owner cannot read, and cannot even find if it is private. Work out
+		// who they are and put them in.
+		if ( empty( $user_ids ) && empty( $emails ) ) {
+			$me = ATTENDANT_Slack::guess_owner_id( (string) wp_get_current_user()->user_email );
+			if ( '' !== $me ) {
+				$user_ids[] = $me;
+			}
+		}
+
+		$result = ATTENDANT_Slack::create_channel( $name, $private, $emails, $user_ids );
 
 		if ( empty( $result['ok'] ) ) {
 			$code = (string) ( $result['error'] ?? 'unknown' );
@@ -1249,8 +1285,9 @@ class ATTENDANT_REST_API {
 
 		// Persist the new channel as the active one so the owner does not have
 		// to pick and Save again — the handoff is ready immediately.
-		$settings                  = (array) Attendant_Plugin::get_setting();
-		$settings['slack_channel'] = (string) $result['id'];
+		$settings                       = (array) Attendant_Plugin::get_setting();
+		$settings['slack_channel']      = (string) $result['id'];
+		$settings['slack_channel_name'] = (string) $result['name'];
 		update_option( 'attendant_settings', $settings );
 
 		return new WP_REST_Response(
@@ -1261,6 +1298,50 @@ class ATTENDANT_REST_API {
 				'private' => $private,
 				'invited' => array_values( (array) ( $result['invited'] ?? array() ) ),
 				'failed'  => array_values( (array) ( $result['failed'] ?? array() ) ),
+				'alone'   => ! empty( $result['alone'] ),
+			),
+			200
+		);
+	}
+
+	/**
+	 * GET /slack/members
+	 *
+	 * The workspace's people, so setup can offer a pick-list. The bot token
+	 * says nothing about which human is using wp-admin, so `you` marks the
+	 * best guess: an email that matches this WordPress account, else the
+	 * workspace's primary owner.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function handle_slack_members(): WP_REST_Response {
+		$members = ATTENDANT_Slack::list_members();
+		$error   = ATTENDANT_Slack::last_members_error();
+
+		$admin_email = strtolower( sanitize_email( (string) wp_get_current_user()->user_email ) );
+		$matched     = false;
+
+		foreach ( $members as $i => $member ) {
+			$is_me                = '' !== $admin_email && strtolower( $member['email'] ) === $admin_email;
+			$members[ $i ]['you'] = $is_me;
+			$matched              = $matched || $is_me;
+		}
+
+		if ( ! $matched ) {
+			foreach ( $members as $i => $member ) {
+				if ( ! empty( $member['owner'] ) ) {
+					$members[ $i ]['you'] = true;
+					break;
+				}
+			}
+		}
+
+		return new WP_REST_Response(
+			array(
+				'members'  => array_values( $members ),
+				'matched'  => $matched,
+				'error'    => $error,
+				'friendly' => '' !== $error ? ATTENDANT_Slack::friendly_error( $error ) : null,
 			),
 			200
 		);

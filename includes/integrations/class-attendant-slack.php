@@ -460,7 +460,11 @@ final class ATTENDANT_Slack {
 	// Admin helpers (settings screen)
 	// -------------------------------------------------------------------------
 
-	/** Last error from list_channels(), '' on success. */
+	/**
+	 * Last error from list_channels(), '' on success.
+	 *
+	 * @var string
+	 */
 	private static string $last_list_error = '';
 
 	/**
@@ -487,8 +491,8 @@ final class ATTENDANT_Slack {
 	 */
 	public static function list_channels(): array {
 		self::$last_list_error = '';
-		$out    = array();
-		$cursor = '';
+		$out                   = array();
+		$cursor                = '';
 
 		// Cursor-paginated; cap pages so a huge workspace can't spin forever.
 		for ( $page = 0; $page < 10; $page++ ) {
@@ -525,16 +529,187 @@ final class ATTENDANT_Slack {
 	}
 
 	/**
-	 * Create a channel the bot owns (so it is automatically a member — no
-	 * manual /invite needed) and, optionally, invite teammates by email.
+	 * Last error from list_members(), '' on success.
 	 *
-	 * @param string   $name    Desired channel name (sanitised to Slack rules).
-	 * @param bool     $private Whether to make it private.
-	 * @param string[] $emails  Optional teammate emails to invite.
-	 * @return array{ok: bool, id?: string, name?: string, error?: string,
-	 *               invited?: string[], failed?: string[]}
+	 * @var string
 	 */
-	public static function create_channel( string $name, bool $private, array $emails = array() ): array {
+	private static string $last_members_error = '';
+
+	/**
+	 * The Slack error from the most recent list_members() call, '' on success.
+	 *
+	 * @return string
+	 */
+	public static function last_members_error(): string {
+		return self::$last_members_error;
+	}
+
+	/**
+	 * The people in the workspace, so setup can offer a pick-list instead of
+	 * asking anyone to type an email address.
+	 *
+	 * Bots, deactivated accounts and Slackbot are filtered out. `owner` marks
+	 * the workspace's primary owner — the safest guess at who is standing in
+	 * front of the screen when nothing else identifies them.
+	 *
+	 * @return array[] Each: ['id','name','handle','email','owner'].
+	 */
+	public static function list_members(): array {
+		self::$last_members_error = '';
+		$out                      = array();
+		$cursor                   = '';
+
+		for ( $page = 0; $page < 10; $page++ ) {
+			$args = array( 'limit' => 200 );
+			if ( '' !== $cursor ) {
+				$args['cursor'] = $cursor;
+			}
+
+			$response = self::api_call( 'users.list', $args );
+			if ( empty( $response['ok'] ) ) {
+				self::$last_members_error = (string) ( $response['error'] ?? 'unreachable' );
+				break;
+			}
+
+			foreach ( (array) ( $response['members'] ?? array() ) as $user ) {
+				if ( ! empty( $user['is_bot'] ) || ! empty( $user['deleted'] ) || 'USLACKBOT' === ( $user['id'] ?? '' ) ) {
+					continue;
+				}
+
+				$profile = (array) ( $user['profile'] ?? array() );
+				$name    = (string) ( $profile['real_name'] ?? '' );
+				if ( '' === $name ) {
+					$name = (string) ( $user['name'] ?? '' );
+				}
+
+				$out[] = array(
+					'id'     => (string) ( $user['id'] ?? '' ),
+					'name'   => $name,
+					'handle' => (string) ( $user['name'] ?? '' ),
+					'email'  => (string) ( $profile['email'] ?? '' ),
+					'owner'  => ! empty( $user['is_primary_owner'] ),
+				);
+			}
+
+			$cursor = (string) ( $response['response_metadata']['next_cursor'] ?? '' );
+			if ( '' === $cursor ) {
+				break;
+			}
+		}
+
+		usort(
+			$out,
+			static fn( array $a, array $b ): int => strcasecmp( $a['name'], $b['name'] )
+		);
+
+		return $out;
+	}
+
+	/**
+	 * Best guess at the Slack account belonging to whoever is using wp-admin:
+	 * an email that matches, else the workspace's primary owner. A bot token
+	 * carries no identity, so this is as close as Slack lets us get.
+	 *
+	 * @param string $email The WordPress user's email.
+	 * @return string Slack user id, '' when the member list is unreadable.
+	 */
+	public static function guess_owner_id( string $email ): string {
+		$email   = strtolower( trim( $email ) );
+		$members = self::list_members();
+		$owner   = '';
+
+		foreach ( $members as $member ) {
+			if ( '' !== $email && strtolower( $member['email'] ) === $email ) {
+				return $member['id'];
+			}
+			if ( '' === $owner && ! empty( $member['owner'] ) ) {
+				$owner = $member['id'];
+			}
+		}
+
+		return $owner;
+	}
+
+	/**
+	 * Invite people to a channel by Slack user id.
+	 *
+	 * One call carries every id; Slack reports partial failures in `errors`,
+	 * so a single bad id does not cost everyone else their invite.
+	 *
+	 * @param string   $channel_id Channel id.
+	 * @param string[] $user_ids   Slack user ids.
+	 * @return array{invited: string[], failed: string[]}
+	 */
+	public static function invite_by_ids( string $channel_id, array $user_ids ): array {
+		$ids = array_values( array_unique( array_filter( array_map( 'strval', $user_ids ) ) ) );
+		if ( empty( $ids ) ) {
+			return array(
+				'invited' => array(),
+				'failed'  => array(),
+			);
+		}
+
+		$response = self::api_call(
+			'conversations.invite',
+			array(
+				'channel' => $channel_id,
+				'users'   => implode( ',', $ids ),
+			)
+		);
+
+		if ( ! empty( $response['ok'] ) ) {
+			return array(
+				'invited' => $ids,
+				'failed'  => array(),
+			);
+		}
+
+		// Already-a-member is not a failure, and it is the whole-call error
+		// when every id was already in the channel.
+		if ( 'already_in_channel' === ( $response['error'] ?? '' ) ) {
+			return array(
+				'invited' => $ids,
+				'failed'  => array(),
+			);
+		}
+
+		$failed = array();
+		foreach ( (array) ( $response['errors'] ?? array() ) as $problem ) {
+			$user = (string) ( $problem['user'] ?? '' );
+			if ( '' !== $user && 'already_in_channel' !== ( $problem['error'] ?? '' ) ) {
+				$failed[] = $user;
+			}
+		}
+
+		// No per-user detail means the whole call failed.
+		if ( empty( $failed ) ) {
+			$failed = $ids;
+		}
+
+		return array(
+			'invited' => array_values( array_diff( $ids, $failed ) ),
+			'failed'  => $failed,
+		);
+	}
+
+	/**
+	 * Create a channel the bot owns (so it is automatically a member — no
+	 * manual /invite needed) and put the people who will answer chats in it.
+	 *
+	 * The bot being a member is not the same as setup working: a channel whose
+	 * only member is the bot is invisible to the owner (a private one cannot
+	 * even be searched for), so the result reports `alone` and the caller can
+	 * say so instead of showing a green tick.
+	 *
+	 * @param string   $name     Desired channel name (sanitised to Slack rules).
+	 * @param bool     $private  Whether to make it private.
+	 * @param string[] $emails   Teammate emails to invite — fallback for when
+	 *                           the workspace member list cannot be read.
+	 * @param string[] $user_ids Slack user ids to invite; the normal path.
+	 * @return array{ok: bool, id?: string, name?: string, error?: string,
+	 *               invited?: string[], failed?: string[], alone?: bool}
+	 */
+	public static function create_channel( string $name, bool $private, array $emails = array(), array $user_ids = array() ): array {
 		$clean = self::normalize_channel_name( $name );
 		if ( '' === $clean ) {
 			return array( 'ok' => false, 'error' => 'invalid_name' );
@@ -560,13 +735,84 @@ final class ATTENDANT_Slack {
 			'name' => (string) ( $resp['channel']['name'] ?? $clean ),
 		);
 
-		if ( '' !== $channel_id && ! empty( $emails ) ) {
+		if ( '' !== $channel_id && ! empty( $user_ids ) ) {
+			$invite            = self::invite_by_ids( $channel_id, $user_ids );
+			$result['invited'] = $invite['invited'];
+			$result['failed']  = $invite['failed'];
+		} elseif ( '' !== $channel_id && ! empty( $emails ) ) {
 			$invite            = self::invite_by_emails( $channel_id, $emails );
 			$result['invited'] = $invite['invited'];
 			$result['failed']  = $invite['failed'];
 		}
 
+		if ( '' !== $channel_id ) {
+			$result['alone'] = ! self::has_human_member( $channel_id );
+		}
+
 		return $result;
+	}
+
+	/**
+	 * Is anyone other than our bot in this channel?
+	 *
+	 * @param string $channel_id Channel id.
+	 * @return bool False when the bot is talking to an empty room, or when the
+	 *               membership could not be read at all.
+	 */
+	public static function has_human_member( string $channel_id ): bool {
+		$bot = self::bot_user_id();
+
+		$cursor = '';
+		for ( $page = 0; $page < 5; $page++ ) {
+			$args = array(
+				'channel' => $channel_id,
+				'limit'   => 200,
+			);
+			if ( '' !== $cursor ) {
+				$args['cursor'] = $cursor;
+			}
+
+			$response = self::api_call( 'conversations.members', $args );
+			if ( empty( $response['ok'] ) ) {
+				return false;
+			}
+
+			foreach ( (array) ( $response['members'] ?? array() ) as $member ) {
+				if ( (string) $member !== $bot ) {
+					return true;
+				}
+			}
+
+			$cursor = (string) ( $response['response_metadata']['next_cursor'] ?? '' );
+			if ( '' === $cursor ) {
+				break;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Our own bot user id, so we can tell ourselves apart from real people.
+	 * Cached for a day — it only changes on reinstall, and the token change
+	 * that comes with one clears the cache.
+	 *
+	 * @return string '' when the token is unusable.
+	 */
+	public static function bot_user_id(): string {
+		$key    = 'attendant_slack_bot_uid_' . substr( md5( self::bot_token() ), 0, 12 );
+		$cached = get_transient( $key );
+		if ( is_string( $cached ) && '' !== $cached ) {
+			return $cached;
+		}
+
+		$response = self::api_call( 'auth.test', array() );
+		$uid      = ! empty( $response['ok'] ) ? (string) ( $response['user_id'] ?? '' ) : '';
+		if ( '' !== $uid ) {
+			set_transient( $key, $uid, DAY_IN_SECONDS );
+		}
+
+		return $uid;
 	}
 
 	/**
@@ -837,8 +1083,14 @@ final class ATTENDANT_Slack {
 	/**
 	 * Minimal Slack Web API POST.
 	 *
+	 * Arguments go out form-encoded, never as JSON. Slack's read methods
+	 * (users.conversations, conversations.info/members, users.lookupByEmail)
+	 * drop a JSON body on the floor: the call still returns 200, but with no
+	 * arguments at all — so a lookup 400s with `invalid_arguments` and a list
+	 * quietly answers with defaults instead of what you asked for.
+	 *
 	 * @param string $method Slack API method name.
-	 * @param array  $body   JSON body.
+	 * @param array  $body   Arguments.
 	 * @return array Decoded response (empty array on transport failure).
 	 */
 	private static function api_call( string $method, array $body ): array {
@@ -847,15 +1099,27 @@ final class ATTENDANT_Slack {
 			return array();
 		}
 
+		$form = array();
+		foreach ( $body as $key => $value ) {
+			if ( is_bool( $value ) ) {
+				$form[ $key ] = $value ? 'true' : 'false';
+			} elseif ( is_array( $value ) ) {
+				// Structured args (blocks, attachments) travel as a JSON string.
+				$form[ $key ] = (string) wp_json_encode( $value );
+			} else {
+				$form[ $key ] = (string) $value;
+			}
+		}
+
 		$response = wp_remote_post(
 			self::API . $method,
 			array(
 				'timeout' => 10,
 				'headers' => array(
 					'Authorization' => 'Bearer ' . $token,
-					'Content-Type'  => 'application/json; charset=utf-8',
+					'Content-Type'  => 'application/x-www-form-urlencoded; charset=utf-8',
 				),
-				'body'    => (string) wp_json_encode( $body ),
+				'body'    => $form,
 			)
 		);
 

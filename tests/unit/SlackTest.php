@@ -164,7 +164,7 @@ final class SlackTest extends TestCase {
 		$this->assertFalse( ATTENDANT_Slack::verify_session_secret( 'other-sess', $secret ) );
 
 		// The parent message carries the transcript.
-		$sent = json_decode( $this->posts[0]['args']['body'], true );
+		$sent = (array) $this->posts[0]['args']['body'];
 		$this->assertStringContainsString( 'I need help', $sent['text'] );
 		$this->assertSame( 'C0TESTCHAN', $sent['channel'] );
 	}
@@ -190,7 +190,7 @@ final class SlackTest extends TestCase {
 
 		ATTENDANT_Slack::forward_visitor_message( 'sess-1', 'hello there' );
 
-		$sent = json_decode( end( $this->posts )['args']['body'], true );
+		$sent = (array) end( $this->posts )['args']['body'];
 		$this->assertSame( '111.222', $sent['thread_ts'] );
 		$this->assertStringContainsString( 'hello there', $sent['text'] );
 	}
@@ -271,15 +271,61 @@ final class SlackTest extends TestCase {
 
 	public function test_create_channel_returns_id_and_marks_bot_member(): void {
 		$this->store_credentials();
-		$this->api_response = array( 'ok' => true, 'channel' => array( 'id' => 'C0NEW', 'name' => 'website-chat' ) );
+		Functions\when( 'wp_remote_post' )->alias(
+			function ( $url, $args ) {
+				$this->posts[] = array( 'url' => $url, 'args' => $args );
+				if ( false !== strpos( $url, 'auth.test' ) ) {
+					return array( 'body' => json_encode( array( 'ok' => true, 'user_id' => 'UBOT' ) ) );
+				}
+				if ( false !== strpos( $url, 'conversations.members' ) ) {
+					return array( 'body' => json_encode( array( 'ok' => true, 'members' => array( 'UBOT' ) ) ) );
+				}
+				return array( 'body' => json_encode( array( 'ok' => true, 'channel' => array( 'id' => 'C0NEW', 'name' => 'website-chat' ) ) ) );
+			}
+		);
 
 		$r = ATTENDANT_Slack::create_channel( 'Website Chat', true );
 
 		$this->assertTrue( $r['ok'] );
 		$this->assertSame( 'C0NEW', $r['id'] );
-		$sent = json_decode( $this->posts[0]['args']['body'], true );
-		$this->assertSame( 'website-chat', $sent['name'] );
-		$this->assertTrue( $sent['is_private'] );
+		// Only the bot is in it, so setup is not actually usable yet.
+		$this->assertTrue( $r['alone'] );
+
+		$sent = $this->posts[0]['args'];
+		$this->assertSame( 'website-chat', $sent['body']['name'] );
+		$this->assertSame( 'true', $sent['body']['is_private'] );
+		$this->assertStringContainsString( 'x-www-form-urlencoded', $sent['headers']['Content-Type'] );
+	}
+
+	public function test_api_arguments_go_out_form_encoded_not_json(): void {
+		// Slack's read methods ignore a JSON body: users.conversations then
+		// falls back to types=public_channel and hides every private channel,
+		// which is how a freshly created private channel went missing.
+		$this->store_credentials();
+		$this->api_response = array( 'ok' => true, 'channels' => array() );
+
+		ATTENDANT_Slack::list_channels();
+
+		$sent = $this->posts[0]['args'];
+		$this->assertIsArray( $sent['body'] );
+		$this->assertSame( 'public_channel,private_channel', $sent['body']['types'] );
+		$this->assertSame( 'true', $sent['body']['exclude_archived'] );
+		$this->assertStringNotContainsString( 'json', $sent['headers']['Content-Type'] );
+	}
+
+	public function test_has_human_member_sees_someone_other_than_the_bot(): void {
+		$this->store_credentials();
+		Functions\when( 'wp_remote_post' )->alias(
+			function ( $url, $args ) {
+				$this->posts[] = array( 'url' => $url, 'args' => $args );
+				if ( false !== strpos( $url, 'auth.test' ) ) {
+					return array( 'body' => json_encode( array( 'ok' => true, 'user_id' => 'UBOT' ) ) );
+				}
+				return array( 'body' => json_encode( array( 'ok' => true, 'members' => array( 'UBOT', 'UHUMAN' ) ) ) );
+			}
+		);
+
+		$this->assertTrue( ATTENDANT_Slack::has_human_member( 'C0NEW' ) );
 	}
 
 	public function test_create_channel_reports_name_taken(): void {
@@ -293,6 +339,68 @@ final class SlackTest extends TestCase {
 		$this->assertStringContainsString( 'already exists', ATTENDANT_Slack::friendly_error( 'name_taken' )['message'] );
 	}
 
+	public function test_list_members_skips_bots_and_flags_the_owner(): void {
+		$this->store_credentials();
+		$this->api_response = array(
+			'ok'      => true,
+			'members' => array(
+				array( 'id' => 'UBOT', 'name' => 'attendant', 'is_bot' => true ),
+				array( 'id' => 'USLACKBOT', 'name' => 'slackbot' ),
+				array( 'id' => 'UGONE', 'name' => 'exemployee', 'deleted' => true ),
+				array(
+					'id'               => 'UOWNER',
+					'name'             => 'sungraiz',
+					'is_primary_owner' => true,
+					'profile'          => array( 'real_name' => 'Sungraiz', 'email' => 'me@example.com' ),
+				),
+				array( 'id' => 'UMATE', 'name' => 'ada', 'profile' => array( 'real_name' => 'Ada', 'email' => 'ada@example.com' ) ),
+			),
+		);
+
+		$members = ATTENDANT_Slack::list_members();
+
+		$this->assertCount( 2, $members );
+		// Sorted by display name, so Ada comes first.
+		$this->assertSame( 'UMATE', $members[0]['id'] );
+		$this->assertFalse( $members[0]['owner'] );
+		$this->assertSame( 'UOWNER', $members[1]['id'] );
+		$this->assertTrue( $members[1]['owner'] );
+		$this->assertSame( 'me@example.com', $members[1]['email'] );
+	}
+
+	public function test_guess_owner_id_prefers_an_email_match_over_the_owner(): void {
+		$this->store_credentials();
+		$this->api_response = array(
+			'ok'      => true,
+			'members' => array(
+				array( 'id' => 'UOWNER', 'name' => 'boss', 'is_primary_owner' => true, 'profile' => array( 'email' => 'boss@example.com' ) ),
+				array( 'id' => 'UME', 'name' => 'me', 'profile' => array( 'email' => 'me@example.com' ) ),
+			),
+		);
+
+		$this->assertSame( 'UME', ATTENDANT_Slack::guess_owner_id( 'ME@example.com' ) );
+		$this->assertSame( 'UOWNER', ATTENDANT_Slack::guess_owner_id( 'nobody@example.com' ) );
+	}
+
+	public function test_invite_by_ids_sends_one_call_and_keeps_partial_successes(): void {
+		$this->store_credentials();
+		$this->api_response = array(
+			'ok'     => false,
+			'error'  => 'user_not_found',
+			'errors' => array(
+				array( 'user' => 'UGHOST', 'error' => 'user_not_found' ),
+				array( 'user' => 'UHERE', 'error' => 'already_in_channel' ),
+			),
+		);
+
+		$r = ATTENDANT_Slack::invite_by_ids( 'C0NEW', array( 'UME', 'UGHOST', 'UHERE' ) );
+
+		$this->assertCount( 1, $this->posts );
+		$this->assertSame( 'UME,UGHOST,UHERE', $this->posts[0]['args']['body']['users'] );
+		$this->assertSame( array( 'UGHOST' ), $r['failed'] );
+		$this->assertSame( array( 'UME', 'UHERE' ), array_values( $r['invited'] ) );
+	}
+
 	public function test_invite_by_emails_splits_found_and_missing(): void {
 		$this->store_credentials();
 		// lookupByEmail then conversations.invite, per email; alternate found/not.
@@ -303,7 +411,7 @@ final class SlackTest extends TestCase {
 				++$calls;
 				if ( false !== strpos( $url, 'users.lookupByEmail' ) ) {
 					// First email resolves, second does not.
-					$body = json_decode( $args['body'], true );
+					$body = (array) $args['body'];
 					if ( 'known@example.com' === ( $body['email'] ?? '' ) ) {
 						return array( 'body' => json_encode( array( 'ok' => true, 'user' => array( 'id' => 'U1' ) ) ) );
 					}
@@ -396,7 +504,7 @@ final class SlackTest extends TestCase {
 		$this->assertSame( 'G2', $channels[1]['id'] );
 		$this->assertTrue( $channels[1]['private'] );
 		// Second request carried the cursor.
-		$second = json_decode( $this->posts[1]['args']['body'], true );
+		$second = (array) $this->posts[1]['args']['body'];
 		$this->assertSame( 'CURSOR2', $second['cursor'] );
 	}
 

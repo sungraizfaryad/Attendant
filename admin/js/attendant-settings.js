@@ -266,6 +266,7 @@
 				return;
 			}
 
+			syncSlackChannelName();
 			slackSay( channels.length + ' channels loaded — pick one and Save.', true );
 		} )
 		.catch( function () {
@@ -276,8 +277,23 @@
 		} );
 	}
 
+	// The id is what we save; the name rides along so the UI can say "#support"
+	// instead of "C0C07FE1NUQ".
+	function syncSlackChannelName() {
+		const hidden = document.getElementById( 'attendant-slack-channel-name' );
+		if ( ! hidden || ! slackSelect ) {
+			return;
+		}
+		const opt = slackSelect.options[ slackSelect.selectedIndex ];
+		const raw = opt ? opt.textContent.trim() : '';
+		hidden.value = ( 0 === raw.indexOf( '#' ) )
+			? raw.slice( 1 ).replace( / \(private\)$/, '' )
+			: '';
+	}
+
 	if ( slackLoadBtn && slackSelect ) {
 		slackLoadBtn.addEventListener( 'click', loadSlackChannels );
+		slackSelect.addEventListener( 'change', syncSlackChannelName );
 
 		// Auto-load the moment the picker appears with nothing chosen yet, so
 		// the flow is: save tokens → page reloads → channels populate here.
@@ -332,7 +348,6 @@
 		slackCreateBtn.addEventListener( 'click', function () {
 			const nameEl    = document.getElementById( 'attendant-slack-new-name' );
 			const privateEl = document.getElementById( 'attendant-slack-new-private' );
-			const emailsEl  = document.getElementById( 'attendant-slack-new-emails' );
 			const name      = nameEl ? nameEl.value.trim() : '';
 
 			if ( '' === name ) {
@@ -340,17 +355,13 @@
 				return;
 			}
 
-			const emails = emailsEl
-				? emailsEl.value.split( /[\n,]/ ).map( function ( e ) { return e.trim(); } ).filter( Boolean )
-				: [];
-
 			slackCreateBtn.disabled = true;
 			createStatus( 'Creating…', true );
 
 			fetch( attendantAdmin.restUrl + '/slack/create-channel', {
 				method:  'POST',
 				headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': attendantAdmin.nonce },
-				body: JSON.stringify( { name: name, private: !! ( privateEl && privateEl.checked ), emails: emails } ),
+				body: JSON.stringify( { name: name, private: !! ( privateEl && privateEl.checked ) } ),
 			} )
 			.then( function ( res ) { return res.json(); } )
 			.then( function ( json ) {
@@ -378,11 +389,21 @@
 
 				let msg = 'Channel #' + json.name + ' created and selected.';
 				if ( json.invited && json.invited.length ) {
-					msg += ' Invited: ' + json.invited.join( ', ' ) + '.';
+					msg += ' You have been added to it.';
 				}
-				if ( json.failed && json.failed.length ) {
-					msg += ' Could not find: ' + json.failed.join( ', ' ) + '.';
+
+				// A channel only the bot is in is not a working setup — the
+				// owner cannot read it, and a private one is not searchable.
+				if ( json.alone ) {
+					createStatus(
+						msg + ' Nobody could be added to it — ' + ( json.private
+							? 'a private channel cannot be found in Slack search, so create a public one instead or ask a workspace admin to add you.'
+							: 'open Slack, search for #' + json.name + ', and join it.' ),
+						false
+					);
+					return;
 				}
+
 				msg += ' Click "Send test message" to confirm.';
 				createStatus( msg, true );
 			} )

@@ -98,16 +98,126 @@
 	font-size:   14px;
 }
 
+.attendant-wiz__notice {
+	margin:        0 0 18px;
+	padding:       14px 16px;
+	background:    #f0f6fc;
+	border:        1px solid #c5d9ea;
+	border-left:   4px solid #2271b1;
+	border-radius: 4px;
+	font-size:     14px;
+	line-height:   1.6;
+}
+.attendant-wiz__notice p    { margin: 0 0 8px; }
+.attendant-wiz__notice ul   { margin: 0 0 8px; padding-left: 18px; list-style: disc; }
+.attendant-wiz__notice li   { margin-bottom: 6px; }
+.attendant-wiz__notice-head { font-size: 15px; }
+.attendant-wiz__notice-warn { margin-bottom: 0; color: #8a6100; }
+
 .attendant-wiz__list        { font-size: 15px; line-height: 2; margin: 0 0 14px 20px; }
 .attendant-wiz__list--big li { font-size: 17px; }
 
-.attendant-wiz__shot {
-	margin:        16px 0 0;
-	border:        1px solid #dcdcde;
-	border-radius: 6px;
-	overflow:      hidden;
+/* Screenshots sit on the step they explain, as a plain blue link. A row of
+   buttons under the instructions reads as decoration and gets skipped. */
+.attendant-wiz__shotlink {
+	padding:         0;
+	margin-left:     6px;
+	font:            inherit;
+	font-size:       0.92em;
+	color:           #2271b1;
+	background:      none;
+	border:          0;
+	text-decoration: underline;
+	cursor:          pointer;
 }
-.attendant-wiz__shot img { display: block; max-width: 100%; height: auto; }
+.attendant-wiz__shotlink:hover { color: #135e96; }
+.attendant-wiz__shotlink:focus { outline: 2px solid #2271b1; outline-offset: 2px; border-radius: 2px; }
+
+/* The step-1 note is empty until a sign-in screenshot is added. */
+.attendant-wiz__note:empty { display: none; }
+
+.attendant-wiz-shotview {
+	position:   fixed;
+	inset:      0;
+	z-index:    160010;
+	background: rgba(10, 12, 14, 0.88);
+}
+/* Belt and braces against the overlay trap above: if this ever gains a display
+   rule it must still opt back out of [hidden], or it hangs open over the page. */
+.attendant-wiz-shotview[hidden] {
+	display: none !important;
+}
+
+/* The whole overlay scrolls. Sizing the image to fit instead looked tidy but
+   relied on a percentage height inside a flex column — with no definite height
+   to resolve against it fell back to the natural size, overflowed, and got
+   clipped with no way to reach the rest. Full width plus a scroll works on any
+   screen and needs to know nothing about the viewport. */
+.attendant-wiz-shotview__scroll {
+	position:            absolute;
+	inset:               0;
+	overflow-y:          auto;
+	overflow-x:          hidden;
+	overscroll-behavior: contain;
+	-webkit-overflow-scrolling: touch;
+	padding:             68px 16px 32px;
+}
+.attendant-wiz-shotview__scroll:focus { outline: none; }
+
+.attendant-wiz-shotview__panel {
+	margin:        0 auto;
+	max-width:     1100px;
+	background:    #fff;
+	border-radius: 8px;
+	overflow:      hidden;
+	box-shadow:    0 24px 70px rgba(0, 0, 0, 0.55);
+}
+.attendant-wiz-shotview__caption {
+	padding:     13px 18px;
+	background:  #1d2327;
+	color:       #fff;
+	font-size:   14px;
+	font-weight: 600;
+	line-height: 1.4;
+}
+.attendant-wiz-shotview__panel img {
+	display: block;
+	width:   100%;
+	height:  auto;
+}
+
+/* Pinned to the corner of the screen, not the image, so it stays put however
+   far down the screenshot you have scrolled. */
+.attendant-wiz-shotview__close {
+	position:        fixed;
+	top:             14px;
+	right:           18px;
+	z-index:         1;
+	display:         flex;
+	align-items:     center;
+	justify-content: center;
+	width:           48px;
+	height:          48px;
+	padding:         0;
+	color:           #1d2327;
+	background:      #fff;
+	border:          0;
+	border-radius:   50%;
+	box-shadow:      0 2px 12px rgba(0, 0, 0, 0.45);
+	cursor:          pointer;
+}
+.attendant-wiz-shotview__close:hover { background: #f0f0f1; }
+.attendant-wiz-shotview__close:focus { outline: 3px solid #72aee6; outline-offset: 2px; }
+.attendant-wiz-shotview__close .dashicons {
+	font-size: 30px;
+	width:     30px;
+	height:    30px;
+}
+
+@media screen and (max-width: 782px) {
+	.attendant-wiz-shotview__scroll { padding: 62px 8px 24px; }
+	.attendant-wiz-shotview__close  { top: 8px; right: 8px; }
+}
 
 .attendant-wiz__choices { display: flex; gap: 14px; flex-wrap: wrap; }
 
@@ -140,6 +250,33 @@
 	text-transform: uppercase;
 	color:         #646970;
 	margin:        14px 0 6px;
+}
+
+.attendant-wiz__people {
+	max-height:    220px;
+	overflow-y:    auto;
+	border:        1px solid #dcdcde;
+	border-radius: 6px;
+	padding:       6px;
+}
+.attendant-wiz__person {
+	display:       flex;
+	align-items:   center;
+	gap:           8px;
+	padding:       7px 8px;
+	border-radius: 5px;
+	cursor:        pointer;
+}
+.attendant-wiz__person[hidden] { display: none !important; }
+.attendant-wiz__person:hover { background: #f6fbff; }
+.attendant-wiz__person span  { font-size: 12px; color: #646970; }
+.attendant-wiz__person mark {
+	background:    #d5f0dd;
+	border-radius: 3px;
+	padding:       0 5px;
+	font-size:     11px;
+	font-weight:   600;
+	color:         #135e2b;
 }
 
 .attendant-wiz__status { padding: 0 24px; font-size: 14px; min-height: 22px; }

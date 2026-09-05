@@ -92,6 +92,33 @@ manual indexing controls, file-based chat logs, and email lead capture.
   it makes setup harder, not easier. The pre-filled manifest URL is the
   simplest path Slack offers; don't "improve" it into OAuth without deciding to
   run a server.
+- **Never send Slack arguments as a JSON body.** Slack's docs claim both
+  content types are accepted, but in practice the read methods
+  (`users.conversations`, `conversations.info`, `conversations.members`,
+  `users.lookupByEmail`) drop a JSON body entirely: the call still returns 200
+  with `ok:true` and *default* arguments. That is how a private channel the bot
+  had just created vanished from the picker — `types` never arrived, so
+  `users.conversations` fell back to `public_channel`. `conversations.info`
+  400s with `invalid_arguments` on the same body, which is the tell. `api_call()`
+  form-encodes everything (bools → `'true'`/`'false'`, arrays → JSON string).
+- **A channel the bot created has exactly one member: the bot.** It is not a
+  working setup — the owner cannot read it, and a *private* channel does not
+  appear in Slack search, so there is no way back in without an invite by
+  user id. `create_channel()` reports `alone` and the UI warns instead of
+  showing a tick.
+- **The plugin can never remove a Slack channel** — there is no archive or
+  delete call anywhere, and Slack gives bots no delete. Re-running the wizard
+  therefore changes nothing inside Slack; picking "create a new channel" just
+  makes a second one and re-points `slack_channel`. Only the channel NAME can
+  collide (`name_taken`, and an archived channel still holds its name). Never
+  write copy telling owners to delete a channel: it is permanent and those
+  threads are their support history.
+- **A bot token carries no identity.** Slack never tells an app which human
+  pasted the token into wp-admin, so the plugin cannot know who the site owner
+  is in Slack. The bridge is `users.list` + a pick-list (`guess_owner_id()`
+  falls back to `is_primary_owner` when no email matches the WP account).
+  Don't reintroduce "type your email" — Sungraiz rejected it, and adding
+  people after setup belongs in Slack, not in our settings screen.
 - **Private channels need `users.conversations`, not `conversations.list`** —
   the latter does not reliably surface them. The bot must also be a member,
   which is why the wizard creates the channel itself (creator = member, so no

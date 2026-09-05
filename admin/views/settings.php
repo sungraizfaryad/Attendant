@@ -705,6 +705,7 @@ $logging         = ! empty( $settings['logging_enabled'] );
 		$attendant_has_slack_token  = '' !== (string) get_option( 'attendant_slack_bot_token', '' );
 		$attendant_has_slack_secret = '' !== (string) get_option( 'attendant_slack_signing_secret', '' );
 		$attendant_slack_channel    = (string) ( $settings['slack_channel'] ?? '' );
+		$attendant_slack_chan_name  = (string) ( $settings['slack_channel_name'] ?? '' );
 		// Fully wired means: both credentials stored AND a channel chosen. Until
 		// then the tab shows the wizard instead of a wall of fields.
 		$attendant_slack_ready      = $attendant_has_slack_token && $attendant_has_slack_secret && '' !== $attendant_slack_channel;
@@ -827,9 +828,8 @@ $logging         = ! empty( $settings['logging_enabled'] );
 						<input type="checkbox" id="attendant-slack-new-private" checked>
 						<?php echo esc_html__( 'Make it private', 'attendant' ); ?>
 					</label>
-					<p style="margin:8px 0 0;">
-						<label for="attendant-slack-new-emails"><?php echo esc_html__( 'Invite teammates (optional) — one email per line:', 'attendant' ); ?></label><br>
-						<textarea id="attendant-slack-new-emails" rows="2" class="large-text" placeholder="teammate@example.com"></textarea>
+					<p class="description" style="margin:8px 0 0;max-width:640px;">
+						<?php echo esc_html__( 'You are added to the channel automatically. Everyone else joins from Slack, the same way they would join any other channel.', 'attendant' ); ?>
 					</p>
 					<p style="margin:8px 0 0;">
 						<button type="button" class="button button-primary" id="attendant-slack-create-channel">
@@ -845,12 +845,17 @@ $logging         = ! empty( $settings['logging_enabled'] );
 					<label for="attendant-slack-channel"><?php echo esc_html__( 'Or choose an existing channel', 'attendant' ); ?></label>
 				</th>
 				<td>
+					<input type="hidden" id="attendant-slack-channel-name" name="slack_channel_name" value="<?php echo esc_attr( $attendant_slack_chan_name ); ?>">
 					<select id="attendant-slack-channel" name="slack_channel">
 						<?php if ( '' !== $attendant_slack_channel ) : ?>
 							<option value="<?php echo esc_attr( $attendant_slack_channel ); ?>" selected>
 								<?php
-								/* translators: %s: Slack channel id */
-								printf( esc_html__( 'Saved channel (%s)', 'attendant' ), esc_html( $attendant_slack_channel ) );
+								if ( '' !== $attendant_slack_chan_name ) {
+									echo esc_html( '#' . $attendant_slack_chan_name );
+								} else {
+									/* translators: %s: Slack channel id */
+									printf( esc_html__( 'Saved channel (%s)', 'attendant' ), esc_html( $attendant_slack_channel ) );
+								}
 								?>
 							</option>
 						<?php else : ?>
@@ -871,6 +876,7 @@ $logging         = ! empty( $settings['logging_enabled'] );
 					</p>
 				</td>
 			</tr>
+
 			<?php else : ?>
 			<tr>
 				<th scope="row"><?php echo esc_html__( 'Channel', 'attendant' ); ?></th>

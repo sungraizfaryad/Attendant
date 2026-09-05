@@ -1,7 +1,8 @@
 # Attendant — Progress
 
-_Last updated: 2026-09-03. v2.1.0 SHIPPED. Slack live-agent handoff built on
-branch `slack-handoff`, NOT merged, NOT shipped — awaiting Sungraiz's testing._
+_Last updated: 2026-09-05. v2.1.0 SHIPPED. Slack live-agent handoff on branch
+`slack-handoff` — **verified end to end on a real workspace 2026-09-05**,
+inbound included. Still NOT merged, NOT shipped, all work uncommitted._
 
 ## Shipped
 
@@ -37,16 +38,99 @@ owner's Slack channel; team replies land back in the chat widget.
   and why it was skipped (wrong channel, bad signature, …). All Slack error
   codes map to plain-language messages with fix links.
 
+## Fixed 2026-09-03 (uncommitted, on `slack-handoff`)
+
+Wizard reported success but the channel was unreachable. Two causes, both
+reproduced live against Sungraiz's workspace via WP-CLI:
+
+1. `api_call()` sent a JSON body. Slack's read methods ignore it and answer
+   with defaults, so `users.conversations` fell back to `types=public_channel`
+   and the just-created *private* channel never appeared ("No channels found").
+   `users.lookupByEmail` was broken the same way, so invites always failed.
+   Now form-encoded. Verified: `list_channels()` 0 → 1.
+2. Nothing ever put a human in the channel. The bot creates it, so the bot is
+   the only member; a private channel is not searchable, so the owner had no
+   route in and the test message landed in an empty room.
+
+Who-goes-in-the-channel is now a pick-list, not typing (Sungraiz's call —
+typing an email was "not good"):
+
+- `GET /slack/members` → `list_members()` (`users.list`, bots/deleted/Slackbot
+  filtered, sorted by name). The handler marks one person `you`: an email
+  matching the WP account, else `is_primary_owner`. `matched:false` means the
+  tick is a guess and the wizard says so.
+- Wizard step 6 renders that as a searchable checkbox list with `you`
+  pre-ticked; create is blocked if nothing is ticked. If `users.list` fails
+  (scope/transport) the step falls back to the old email textarea.
+- Invites go out by user id (`invite_by_ids` — one `conversations.invite` with
+  every id, partial failures read out of `errors`).
+- The settings tab has NO people UI at all: no "Add people" row, no email box
+  on Create channel. Adding people after setup is a Slack job. When that row
+  creates a channel the server resolves the owner itself via
+  `guess_owner_id()`.
+- `create_channel()` still returns `alone`; wizard and settings warn instead of
+  showing a tick.
+
+**Reset done 2026-09-03 on media-usage-inspector only** (not FLP), so the
+wizard starts clean: deleted `attendant_slack_bot_token`,
+`attendant_slack_signing_secret`, `attendant_slack_debug` and 2 Slack
+transients; blanked `slack_channel`, `slack_enabled` in `attendant_settings`.
+All 42 other settings keys, the API keys and the index were left alone.
+Backup of the deleted values:
+`<session scratchpad>/slack-reset-backup.json`. Sungraiz is deleting the old
+Slack app and re-creating it from the manifest URL (scopes unchanged).
+
 ## Next steps
 
 - **Sungraiz is testing the wizard** on a real workspace. Two prerequisites:
   re-create/reinstall the Slack app (new scopes: channels:manage, groups:write,
   users:read, users:read.email) and note Slack must reach the site (no local).
-- Screenshots pending from Sungraiz: drop PNGs into `admin/images/` named
-  `slack-step-signin.png`, `slack-step-create.png`, `slack-step-install.png`,
-  `slack-step-credentials.png` — they auto-render in the matching wizard steps.
-- Known-unverified: inbound Slack→site direction never confirmed on a real
-  workspace (outbound works). The status panel exists to diagnose exactly that.
+- Screenshots open in a viewer, and the trigger is an underlined blue link
+  ("click here to see the screenshot") printed INSIDE the step it explains —
+  a list item or a hint paragraph. A row of buttons under the instructions
+  read as decoration and got skipped. `attendant_wizard_shot()` prints (does
+  not return) the markup and escapes each part itself: `wp_kses_post` strips
+  `<button>` and every `data-` attribute, so call sites must echo it raw.
+- `#attendant-wiz-shotview` is a full-screen scroller: the whole overlay is
+  `overflow-y: auto`, the image is `width: 100%; height: auto`, and the close
+  button is `position: fixed` in the screen's top-right corner (48px, dashicon
+  at 30px) so it stays reachable however far down you scroll. Do NOT go back to
+  fitting the image with `object-fit: contain` and `max-height: 100%` — a
+  percentage height inside a flex column has no definite height to resolve
+  against, so it silently falls back to the natural size, overflows, and gets
+  clipped with no way to reach the rest. Opening resets `scrollTop` and focuses
+  the scroller so arrow keys page through immediately. Escape closes the viewer
+  first and the wizard only when no shot is open.
+- Screenshots: six in `admin/images/` (`slack-step-create-1/2`,
+  `slack-step-install-1/2`, `slack-step-credentials-1/2`), NATIVE resolution
+  WebP q82, page background auto-cropped off the edges — 452 KB for the set.
+  The first pass downscaled to 1200px and quantised to 256 colours: half the
+  size but visibly pixelated against a 1100px panel on a retina screen. Do not
+  downscale these again; the natural size is already at or under 2× the panel.
+  `attendant_wizard_shot()` takes a base name with NO extension and probes
+  webp/png/jpg, so a replacement can be dropped in any format.
+- Step 3's copy was rewritten to match what the manifest flow actually does
+  (Allow → Go to App Settings, not "Install to Workspace").
+- Re-running the wizard shows a notice at the top of step 1 (gated on
+  token + secret + channel all being present). It says plainly that re-running
+  never touches Slack, then splits into three paths: reconnect (leave the
+  credential boxes empty, they are kept), move to an existing channel, or make
+  a new one. It does NOT tell people to delete the old channel — deleting is
+  permanent, destroys support history, and is not required; only the NAME can
+  collide, and `name_taken` already has a friendly error. Archive is the
+  suggested tidy-up. Also warns that switching cuts off a live handoff.
+- `slack_channel_name` now rides beside `slack_channel` so the UI can say
+  "#website-chat" instead of "C0C07FE1NUQ" — set by create-channel, by the
+  wizard's existing-channel path, and by a hidden field on the settings form.
+  The sanitizer blanks a stale name whenever the id changes, so the label can
+  never name one channel while messages go to another. Everything falls back to
+  the raw id when the name is unknown.
+- Still missing: `slack-step-signin` for step 1. And `slack-step-create-1`
+  shows a `.local` request_url — worth re-shooting from the public site before
+  release.
+- Inbound Slack→site is CONFIRMED (2026-09-05, Sungraiz's workspace, fresh app
+  from the manifest URL). The whole wizard runs clean start to finish. The
+  status panel stays as the diagnostic for when it does not.
 - Not done, deliberately: full OAuth "Add to Slack" (needs a hosted broker or
   swaps which two secrets get copied — see the Slack notes in CLAUDE.md).
 - After Slack: WhatsApp reuses the same inbound/outbound machinery.

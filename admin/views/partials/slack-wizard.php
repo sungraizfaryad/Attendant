@@ -6,10 +6,13 @@
  * button. Each step is a panel; admin/js/attendant-slack-wizard.js handles
  * navigation and the REST calls (save credentials, create/choose channel, test).
  *
- * Screenshots: drop PNGs into admin/images/ using the names below and they
- * appear automatically in the matching step — no code change needed.
- *   slack-step-signin.png · slack-step-create.png · slack-step-install.png
- *   slack-step-credentials.png
+ * Screenshots: drop images into admin/images/ using the names below and they
+ * appear automatically in the matching step — no code change needed. Any of
+ * .webp / .png / .jpg works; the shipped set is .webp.
+ *   slack-step-signin
+ *   slack-step-create-1       · slack-step-create-2
+ *   slack-step-install-1      · slack-step-install-2
+ *   slack-step-credentials-1  · slack-step-credentials-2
  *
  * @package Attendant
  */
@@ -22,22 +25,54 @@ if ( ! defined( 'ABSPATH' ) ) {
 // needs the Slack class whether or not the caller already loaded it.
 require_once ATTENDANT_PLUGIN_DIR . 'includes/integrations/class-attendant-slack.php';
 
+// Re-run or first run? Computed here rather than trusting a caller's variable.
+$attendant_wiz_settings = (array) Attendant_Plugin::get_setting();
+$attendant_wiz_channel  = (string) ( $attendant_wiz_settings['slack_channel'] ?? '' );
+$attendant_wiz_chan     = (string) ( $attendant_wiz_settings['slack_channel_name'] ?? '' );
+$attendant_wiz_rerun    = '' !== $attendant_wiz_channel
+	&& '' !== (string) get_option( 'attendant_slack_bot_token', '' )
+	&& '' !== (string) get_option( 'attendant_slack_signing_secret', '' );
+$attendant_wiz_chan     = '' !== $attendant_wiz_chan ? '#' . $attendant_wiz_chan : $attendant_wiz_channel;
+
 /**
- * Print a wizard screenshot when the file has been added, otherwise nothing.
+ * A link that opens the screenshot for a step. Prints nothing when the file
+ * has not been added yet.
  *
- * @param string $file Filename inside admin/images/.
- * @param string $alt  Alt text.
+ * Printed inline so it can sit inside a sentence or a list item — people skip
+ * a row of buttons under the instructions, but they click a blue link sitting
+ * on the step it belongs to. Every part is escaped here, so call sites echo it
+ * directly (wp_kses_post would strip the button and its data attributes).
+ *
+ * @param string $name    Base filename inside admin/images/, no extension.
+ * @param string $alt     Alt text.
+ * @param string $caption Caption shown above the image in the viewer.
+ * @param string $label   Link text.
  */
-function attendant_wizard_shot( string $file, string $alt ): void {
-	if ( ! file_exists( ATTENDANT_PLUGIN_DIR . 'admin/images/' . $file ) ) {
+if ( ! function_exists( 'attendant_wizard_shot' ) ) :
+function attendant_wizard_shot( string $name, string $alt, string $caption = '', string $label = '' ): void {
+	$file = '';
+	foreach ( array( 'webp', 'png', 'jpg', 'jpeg' ) as $ext ) {
+		if ( file_exists( ATTENDANT_PLUGIN_DIR . 'admin/images/' . $name . '.' . $ext ) ) {
+			$file = $name . '.' . $ext;
+			break;
+		}
+	}
+	if ( '' === $file ) {
 		return;
 	}
+	if ( '' === $label ) {
+		$label = __( 'click here to see the screenshot', 'attendant' );
+	}
+
 	printf(
-		'<figure class="attendant-wiz__shot"><img src="%s" alt="%s"></figure>',
+		' <button type="button" class="attendant-wiz__shotlink" data-shot="%s" data-alt="%s" data-caption="%s">%s</button>',
 		esc_url( ATTENDANT_PLUGIN_URL . 'admin/images/' . $file ),
-		esc_attr( $alt )
+		esc_attr( $alt ),
+		esc_attr( '' === $caption ? $label : $caption ),
+		esc_html( $label )
 	);
 }
+endif;
 ?>
 <div class="attendant-wiz-overlay" id="attendant-wiz" hidden>
 	<div class="attendant-wiz" role="dialog" aria-modal="true" aria-labelledby="attendant-wiz-title">
@@ -57,6 +92,39 @@ function attendant_wizard_shot( string $file, string $alt ): void {
 			<!-- 1 — Sign in ------------------------------------------------- -->
 			<section class="attendant-wiz__step" data-step="1">
 				<h3><?php echo esc_html__( 'Sign in to Slack first', 'attendant' ); ?></h3>
+				<?php if ( $attendant_wiz_rerun ) : ?>
+				<div class="attendant-wiz__notice">
+					<p class="attendant-wiz__notice-head">
+						<?php
+						printf(
+							/* translators: %s: Slack channel name, e.g. #website-chat */
+							esc_html__( 'You are already set up. Chats are going to %s.', 'attendant' ),
+							'<strong>' . esc_html( $attendant_wiz_chan ) . '</strong>'
+						);
+						?>
+					</p>
+					<p>
+						<?php echo esc_html__( 'Running this again never changes anything inside Slack. Your channel and every message in it stay exactly as they are.', 'attendant' ); ?>
+					</p>
+					<ul>
+						<li>
+							<strong><?php echo esc_html__( 'Just reconnecting?', 'attendant' ); ?></strong>
+							<?php echo esc_html__( 'Click through and leave the two credential boxes empty to keep the ones you already have, then pick the same channel at the end.', 'attendant' ); ?>
+						</li>
+						<li>
+							<strong><?php echo esc_html__( 'Moving to a channel that already exists?', 'attendant' ); ?></strong>
+							<?php echo esc_html__( 'Choose "Use an existing channel" and pick it. Nothing is created.', 'attendant' ); ?>
+						</li>
+						<li>
+							<strong><?php echo esc_html__( 'Want a brand new channel?', 'attendant' ); ?></strong>
+							<?php echo esc_html__( 'Give it a name you are not already using — Slack refuses a name that is taken, and an archived channel still holds its name. Your old channel stays where it is; archive it in Slack if you are done with it, which keeps the history. Deleting is permanent and you rarely want it.', 'attendant' ); ?>
+						</li>
+					</ul>
+					<p class="attendant-wiz__notice-warn">
+						<?php echo esc_html__( 'One caution: if a visitor is talking to your team right now, switching channels cuts that conversation off. Finish it first.', 'attendant' ); ?>
+					</p>
+				</div>
+				<?php endif; ?>
 				<p class="attendant-wiz__lead">
 					<?php echo esc_html__( 'Open Slack in a new tab and sign in. If you do not have a workspace yet, you can create one there — it is free.', 'attendant' ); ?>
 				</p>
@@ -68,7 +136,15 @@ function attendant_wizard_shot( string $file, string $alt ): void {
 						<?php echo esc_html__( 'Open Slack and sign in', 'attendant' ); ?> ↗
 					</a>
 				</p>
-				<?php attendant_wizard_shot( 'slack-step-signin.png', __( 'Slack sign-in screen', 'attendant' ) ); ?>
+				<p class="attendant-wiz__note">
+					<?php
+					attendant_wizard_shot(
+						'slack-step-signin',
+						__( 'Slack sign-in screen', 'attendant' ),
+						__( 'The Slack sign-in screen.', 'attendant' )
+					);
+					?>
+				</p>
 			</section>
 
 			<!-- 2 — Create the app ------------------------------------------ -->
@@ -78,32 +154,66 @@ function attendant_wizard_shot( string $file, string $alt ): void {
 					<?php echo esc_html__( 'This link opens Slack with everything already filled in for you — the name, the permissions, and your website address.', 'attendant' ); ?>
 				</p>
 				<ol class="attendant-wiz__list">
-					<li><?php echo esc_html__( 'Choose your workspace', 'attendant' ); ?></li>
+					<li>
+						<?php
+						echo esc_html__( 'Choose your workspace', 'attendant' );
+						attendant_wizard_shot(
+							'slack-step-create-1',
+							__( 'Slack "Create from a manifest" screen with the workspace picker', 'attendant' ),
+							__( 'Pick your workspace, then Next.', 'attendant' )
+						);
+						?>
+					</li>
 					<li><?php echo esc_html__( 'Click Next', 'attendant' ); ?></li>
-					<li><?php echo esc_html__( 'Click Create', 'attendant' ); ?></li>
+					<li>
+						<?php
+						echo esc_html__( 'Click Create and Install', 'attendant' );
+						attendant_wizard_shot(
+							'slack-step-create-2',
+							__( 'Slack "Review your app" screen', 'attendant' ),
+							__( 'Then Create and Install.', 'attendant' )
+						);
+						?>
+					</li>
 				</ol>
 				<p>
 					<a class="button button-hero button-primary" id="attendant-wiz-create-app" href="<?php echo esc_url( ATTENDANT_Slack::manifest_url() ); ?>" target="_blank" rel="noopener noreferrer">
 						<?php echo esc_html__( 'Create the app in Slack', 'attendant' ); ?> ↗
 					</a>
 				</p>
-				<?php attendant_wizard_shot( 'slack-step-create.png', __( 'Slack create-app screen', 'attendant' ) ); ?>
 			</section>
 
 			<!-- 3 — Install to workspace ------------------------------------ -->
 			<section class="attendant-wiz__step" data-step="3" hidden>
-				<h3><?php echo esc_html__( 'Install it to your workspace', 'attendant' ); ?></h3>
+				<h3><?php echo esc_html__( 'Give it permission', 'attendant' ); ?></h3>
 				<p class="attendant-wiz__lead">
-					<?php echo esc_html__( 'On the app page that just opened, install the app so it can post into Slack.', 'attendant' ); ?>
+					<?php echo esc_html__( 'Slack now asks whether the app may act in your workspace.', 'attendant' ); ?>
 				</p>
 				<ol class="attendant-wiz__list attendant-wiz__list--big">
-					<li><strong><?php echo esc_html__( 'Click "Install to Workspace"', 'attendant' ); ?></strong></li>
-					<li><strong><?php echo esc_html__( 'Click "Allow"', 'attendant' ); ?></strong></li>
+					<li>
+						<strong><?php echo esc_html__( 'Click "Allow"', 'attendant' ); ?></strong>
+						<?php
+						attendant_wizard_shot(
+							'slack-step-install-1',
+							__( 'Slack permission screen for the Attendant Chat app', 'attendant' ),
+							__( 'Check the workspace is the right one, then Allow.', 'attendant' )
+						);
+						?>
+					</li>
+					<li>
+						<strong><?php echo esc_html__( 'Click "Go to App Settings"', 'attendant' ); ?></strong>
+						<?php
+						attendant_wizard_shot(
+							'slack-step-install-2',
+							__( 'Slack "app is ready" screen', 'attendant' ),
+							__( 'Then Go to App Settings.', 'attendant' )
+						);
+						?>
+					</li>
 				</ol>
 				<p class="attendant-wiz__note">
-					<?php echo esc_html__( 'Keep that Slack tab open — the next step needs two values from it.', 'attendant' ); ?>
+					<?php echo esc_html__( 'Keep that Slack tab open — the next step needs two values from it. You can ignore the Slack CLI instructions on that screen; they are for people writing their own app.', 'attendant' ); ?>
 				</p>
-				<?php attendant_wizard_shot( 'slack-step-install.png', __( 'Slack install-to-workspace screen', 'attendant' ) ); ?>
 			</section>
 
 			<!-- 4 — Credentials --------------------------------------------- -->
@@ -123,6 +233,11 @@ function attendant_wizard_shot( string $file, string $alt ): void {
 						esc_html__( 'Open %s, click your app, then Basic Information → App Credentials → Show next to Signing Secret.', 'attendant' ),
 						'<a href="https://api.slack.com/apps" target="_blank" rel="noopener noreferrer">api.slack.com/apps ↗</a>'
 					);
+					attendant_wizard_shot(
+						'slack-step-credentials-1',
+						__( 'Slack Basic Information page showing the Signing Secret', 'attendant' ),
+						__( 'Signing Secret: Basic Information → App Credentials → Show.', 'attendant' )
+					);
 					?>
 				</p>
 				<input type="password" id="attendant-wiz-secret" class="regular-text" autocomplete="off" placeholder="<?php echo esc_attr__( 'Paste the Signing Secret', 'attendant' ); ?>">
@@ -131,11 +246,17 @@ function attendant_wizard_shot( string $file, string $alt ): void {
 					<?php echo esc_html__( '2. Bot Token', 'attendant' ); ?>
 				</label>
 				<p class="attendant-wiz__hint">
-					<?php echo esc_html__( 'Same app → OAuth & Permissions → copy the Bot User OAuth Token (it starts with xoxb-).', 'attendant' ); ?>
+					<?php
+					echo esc_html__( 'Same app → OAuth & Permissions → copy the Bot User OAuth Token (it starts with xoxb-).', 'attendant' );
+					attendant_wizard_shot(
+						'slack-step-credentials-2',
+						__( 'Slack OAuth and Permissions page showing the Bot User OAuth Token', 'attendant' ),
+						__( 'Bot Token: OAuth & Permissions → Bot User OAuth Token → Copy.', 'attendant' )
+					);
+					?>
 				</p>
 				<input type="password" id="attendant-wiz-token" class="regular-text" autocomplete="off" placeholder="xoxb-…">
 
-				<?php attendant_wizard_shot( 'slack-step-credentials.png', __( 'Where to find the Slack credentials', 'attendant' ) ); ?>
 			</section>
 
 			<!-- 5 — Channel choice ------------------------------------------ -->
@@ -164,9 +285,20 @@ function attendant_wizard_shot( string $file, string $alt ): void {
 				<p style="margin-top:10px;">
 					<label><input type="checkbox" id="attendant-wiz-new-private" checked> <?php echo esc_html__( 'Make it private (recommended)', 'attendant' ); ?></label>
 				</p>
-				<label class="attendant-wiz__label" for="attendant-wiz-new-emails"><?php echo esc_html__( 'Invite teammates (optional)', 'attendant' ); ?></label>
-				<p class="attendant-wiz__hint"><?php echo esc_html__( 'One email address per line.', 'attendant' ); ?></p>
-				<textarea id="attendant-wiz-new-emails" rows="3" class="large-text" placeholder="teammate@example.com"></textarea>
+				<label class="attendant-wiz__label"><?php echo esc_html__( 'Who should be in this channel?', 'attendant' ); ?></label>
+				<p class="attendant-wiz__hint">
+					<?php echo esc_html__( 'You are ticked already. Tick anyone else who should answer visitor chats — but you do not have to do it here: once the channel exists, adding people is done in Slack like any other channel.', 'attendant' ); ?>
+				</p>
+				<p>
+					<input type="search" id="attendant-wiz-people-filter" class="regular-text" placeholder="<?php echo esc_attr__( 'Search people', 'attendant' ); ?>">
+				</p>
+				<div id="attendant-wiz-people" class="attendant-wiz__people"></div>
+
+				<div id="attendant-wiz-people-fallback" hidden>
+					<label class="attendant-wiz__label" for="attendant-wiz-new-emails"><?php echo esc_html__( 'Email addresses instead', 'attendant' ); ?></label>
+					<p class="attendant-wiz__hint"><?php echo esc_html__( 'One per line, as it appears on their Slack account. Include your own.', 'attendant' ); ?></p>
+					<textarea id="attendant-wiz-new-emails" rows="3" class="large-text" placeholder="you@example.com"><?php echo esc_textarea( wp_get_current_user()->user_email ); ?></textarea>
+				</div>
 			</section>
 
 			<!-- 7 — Choose existing ----------------------------------------- -->
@@ -207,5 +339,17 @@ function attendant_wizard_shot( string $file, string $alt ): void {
 			<button type="button" class="button button-primary" id="attendant-wiz-next"><?php echo esc_html__( 'Next', 'attendant' ); ?></button>
 		</div>
 
+	</div>
+
+	<div class="attendant-wiz-shotview" id="attendant-wiz-shotview" role="dialog" aria-modal="true" aria-label="<?php echo esc_attr__( 'Screenshot', 'attendant' ); ?>" hidden>
+		<button type="button" class="attendant-wiz-shotview__close" id="attendant-wiz-shotview-close" aria-label="<?php echo esc_attr__( 'Close screenshot', 'attendant' ); ?>" title="<?php echo esc_attr__( 'Close screenshot', 'attendant' ); ?>">
+			<span class="dashicons dashicons-no-alt" aria-hidden="true"></span>
+		</button>
+		<div class="attendant-wiz-shotview__scroll" id="attendant-wiz-shotview-scroll" tabindex="0">
+			<figure class="attendant-wiz-shotview__panel">
+				<figcaption class="attendant-wiz-shotview__caption" id="attendant-wiz-shotview-caption"></figcaption>
+				<img id="attendant-wiz-shotview-img" src="" alt="">
+			</figure>
+		</div>
 	</div>
 </div>

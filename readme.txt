@@ -3,7 +3,7 @@ Contributors:      sungraizfaryad
 Tags:              ai, site-search, chatbot, gemini, free
 Requires at least: 6.0
 Tested up to:      7.1
-Stable tag:        2.1.0
+Stable tag:        2.2.0
 Requires PHP:      8.0
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
@@ -25,6 +25,7 @@ It runs on Google Gemini's free plan. One free key, no credit card, ever. Prefer
 * Shows tap-to-answer buttons so visitors can choose instead of typing
 * Suggests real alternatives from your site when nothing matches
 * Remembers the conversation while they browse, even across open tabs
+* Hands them to a real person when the AI cannot help, without leaving the chat
 
 = What it does for you =
 
@@ -34,6 +35,7 @@ It runs on Google Gemini's free plan. One free key, no credit card, ever. Prefer
 * Works with WooCommerce products, custom fields (ACF, MetaBox), and any post type
 * Collects leads: it can offer a callback, take the visitor's email, and send it to you. Off by default
 * Passes captured leads to your newsletter or CRM plugin if you use one
+* Talks to your team in Slack: when the AI falls short, the visitor can ask for a person, and you answer from a Slack thread while they stay on your site
 * Lets you add your own questions and answers that the chatbot always uses first
 * Spending limits you control, so the chat can never run up a surprise bill
 * Private by design: chats stay in the visitor's browser and IP addresses are never stored
@@ -50,6 +52,7 @@ It runs on Google Gemini's free plan. One free key, no credit card, ever. Prefer
 
 * WordPress 6.0 or higher and PHP 8.0 or higher
 * A free Google Gemini key (no credit card), or an OpenAI key if you prefer
+* For the optional Slack handover: a Slack workspace, and a site Slack can reach over the internet (it will not work on a local install)
 
 == Installation ==
 
@@ -101,6 +104,14 @@ Yes. Every accepted callback request also fires a WordPress action, `attendant_l
 
 The hook fires only after validation and rate-limit checks pass, so you only ever receive real, consented requests.
 
+= Can a real person take over a chat? =
+
+Yes, if you connect Slack. The chat only offers the "talk to a person" button when the AI actually falls short, so visitors are not pushed at your team for questions the bot can answer. When someone takes it, the conversation becomes one thread in your Slack channel, led by a short summary of what they were asking about. Whatever your team writes in that thread appears in the visitor's chat, and whatever they type next appears in the thread. It is off by default.
+
+= What do I need for the Slack handover? =
+
+A Slack workspace, and a website Slack can reach. A setup wizard in the plugin walks you through it: it creates the Slack app for you with the right permissions already filled in, you paste two values back, and it creates the channel and puts you in it. It will not work on a local development site, because Slack has to be able to send replies to your site.
+
 = Can I keep a record of the conversations? =
 
 Yes, optionally. File logging is off by default. When enabled, each exchange is written to a dated file in a protected folder in your uploads directory, kept for 30 days, and downloadable only by an administrator. IP addresses are never stored and session identifiers are one-way hashed. See the Privacy section.
@@ -124,15 +135,24 @@ OpenAI API, provided by OpenAI, L.L.C.:
 * Privacy Policy: https://openai.com/policies/privacy-policy
 * API data usage policies: https://openai.com/policies/api-data-usage-policies
 
+Slack, provided by Slack Technologies, LLC (a Salesforce company). Only used if you connect Slack for the live handover, which is off by default and does nothing until you finish the setup wizard.
+
+What is sent, and when: only when a visitor asks to speak to a person, the plugin sends the recent conversation (their messages and the assistant's replies) plus a short summary of what they need to the Slack channel you chose. While that handover is open, each new message the visitor sends is posted to the same Slack thread, and each reply your team writes there is sent back to the visitor's chat. Nothing is sent to Slack at any other time. Your Slack credentials are stored encrypted on your own site and are never sent anywhere except to Slack itself.
+
+* Slack API Terms of Service: https://slack.com/terms-of-service/api
+* Slack Privacy Policy: https://slack.com/trust/privacy/privacy-policy
+
 == Privacy ==
 
-Three features can handle personal data. All are OFF by default and only do anything once you, the site owner, turn them on.
+Four features can handle personal data. All are OFF by default and only do anything once you, the site owner, turn them on.
 
 **Conversation history (in the visitor's browser).** The chat keeps a copy of the current conversation in the visitor's own browser using localStorage so it survives page changes and refreshes. This data never leaves the visitor's device except as the normal chat messages already described above. It is not stored on your server or in your database. The visitor can clear it at any time with the "New chat" button or by clearing their browser storage.
 
 **Conversation logging to files (optional, off by default).** When you enable file logging in Settings, the plugin writes each exchange (the visitor's message and the assistant's reply) to a dated log file in a protected folder inside your uploads directory, so you can review how the assistant is used. IP addresses are never stored. Session identifiers are stored only as short one-way hashes used to group a single conversation. Logs are kept for 30 days and then deleted automatically, and only a logged-in administrator can download them. No conversation data is sent anywhere by this feature; the files stay on your server.
 
 **Callback / lead capture (optional, off by default).** When you enable lead capture and a visitor explicitly agrees to be contacted, the plugin collects the email address the visitor provides (and, if they choose, a phone number and a preferred time) and emails that request to the address you configure, using your site's normal email. It is rate-limited to one request per conversation and a daily maximum. This information is handled by whatever email service your WordPress site already uses; the plugin does not store it in a database or send it to any third party of its own.
+
+**Live handover to Slack (optional, off by default).** When a visitor asks to speak to a person, the conversation is sent to your Slack workspace as described under External services above, and stays readable by whoever is in that Slack channel. The plugin keeps the link between a chat and its Slack thread on your own server for 24 hours and then discards it. IP addresses are never sent. If you use this feature, your visitors' messages are handled by Slack under Slack's own privacy policy, and you should say so in your privacy policy.
 
 You are responsible for disclosing these features in your own privacy policy if you enable them.
 
@@ -145,6 +165,16 @@ You are responsible for disclosing these features in your own privacy policy if 
 5. Q&A Manager: add your own questions and answers
 
 == Changelog ==
+
+= 2.2.0 =
+* New: live handover to Slack. When the AI cannot help, the visitor can ask for a person and your team answers from a Slack thread while the visitor stays on your site. Off by default.
+* New: guided Slack setup wizard. It creates the Slack app with the right permissions already filled in, creates the channel, and puts you and anyone you pick into it, so there is nothing to configure by hand in Slack.
+* New: the "talk to a person" button only appears when the AI actually falls short, so your team is not interrupted for questions the chatbot already answers.
+* New: each conversation becomes one Slack thread, led by a short summary of what the visitor is asking about.
+* New: Slack connection status panel showing the last message Slack sent and, if it was ignored, why.
+* Improved: setup errors are explained in plain language with a link to the exact page that fixes them.
+* Fixed: the channel list could come back empty and a newly created private channel could go missing, because requests to Slack were sent in a format its read endpoints ignore.
+* Fixed: a channel created by the setup wizard had nobody in it but the app, so the owner could not see it or the test message. Setup now adds you, and warns instead of reporting success if it could not.
 
 = 2.1.0 =
 * New: Google Gemini support. Run the whole plugin on Google's free plan with one free key, no credit card.
@@ -181,6 +211,9 @@ You are responsible for disclosing these features in your own privacy policy if 
 * Q&A Manager: admin-configured question/answer pairs matched semantically before RAG (threshold 0.92); REST CRUD API.
 
 == Upgrade Notice ==
+
+= 2.2.0 =
+Adds an optional live handover to Slack so a real person can take over a chat. Nothing changes unless you set it up; existing settings and your content index are untouched.
 
 = 1.0.0 =
 Initial release.

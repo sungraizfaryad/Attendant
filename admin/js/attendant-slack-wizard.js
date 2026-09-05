@@ -90,6 +90,121 @@
 		.finally( function () { nextBtn.disabled = false; } );
 	}
 
+	// ── People picker ────────────────────────────────────────────────────
+	let peopleLoaded = false;
+
+	function peopleBox() {
+		return document.getElementById( 'attendant-wiz-people' );
+	}
+
+	function usingEmailFallback() {
+		const fb = document.getElementById( 'attendant-wiz-people-fallback' );
+		return !! fb && ! fb.hidden;
+	}
+
+	function showEmailFallback( reason ) {
+		const box = peopleBox();
+		const fb  = document.getElementById( 'attendant-wiz-people-fallback' );
+		if ( box ) {
+			box.hidden = true;
+		}
+		const filter = document.getElementById( 'attendant-wiz-people-filter' );
+		if ( filter ) {
+			filter.parentNode.hidden = true;
+		}
+		if ( fb ) {
+			fb.hidden = false;
+		}
+		if ( reason ) {
+			say( reason, false );
+		}
+	}
+
+	function renderPeople( members ) {
+		const box = peopleBox();
+		box.textContent = '';
+
+		members.forEach( function ( m ) {
+			const label = document.createElement( 'label' );
+			label.className = 'attendant-wiz__person';
+			label.dataset.search = ( m.name + ' ' + m.handle + ' ' + m.email ).toLowerCase();
+
+			const cb = document.createElement( 'input' );
+			cb.type = 'checkbox';
+			cb.value = m.id;
+			cb.checked = !! m.you;
+			label.appendChild( cb );
+
+			const name = document.createElement( 'strong' );
+			name.textContent = m.name || m.handle;
+			label.appendChild( name );
+
+			if ( m.handle ) {
+				const handle = document.createElement( 'span' );
+				handle.textContent = '@' + m.handle;
+				label.appendChild( handle );
+			}
+			if ( m.you ) {
+				const tag = document.createElement( 'mark' );
+				tag.textContent = 'you';
+				label.appendChild( tag );
+			}
+
+			box.appendChild( label );
+		} );
+	}
+
+	function loadPeople() {
+		if ( peopleLoaded ) {
+			return;
+		}
+		peopleLoaded = true;
+
+		const box = peopleBox();
+		box.textContent = 'Loading your workspace…';
+
+		fetch( attendantAdmin.restUrl + '/slack/members', { headers: headers( false ) } )
+		.then( function ( r ) { return r.json(); } )
+		.then( function ( json ) {
+			const members = ( json && json.members ) || [];
+			if ( ! members.length ) {
+				peopleLoaded = false;
+				showEmailFallback(
+					( json && json.friendly && json.friendly.message ) ||
+					'Could not read your workspace members — type email addresses instead.'
+				);
+				return;
+			}
+
+			renderPeople( members );
+
+			// No email matched this WordPress account, so the tick is a guess.
+			if ( json && ! json.matched ) {
+				say( 'We ticked the workspace owner — untick and pick yourself if that is not you.', true );
+			}
+		} )
+		.catch( function () {
+			peopleLoaded = false;
+			showEmailFallback( 'Could not reach Slack — type email addresses instead.' );
+		} );
+	}
+
+	function pickedPeople() {
+		return Array.prototype.slice
+			.call( peopleBox().querySelectorAll( 'input[type="checkbox"]:checked' ) )
+			.map( function ( cb ) { return cb.value; } );
+	}
+
+	const peopleFilter = document.getElementById( 'attendant-wiz-people-filter' );
+	if ( peopleFilter ) {
+		peopleFilter.addEventListener( 'input', function () {
+			const q = peopleFilter.value.trim().toLowerCase();
+			peopleBox().querySelectorAll( '.attendant-wiz__person' ).forEach( function ( row ) {
+				row.hidden = ( '' !== q && -1 === row.dataset.search.indexOf( q ) );
+			} );
+		} );
+	}
+
 	function createChannel() {
 		const name    = document.getElementById( 'attendant-wiz-new-name' ).value.trim();
 		const priv    = document.getElementById( 'attendant-wiz-new-private' ).checked;
@@ -100,7 +215,17 @@
 			return;
 		}
 
-		const emails = emailsV.split( /[\n,]/ ).map( function ( e ) { return e.trim(); } ).filter( Boolean );
+		// One source of truth: the picker, or the email box that replaces it.
+		const fallback = usingEmailFallback();
+		const emails   = fallback
+			? emailsV.split( /[\n,]/ ).map( function ( e ) { return e.trim(); } ).filter( Boolean )
+			: [];
+		const users    = fallback ? [] : pickedPeople();
+
+		if ( ! users.length && ! emails.length ) {
+			say( 'Tick at least yourself — the app creates the channel, so nobody else is in it until they are added.', false );
+			return;
+		}
 
 		nextBtn.disabled = true;
 		say( 'Creating the channel…', true );
@@ -108,7 +233,7 @@
 		fetch( attendantAdmin.restUrl + '/slack/create-channel', {
 			method:  'POST',
 			headers: headers( true ),
-			body: JSON.stringify( { name: name, private: priv, emails: emails } ),
+			body: JSON.stringify( { name: name, private: priv, emails: emails, users: users } ),
 		} )
 		.then( function ( r ) { return r.json(); } )
 		.then( function ( json ) {
@@ -116,16 +241,29 @@
 				say( ( json && json.friendly && json.friendly.message ) || 'Could not create the channel.', false );
 				return;
 			}
-			let msg = 'Created #' + json.name + '.';
+			let summary = 'Chats will arrive in #' + json.name + '.';
 			if ( json.invited && json.invited.length ) {
-				msg += ' Invited ' + json.invited.length + '.';
+				summary += ' Added ' + json.invited.length + ( 1 === json.invited.length ? ' person.' : ' people.' );
 			}
-			if ( json.failed && json.failed.length ) {
-				msg += ' Not found: ' + json.failed.join( ', ' ) + '.';
-			}
-			document.getElementById( 'attendant-wiz-summary' ).textContent =
-				'Chats will arrive in #' + json.name + '. ' + msg;
+			document.getElementById( 'attendant-wiz-summary' ).textContent = summary;
 			show( 8 );
+
+			// show() clears the status line, so any warning has to go on after.
+			const problems = [];
+			if ( json.failed && json.failed.length ) {
+				problems.push( 'Slack would not add ' + json.failed.length + ' of the people you picked.' );
+			}
+			if ( json.alone ) {
+				problems.push(
+					'You are not in #' + json.name + ' yet, so the test message will land somewhere you cannot see it. ' +
+					( json.private
+						? 'A private channel never shows up in Slack search, so go Back and create a public one instead, or ask a Slack workspace admin to add you.'
+						: 'Open Slack, search for #' + json.name + ', and join it.' )
+				);
+			}
+			if ( problems.length ) {
+				say( problems.join( ' ' ), false );
+			}
 		} )
 		.catch( function () { say( 'Could not create the channel.', false ); } )
 		.finally( function () { nextBtn.disabled = false; } );
@@ -183,14 +321,19 @@
 		nextBtn.disabled = true;
 		say( 'Saving…', true );
 
+		const name = picked.parentNode.textContent.trim();
+
 		fetch( attendantAdmin.restUrl + '/settings', {
 			method:  'POST',
 			headers: headers( true ),
-			body: JSON.stringify( { slack_enabled: true, slack_channel: picked.value } ),
+			body: JSON.stringify( {
+				slack_enabled:      true,
+				slack_channel:      picked.value,
+				slack_channel_name: name.replace( /^#/, '' ),
+			} ),
 		} )
 		.then( function ( r ) { return r.json(); } )
 		.then( function () {
-			const name = picked.parentNode.textContent.trim();
 			document.getElementById( 'attendant-wiz-summary' ).textContent =
 				'Chats will arrive in ' + name + '.';
 			show( 8 );
@@ -235,6 +378,7 @@
 	document.getElementById( 'attendant-wiz-pick-new' ).addEventListener( 'click', function () {
 		path = 'new';
 		show( 6 );
+		loadPeople();
 	} );
 
 	document.getElementById( 'attendant-wiz-pick-existing' ).addEventListener( 'click', function () {
@@ -246,7 +390,52 @@
 	document.getElementById( 'attendant-wiz-reload' ).addEventListener( 'click', loadExisting );
 	document.getElementById( 'attendant-wiz-test' ).addEventListener( 'click', sendTest );
 
+	// ── Screenshot viewer ────────────────────────────────────────────────
+	const shotView    = document.getElementById( 'attendant-wiz-shotview' );
+	const shotScroll  = document.getElementById( 'attendant-wiz-shotview-scroll' );
+	const shotImg     = document.getElementById( 'attendant-wiz-shotview-img' );
+	const shotCaption = document.getElementById( 'attendant-wiz-shotview-caption' );
+	let   shotOpener  = null;
+
+	function openShot( btn ) {
+		shotOpener              = btn;
+		shotImg.src             = btn.dataset.shot;
+		shotImg.alt             = btn.dataset.alt || '';
+		shotCaption.textContent = btn.dataset.caption || '';
+		shotView.hidden         = false;
+
+		// A previous shot may have been left scrolled halfway down.
+		shotScroll.scrollTop = 0;
+		// Focus the scroller, not the close button, so arrow keys and space
+		// page through a tall screenshot straight away.
+		shotScroll.focus();
+	}
+
+	function closeShot() {
+		shotView.hidden = true;
+		shotImg.src     = '';
+		if ( shotOpener ) {
+			shotOpener.focus();
+			shotOpener = null;
+		}
+	}
+
+	overlay.addEventListener( 'click', function ( e ) {
+		const btn = e.target.closest( '.attendant-wiz__shotlink' );
+		if ( btn ) {
+			openShot( btn );
+		}
+	} );
+
+	document.getElementById( 'attendant-wiz-shotview-close' ).addEventListener( 'click', closeShot );
+	shotView.addEventListener( 'click', function ( e ) {
+		if ( e.target === shotView || e.target === shotScroll ) {
+			closeShot();
+		}
+	} );
+
 	function close() {
+		closeShot();
 		overlay.hidden = true;
 	}
 	document.getElementById( 'attendant-wiz-close' ).addEventListener( 'click', close );
@@ -256,7 +445,16 @@
 		}
 	} );
 	document.addEventListener( 'keydown', function ( e ) {
-		if ( 'Escape' === e.key && ! overlay.hidden ) {
+		if ( 'Escape' !== e.key ) {
+			return;
+		}
+		// The viewer sits on top, so it gets the first Escape — otherwise one
+		// key press closes the whole wizard from behind an open screenshot.
+		if ( ! shotView.hidden ) {
+			closeShot();
+			return;
+		}
+		if ( ! overlay.hidden ) {
 			close();
 		}
 	} );
