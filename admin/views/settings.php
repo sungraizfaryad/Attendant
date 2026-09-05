@@ -872,7 +872,13 @@ $logging         = ! empty( $settings['logging_enabled'] );
 					</button>
 					<span id="attendant-slack-status" aria-live="polite"></span>
 					<p class="description" style="margin-top:8px;">
-						<?php echo esc_html__( 'Already have a channel? Pick it here and click Save Settings, then Send test message. For a private channel to appear, type /invite @Attendant Chat in it first, then Reload channels.', 'attendant' ); ?>
+						<?php
+						printf(
+							/* translators: %s: the Slack app's name, e.g. Attendant Chat (My Site) */
+							esc_html__( 'Already have a channel? Pick it here and click Save Settings, then Send test message. For a private channel to appear, type /invite @%s in it first, then Reload channels.', 'attendant' ),
+							esc_html( ATTENDANT_Slack::app_name() )
+						);
+						?>
 					</p>
 				</td>
 			</tr>

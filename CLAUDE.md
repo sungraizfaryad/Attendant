@@ -25,7 +25,7 @@ manual indexing controls, file-based chat logs, and email lead capture.
   `attendant/` is pending (requires deactivate on both sites + rsync + reactivate).
 - FLP install (`~/Local Sites/flp/app/public/wp-content/plugins/ai-chatmate/`) is
   test-only; rsync to it after every change. Real 4,160-property dataset.
-- Build zip lives at `~/Desktop/attendant-2.2.0.zip` (Plugin Check 0 errors).
+- Build zip lives at `~/Desktop/attendant-2.2.1.zip` (Plugin Check 0 errors).
 
 ## Don't trip these mines
 
@@ -106,6 +106,13 @@ manual indexing controls, file-based chat logs, and email lead capture.
   appear in Slack search, so there is no way back in without an invite by
   user id. `create_channel()` reports `alone` and the UI warns instead of
   showing a tick.
+- **One Slack app carries exactly ONE event request URL**, baked in from
+  `rest_url()` at manifest time. So a site running the plugin needs its OWN
+  Slack app — reusing one across sites leaves outbound working everywhere while
+  every inbound reply goes to whichever site owns the URL (which logs
+  `skipped_wrong_channel` and drops it). Many apps in one workspace is fine and
+  is the supported setup; `app_name()` names each after its site so they can be
+  told apart, within Slack's 35-char cap.
 - **The plugin can never remove a Slack channel** — there is no archive or
   delete call anywhere, and Slack gives bots no delete. Re-running the wizard
   therefore changes nothing inside Slack; picking "create a new channel" just
@@ -203,14 +210,14 @@ stubbing `sanitize_text_field` for a new test, use
 `static fn( $v ) => trim( strip_tags( (string) $v ) )` — the pass-through stub
 HID the operator bug.
 
-126 tests / 306 assertions. Plugin Check on the zipped build must report **0 errors**.
+128 tests / 329 assertions. Plugin Check on the zipped build must report **0 errors**.
 
 ## Build & ship
 
 ```sh
 SRC="/Users/sungraizfaryad/Local Sites/media-usage-inspector/app/public/wp-content/plugins/attendant"
 BUILD=/tmp/attendant-build
-ZIP="$HOME/Desktop/attendant-2.2.0.zip"
+ZIP="$HOME/Desktop/attendant-2.2.1.zip"
 rm -f "$ZIP"                       # zip APPENDS to an existing archive — stale top dirs cause WP.org WRONGFORMAT
 rm -rf "$BUILD" && mkdir -p "$BUILD/attendant"
 cp -R "$SRC"/. "$BUILD/attendant"/

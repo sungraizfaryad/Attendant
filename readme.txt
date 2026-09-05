@@ -3,7 +3,7 @@ Contributors:      sungraizfaryad
 Tags:              ai, site-search, chatbot, gemini, free
 Requires at least: 6.0
 Tested up to:      7.1
-Stable tag:        2.2.0
+Stable tag:        2.2.1
 Requires PHP:      8.0
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
@@ -112,6 +112,10 @@ Yes, if you connect Slack. The chat only offers the "talk to a person" button wh
 
 A Slack workspace, and a website Slack can reach. A setup wizard in the plugin walks you through it: it creates the Slack app for you with the right permissions already filled in, you paste two values back, and it creates the channel and puts you in it. It will not work on a local development site, because Slack has to be able to send replies to your site.
 
+= Can I use the same Slack workspace for several websites? =
+
+Yes. Each website needs its own Slack app, because a Slack app can only send replies to one address and that address is your site. The setup wizard handles this for you: run it on each site and it creates an app pointed at that site, named after it, so they are easy to tell apart. All of them install into the same Slack workspace, and each site gets its own channel. Give each channel a different name, since Slack channel names have to be unique.
+
 = Can I keep a record of the conversations? =
 
 Yes, optionally. File logging is off by default. When enabled, each exchange is written to a dated file in a protected folder in your uploads directory, kept for 30 days, and downloadable only by an administrator. IP addresses are never stored and session identifiers are one-way hashed. See the Privacy section.
@@ -166,6 +170,10 @@ You are responsible for disclosing these features in your own privacy policy if 
 
 == Changelog ==
 
+= 2.2.1 =
+* Improved: the Slack app is now named after your site, for example "Attendant Chat (My Shop)". If you run the plugin on more than one website you need one Slack app per site, and they used to all be called the same thing, which made them impossible to tell apart in your workspace.
+* Improved: the "invite the app to your channel" instructions now show your own app's name instead of a generic one.
+
 = 2.2.0 =
 * New: live handover to Slack. When the AI cannot help, the visitor can ask for a person and your team answers from a Slack thread while the visitor stays on your site. Off by default.
 * New: guided Slack setup wizard. It creates the Slack app with the right permissions already filled in, creates the channel, and puts you and anyone you pick into it, so there is nothing to configure by hand in Slack.
@@ -211,6 +219,9 @@ You are responsible for disclosing these features in your own privacy policy if 
 * Q&A Manager: admin-configured question/answer pairs matched semantically before RAG (threshold 0.92); REST CRUD API.
 
 == Upgrade Notice ==
+
+= 2.2.1 =
+Names the Slack app after your site so several websites can share one Slack workspace without confusion. Existing Slack apps keep working; nothing to redo.
 
 = 2.2.0 =
 Adds an optional live handover to Slack so a real person can take over a chat. Nothing changes unless you set it up; existing settings and your content index are untouched.

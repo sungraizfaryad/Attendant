@@ -235,7 +235,7 @@
 					slackSay( '', false, json.friendly );
 				} else {
 					// No error, just no channels the app has joined yet.
-					slackSay( 'No channels found yet. In Slack, open the channel you want and type /invite @Attendant Chat — for a private channel this is required — then click Reload channels.', false );
+					slackSay( 'No channels found yet. In Slack, open the channel you want and type /invite @' + ( attendantAdmin.slackApp || 'Attendant Chat' ) + ' — for a private channel this is required — then click Reload channels.', false );
 				}
 				return;
 			}

@@ -953,13 +953,21 @@ final class ATTENDANT_Slack {
 			case 'not_in_channel':
 			case 'is_archived':
 				return array(
-					'message' => __( 'The app is not in that channel yet. Open the channel in Slack, type /invite @Attendant Chat, then click "Reload channels" and choose it again.', 'attendant' ),
+					'message' => sprintf(
+						/* translators: %s: the Slack app's name, e.g. Attendant Chat (My Site) */
+						__( 'The app is not in that channel yet. Open the channel in Slack, type /invite @%s, then click "Reload channels" and choose it again.', 'attendant' ),
+						self::app_name()
+					),
 				);
 
 			case 'restricted_action':
 			case 'no_permission':
 				return array(
-					'message' => __( 'Slack blocked this action. Ask a Slack workspace admin to allow the Attendant Chat app, then try again.', 'attendant' ),
+					'message' => sprintf(
+						/* translators: %s: the Slack app's name, e.g. Attendant Chat (My Site) */
+						__( 'Slack blocked this action. Ask a Slack workspace admin to allow the %s app, then try again.', 'attendant' ),
+						self::app_name()
+					),
 				);
 
 			case 'ratelimited':
@@ -991,15 +999,17 @@ final class ATTENDANT_Slack {
 	 * @return array
 	 */
 	public static function manifest(): array {
+		$name = self::app_name();
+
 		return array(
 			'display_information' => array(
-				'name'        => 'Attendant Chat',
+				'name'        => $name,
 				'description' => 'Live-agent handoff for the Attendant chat widget',
 				'background_color' => '#0073aa',
 			),
 			'features'            => array(
 				'bot_user' => array(
-					'display_name'   => 'Attendant Chat',
+					'display_name'   => $name,
 					'always_online'  => true,
 				),
 			),
@@ -1031,6 +1041,39 @@ final class ATTENDANT_Slack {
 				'token_rotation_enabled' => false,
 			),
 		);
+	}
+
+	/**
+	 * What this site's Slack app is called: "Attendant Chat (Site Name)".
+	 *
+	 * One app can only carry one event URL, so a site running the plugin needs
+	 * its own app. Several apps in one workspace all called "Attendant Chat"
+	 * are impossible to tell apart, and "/invite @Attendant Chat" stops meaning
+	 * anything, so the site's own name goes in the title.
+	 *
+	 * Slack caps an app name at 35 characters. "Attendant Chat (" plus ")" eats
+	 * 17, so a long site name is trimmed on a word boundary where it can be.
+	 *
+	 * @return string
+	 */
+	public static function app_name(): string {
+		$base = 'Attendant Chat';
+		$site = trim( wp_strip_all_tags( (string) get_bloginfo( 'name' ) ) );
+		$site = (string) preg_replace( '/\s+/', ' ', $site );
+		if ( '' === $site ) {
+			return $base;
+		}
+
+		$room = 35 - ( strlen( $base ) + 3 ); // " (" + ")".
+		if ( mb_strlen( $site ) > $room ) {
+			$cut   = mb_substr( $site, 0, $room );
+			$space = mb_strrpos( $cut, ' ' );
+			// Only respect a word boundary if it leaves something readable.
+			$site  = ( false !== $space && $space >= 6 ) ? mb_substr( $cut, 0, $space ) : $cut;
+			$site  = rtrim( $site, " -–—," );
+		}
+
+		return $base . ' (' . $site . ')';
 	}
 
 	/**

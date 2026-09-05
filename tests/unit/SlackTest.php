@@ -82,6 +82,9 @@ final class SlackTest extends TestCase {
 		);
 		Functions\when( 'wp_remote_retrieve_body' )->alias( static fn( $r ) => $r['body'] ?? '' );
 		Functions\when( 'is_wp_error' )->justReturn( false );
+		// The manifest names the app after the site.
+		Functions\when( 'wp_strip_all_tags' )->alias( static fn( $v ) => strip_tags( (string) $v ) );
+		Functions\when( 'get_bloginfo' )->justReturn( 'Test Site' );
 	}
 
 	protected function tearDown(): void {
@@ -337,6 +340,38 @@ final class SlackTest extends TestCase {
 		$this->assertFalse( $r['ok'] );
 		$this->assertSame( 'name_taken', $r['error'] );
 		$this->assertStringContainsString( 'already exists', ATTENDANT_Slack::friendly_error( 'name_taken' )['message'] );
+	}
+
+	public function test_app_name_carries_the_site_name_within_slacks_35_char_cap(): void {
+		$cases = array(
+			// site name => expected app name
+			''                                   => 'Attendant Chat',
+			"  \n "                              => 'Attendant Chat',
+			'FLP'                                => 'Attendant Chat (FLP)',
+			'Eighteen Chars Yes'                 => 'Attendant Chat (Eighteen Chars Yes)',
+			'Fine Luxury Property Marbella'      => 'Attendant Chat (Fine Luxury)',
+			'Supercalifragilisticexpialidocious' => 'Attendant Chat (Supercalifragilist)',
+			'<b>My</b>   Shop'                   => 'Attendant Chat (My Shop)',
+		);
+
+		foreach ( $cases as $site => $expected ) {
+			Functions\when( 'get_bloginfo' )->justReturn( (string) $site );
+
+			$name = ATTENDANT_Slack::app_name();
+
+			$this->assertSame( $expected, $name, "site name: '{$site}'" );
+			// Slack rejects an app name over 35 characters.
+			$this->assertLessThanOrEqual( 35, mb_strlen( $name ), "site name: '{$site}'" );
+		}
+	}
+
+	public function test_manifest_names_the_app_and_the_bot_after_the_site(): void {
+		Functions\when( 'get_bloginfo' )->justReturn( 'FLP' );
+
+		$manifest = ATTENDANT_Slack::manifest();
+
+		$this->assertSame( 'Attendant Chat (FLP)', $manifest['display_information']['name'] );
+		$this->assertSame( 'Attendant Chat (FLP)', $manifest['features']['bot_user']['display_name'] );
 	}
 
 	public function test_list_members_skips_bots_and_flags_the_owner(): void {

@@ -1,11 +1,18 @@
 # Attendant — Progress
 
-_Last updated: 2026-09-05. **v2.2.0 SHIPPED** to WP.org and GitHub. Slack
+_Last updated: 2026-09-05. **v2.2.1 SHIPPED** to WP.org and GitHub. Slack
 live-agent handoff is live, verified end to end on a real workspace including
 the inbound direction._
 
 ## Shipped
 
+- **v2.2.1** — the Slack app is named after the site
+  (`ATTENDANT_Slack::app_name()` → "Attendant Chat (Media Usage)"). One Slack
+  app can only carry one event URL, so a site needs its own app; several apps
+  all called "Attendant Chat" were indistinguishable in a shared workspace.
+  Capped at Slack's 35 characters, trimmed on a word boundary. The name is
+  passed to admin JS as `attendantAdmin.slackApp`, so no "/invite @…" copy is
+  hardcoded any more. 128 tests / 329 assertions.
 - **v2.2.0 "Slack handoff"** live on WP.org (SVN r3682498 trunk + assets,
   r3682499 tag; tags 2.0.0 / 2.1.0 / 2.2.0) and GitHub (`main` @ e40439a,
   tag 2.2.0). 126 tests / 306 assertions, Plugin Check on the built zip 0

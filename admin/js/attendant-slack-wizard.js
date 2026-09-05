@@ -281,7 +281,7 @@
 
 			if ( ! list.length ) {
 				box.textContent = ( json && json.friendly && json.friendly.message )
-					|| 'No channels yet. In Slack, type /invite @Attendant Chat in your channel, then Reload.';
+					|| 'No channels yet. In Slack, type /invite @' + ( attendantAdmin.slackApp || 'Attendant Chat' ) + ' in your channel, then Reload.';
 				return;
 			}
 

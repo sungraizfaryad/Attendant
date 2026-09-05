@@ -195,7 +195,7 @@ endif;
 						<?php
 						attendant_wizard_shot(
 							'slack-step-install-1',
-							__( 'Slack permission screen for the Attendant Chat app', 'attendant' ),
+							__( 'Slack permission screen for the Attendant app', 'attendant' ),
 							__( 'Check the workspace is the right one, then Allow.', 'attendant' )
 						);
 						?>
@@ -312,7 +312,13 @@ endif;
 					<button type="button" class="button" id="attendant-wiz-reload"><?php echo esc_html__( 'Reload channels', 'attendant' ); ?></button>
 				</p>
 				<p class="attendant-wiz__note">
-					<?php echo esc_html__( 'Missing a private channel? Open it in Slack, type /invite @Attendant Chat, then Reload.', 'attendant' ); ?>
+					<?php
+					printf(
+						/* translators: %s: the Slack app's name, e.g. Attendant Chat (My Site) */
+						esc_html__( 'Missing a private channel? Open it in Slack, type /invite @%s, then Reload.', 'attendant' ),
+						esc_html( ATTENDANT_Slack::app_name() )
+					);
+					?>
 				</p>
 			</section>
 

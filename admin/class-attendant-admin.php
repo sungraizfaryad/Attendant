@@ -155,6 +155,9 @@ class ATTENDANT_Admin {
 						'restUrl' => esc_url_raw( rest_url( 'attendant/v1' ) ),
 						'nonce'   => wp_create_nonce( 'wp_rest' ),
 						'version' => ATTENDANT_VERSION,
+						// Each site names its own Slack app, so "/invite @…"
+						// hints cannot be hardcoded in the scripts.
+						'slackApp' => ATTENDANT_Slack::app_name(),
 						'i18n'    => array(
 							'saving'    => __( 'Saving…', 'attendant' ),
 							'saved'     => __( 'Settings saved.', 'attendant' ),
