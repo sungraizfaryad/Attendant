@@ -193,6 +193,27 @@ add_filter( 'pre_wp_mail', function ( $null, $atts ) {
   (10 chats × 80 msgs), per-chat server `session_id`, chips render via
   `renderChips()`, init runs on `DOMContentLoaded` because markup prints at
   `wp_footer` priority 100.
+- `includes/integrations/class-attendant-slack.php` — the whole Slack layer.
+  `api_call()` (form-encoded, see mines), `list_channels()` / `list_members()`,
+  `create_channel()` (reports `alone`), `invite_by_ids()`, `guess_owner_id()`,
+  `has_human_member()`, `friendly_error()` (every Slack code → plain English +
+  a fix link), `manifest()` / `manifest_url()` / `app_name()`. Session↔thread
+  maps and the agent-message queue are 24h transients, no new tables.
+  `slack_channel_name` is stored beside `slack_channel` purely as a label so the
+  UI can say "#support" not "C0C07FE1NUQ" — the settings sanitizer BLANKS it
+  whenever the id changes, so a stale name can never label the wrong channel.
+- Slack REST routes live in `class-attendant-rest-api.php`: `/chat/handoff`,
+  `/chat/poll`, `/slack/events`, `/slack/channels`, `/slack/members`,
+  `/slack/create-channel`, `/slack/test`. `/slack/events` is public and gated by
+  Slack's request-signature HMAC (5-min replay window, retries skipped, dedup by
+  event_id); it logs WHY it skipped an event, which the Integrations tab shows.
+- `admin/views/partials/slack-wizard.php` + `admin/js/attendant-slack-wizard.js`
+  — the setup wizard. `attendant_wizard_shot()` PRINTS an inline blue link (base
+  filename, no extension; probes webp/png/jpg) that opens
+  `#attendant-wiz-shotview`, a full-screen scroller. Never wrap that output in
+  `wp_kses_post` — it strips `<button>` and every `data-` attribute. Screenshots
+  live in `admin/images/` at native resolution as WebP; do NOT downscale them,
+  the panel is 1100px and they end up pixelated.
 - `admin/views/settings.php` — six tabs, submenu is registered LAST.
 - `uninstall.php` — multisite-safe; calls `ATTENDANT_Chat_Log::delete_all()` inside
   the per-site function.
@@ -229,7 +250,47 @@ find "$BUILD" \( -name '.DS_Store' -o -name '.playwright-mcp' \) -exec rm -rf {}
 ( cd "$BUILD" && zip -rqX "$ZIP" attendant )
 ```
 
-Verify with `wp plugin check` on the unzipped copy.
+### Releasing to WP.org
+
+Run Plugin Check on the **built copy**, never in place — in place it reports
+~23 errors that are all dev files the build strips (`tests/`, `phpcs.xml.dist`,
+`.DS_Store`). On the build it must be **0 errors**.
+
+```sh
+$WP plugin check /tmp/attendant-build/attendant --format=csv --fields=type,code
+```
+
+Then bump `Version:` in `attendant.php`, `ATTENDANT_VERSION`, and readme
+`Stable tag:` (all three must match), add a `== Changelog ==` entry plus a
+matching `== Upgrade Notice ==` (that one is the short line WordPress shows
+inside wp-admin before someone updates), commit, and tag `X.Y.Z` — deploy.sh
+refuses to run without a git tag matching the version.
+
+Attendant's canonical repo is this folder, not `~/Local Sites/plugins/<slug>/`,
+so deploy.sh needs its path passed at Q2:
+
+```sh
+rm -rf /tmp/attendant
+cd ~/Local\ Sites/plugins
+printf 'attendant\n<abs path to this folder>\n\n\n\n\n\ny\n' | ./deploy.sh
+```
+
+deploy.sh honours `.svnignore` (NOT `.distignore`) — it exports git HEAD, so
+without `.svnignore` your tests and config ship publicly. It also prints
+`svn: E125001: '/tmp/attendant/tags/X.Y.Z/trunk' does not exist` on the tag
+step and commits the tag correctly anyway. Harmless, but never trust
+`*** FIN ***` — verify:
+
+```sh
+svn ls https://plugins.svn.wordpress.org/attendant/tags/X.Y.Z/   # files at the ROOT, no nested trunk/
+svn cat https://plugins.svn.wordpress.org/attendant/trunk/readme.txt | sed -n 6p
+curl -s https://api.wordpress.org/plugins/info/1.0/attendant.json   # version goes live in a minute or two
+```
+
+**Any third party that receives user data must be declared in readme.txt** under
+`== External services ==`, and echoed under `== Privacy ==` — what is sent, when,
+and links to that service's terms and privacy policy. Missing it is a common
+rejection. Currently declared: Google Gemini, OpenAI, Slack.
 
 ## When in doubt
 
