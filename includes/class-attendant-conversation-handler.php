@@ -80,6 +80,13 @@ class ATTENDANT_Conversation_Handler {
 	/** Number of similar chunks to retrieve from the index per turn. */
 	private const RAG_TOP_K = 5;
 
+	/**
+	 * After this many visitor messages in one conversation, offer a human even
+	 * if the assistant has been answering — a long back-and-forth usually means
+	 * self-service is not working.
+	 */
+	private const MAX_SELF_SERVE_TURNS = 6;
+
 	// ── Public API ───────────────────────────────────────────────────────────
 
 	/**
@@ -146,10 +153,12 @@ class ATTENDANT_Conversation_Handler {
 			self::save_history( $session_id, $history );
 
 			return array(
-				'reply'      => $qa_match['answer'],
-				'session_id' => $session_id,
-				'sources'    => array(),
-				'error'      => null,
+				'reply'       => $qa_match['answer'],
+				'session_id'  => $session_id,
+				'sources'     => array(),
+				// A curated Q&A pair answered it — no need for a human.
+				'offer_human' => false,
+				'error'       => null,
 				'usage'      => array(
 					'input_tokens'  => 0,
 					'output_tokens' => 0,
@@ -331,12 +340,15 @@ class ATTENDANT_Conversation_Handler {
 
 		// ── Step 10: return reply ─────────────────────────────────────────
 		return array(
-			'reply'      => $reply,
-			'session_id' => $session_id,
-			'sources'    => $source_ids,
-			'options'    => $options,
-			'error'      => null,
-			'usage'      => $total_usage,
+			'reply'       => $reply,
+			'session_id'  => $session_id,
+			'sources'     => $source_ids,
+			'options'     => $options,
+			// Whether to offer a live person: the AI came up empty, or the
+			// visitor has been going back and forth for a while.
+			'offer_human' => self::should_offer_human( $session_id, $history, $source_ids, $reply ),
+			'error'       => null,
+			'usage'       => $total_usage,
 		);
 	}
 
@@ -455,6 +467,118 @@ class ATTENDANT_Conversation_Handler {
 	private static function get_provider(): ?ATTENDANT_LLM_Provider {
 		require_once ATTENDANT_PLUGIN_DIR . 'includes/providers/class-attendant-provider-factory.php';
 		return ATTENDANT_Provider_Factory::create();
+	}
+
+	// ── Live-agent handoff helpers ───────────────────────────────────────────
+
+	/**
+	 * Should the visitor be offered a real person right now?
+	 *
+	 * The button is deliberately NOT always visible — it appears only when the
+	 * assistant has actually let the visitor down:
+	 *  - this turn found nothing / could not answer, or
+	 *  - two turns in a row came up empty, or
+	 *  - the conversation has dragged on past MAX_SELF_SERVE_TURNS.
+	 *
+	 * Returns false when Slack is not set up, or a handoff is already live.
+	 *
+	 * @param string $session_id Chat session id.
+	 * @param array  $history    Conversation history BEFORE this turn is saved.
+	 * @param int[]  $source_ids Sources backing this turn's answer.
+	 * @param string $reply      The reply text about to be sent.
+	 * @return bool
+	 */
+	private static function should_offer_human( string $session_id, array $history, array $source_ids, string $reply ): bool {
+		require_once ATTENDANT_PLUGIN_DIR . 'includes/integrations/class-attendant-slack.php';
+
+		if ( ! ATTENDANT_Slack::is_configured() ) {
+			return false;
+		}
+		if ( '' !== ATTENDANT_Slack::thread_for_session( $session_id ) ) {
+			return false; // already talking to a person
+		}
+
+		// An answer with no sources AND wording that admits defeat counts as a
+		// miss. Sourced answers are never treated as failures.
+		$admits_defeat = (bool) preg_match(
+			'/(could ?n.t (find|generate)|couldn\x27t find|no results|nothing (matching|that matches)|not sure|unable to)/i',
+			$reply
+		);
+		$missed = empty( $source_ids ) && $admits_defeat;
+
+		$key    = 'attendant_miss_' . md5( $session_id );
+		$misses = (int) get_transient( $key );
+
+		if ( $missed ) {
+			++$misses;
+			set_transient( $key, $misses, HOUR_IN_SECONDS );
+		} elseif ( $misses > 0 ) {
+			delete_transient( $key );
+			$misses = 0;
+		}
+
+		// Long back-and-forth: history holds a user+assistant pair per turn.
+		$user_turns = 0;
+		foreach ( $history as $entry ) {
+			if ( 'user' === ( $entry['role'] ?? '' ) ) {
+				++$user_turns;
+			}
+		}
+
+		return $missed || $misses >= 2 || $user_turns >= self::MAX_SELF_SERVE_TURNS;
+	}
+
+	/**
+	 * Write a short handover summary of the conversation for the human who is
+	 * about to pick it up, using the configured AI provider.
+	 *
+	 * Falls back to '' when there is no history or the provider is unavailable —
+	 * the caller then posts the raw transcript alone.
+	 *
+	 * @param string $session_id Chat session id.
+	 * @return string Plain-text summary (may be multi-line), '' on failure.
+	 */
+	public static function summarize_for_handoff( string $session_id ): string {
+		$history = self::load_history( $session_id );
+		if ( empty( $history ) ) {
+			return '';
+		}
+
+		$provider = self::get_provider();
+		if ( null === $provider ) {
+			return '';
+		}
+
+		$lines = array();
+		foreach ( array_slice( $history, -20 ) as $entry ) {
+			$who     = 'user' === ( $entry['role'] ?? '' ) ? 'Visitor' : 'Assistant';
+			$lines[] = $who . ': ' . (string) ( $entry['content'] ?? '' );
+		}
+
+		$instruction = __( 'A website visitor is being handed to a human support agent. Summarise the chat below for that agent in 3 short bullet points: what the visitor wants, what has already been tried or answered, and what they still need. Be factual and brief. Do not greet anyone.', 'attendant' );
+
+		$response = $provider->chat_completion(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => $instruction . "\n\n" . implode( "\n", $lines ),
+				),
+			),
+			array(),
+			array(
+				'max_tokens'  => 220,
+				'temperature' => 0.2,
+			)
+		);
+
+		$summary = trim( (string) ( $response['content'] ?? '' ) );
+
+		// The summary costs tokens like any other call — keep the books honest.
+		if ( ! empty( $response['usage'] ) ) {
+			self::track_usage( $provider, (array) $response['usage'] );
+		}
+
+		return $summary;
 	}
 
 	// ── Private: session management ──────────────────────────────────────────

@@ -128,6 +128,16 @@
 				if ( ! mine.session && tc.session ) {
 					mine.session = tc.session;
 				}
+				// Live-handoff state only ever propagates FORWARD in a merge
+				// (never downgrade — a stale on-disk copy must not cancel a
+				// handoff this tab just started). Ending is detected per tab by
+				// the next poll returning live:false, so no downgrade is needed.
+				if ( tc.live && ! mine.live ) {
+					mine.live = true;
+				}
+				if ( tc.handoffSecret && ! mine.handoffSecret ) {
+					mine.handoffSecret = tc.handoffSecret;
+				}
 			} );
 			store.chats.sort( function ( a, b ) {
 				return ( b.started || 0 ) - ( a.started || 0 );
@@ -345,9 +355,17 @@
 			welcomeShown         = chat.messages.length > 0;
 
 			chat.messages.forEach( function ( m ) {
+				var role = 'bot';
+				if ( 'u' === m.r ) {
+					role = 'user';
+				} else if ( 'a' === m.r ) {
+					role = 'agent';
+				} else if ( 'y' === m.r ) {
+					role = 'sys';
+				}
 				appendMessage(
 					m.t,
-					'u' === m.r ? 'user' : 'bot',
+					role,
 					( m.s || [] ).map( function ( s ) {
 						return { title: s.t, url: s.u };
 					} )
@@ -378,6 +396,15 @@
 			renderChat( chat );
 			closeHistory();
 			inputEl.focus();
+
+			// Polling follows the OPEN conversation only.
+			if ( chat.live ) {
+				setLivePlaceholder( true );
+				startPolling();
+			} else {
+				setLivePlaceholder( false );
+				stopPolling();
+			}
 		}
 
 		function startNewChat() {
@@ -392,10 +419,13 @@
 				return;
 			}
 
+			endHandoff( activeChat() );
 			createChat();
 			sessionId            = '';
 			messagesEl.innerHTML = '';
 			welcomeShown         = false;
+			stopPolling();
+			setLivePlaceholder( false );
 			closeHistory();
 
 			if ( isOpen && '' !== welcomeMsg ) {
@@ -476,13 +506,7 @@
 			// logged-in users). Without it WordPress downgrades the request to
 			// logged-out, and the user-bound X-Attendant-Nonce can never verify for
 			// logged-in visitors.
-			var headers = {
-				'Content-Type': 'application/json',
-				'X-Attendant-Nonce': nonce,
-			};
-			if ( restNonce ) {
-				headers['X-WP-Nonce'] = restNonce;
-			}
+			var headers = Object.assign( { 'Content-Type': 'application/json' }, chatHeaders() );
 
 			fetch( restBase + '/chat', {
 				method:  'POST',
@@ -513,6 +537,19 @@
 					rememberSession( data.session_id );
 				}
 
+				// Live-agent mode: the message went to the team's Slack thread,
+				// not the AI — there is no bot reply to show. Their answer
+				// arrives via polling.
+				if ( data.live ) {
+					var liveChat = activeChat();
+					if ( ! liveChat.live ) {
+						liveChat.live = true;
+						saveStore();
+					}
+					startPolling();
+					return;
+				}
+
 				var reply   = ( data.reply && '' !== data.reply )
 					? data.reply
 					: 'Sorry, I could not generate a response. Please try again.';
@@ -527,6 +564,12 @@
 				// Render quick-reply chips when the server sent options.
 				if ( options.length > 0 ) {
 					renderChips( options );
+				}
+
+				// The assistant came up short (or this has dragged on) — offer
+				// a real person instead of leaving the visitor stuck.
+				if ( data.offer_human ) {
+					renderHumanOffer();
 				}
 			} )
 			.catch( function ( err ) {
@@ -603,6 +646,264 @@
 			if ( widget.classList.contains( 'is-history' ) ) {
 				renderHistoryList();
 			}
+			// A handoff may have started or ended in the other tab.
+			if ( chat.live && chat.handoffSecret ) {
+				startPolling();
+			} else {
+				stopPolling();
+			}
+		} );
+
+		// ── Live-agent handoff (Slack) ────────────────────────────────────────
+		// "Talk to a human" posts the transcript to the site team; while the
+		// handoff is live the widget polls for their replies and the visitor's
+		// messages are forwarded instead of going to the AI.
+
+		var humanBtn  = document.getElementById( 'attendant-human-btn' );
+		var pollTimer = null;
+
+		function chatHeaders() {
+			var h = { 'X-Attendant-Nonce': nonce };
+			if ( restNonce ) {
+				h['X-WP-Nonce'] = restNonce;
+			}
+			// The per-session handoff secret is the credential the server checks
+			// before touching a live session — send it when the open chat has one.
+			var live = activeChat();
+			if ( live && live.handoffSecret ) {
+				h['X-Attendant-Handoff'] = live.handoffSecret;
+			}
+			return h;
+		}
+
+		function startPolling() {
+			if ( pollTimer ) {
+				return;
+			}
+			pollTimer = window.setInterval( pollAgent, 4000 );
+		}
+
+		function stopPolling() {
+			if ( pollTimer ) {
+				window.clearInterval( pollTimer );
+				pollTimer = null;
+			}
+		}
+
+		function pollAgent() {
+			var chat = activeChat();
+			if ( ! chat.live || ! chat.handoffSecret || document.hidden ) {
+				return;
+			}
+
+			// Bind this request to the chat it was issued for — the visitor may
+			// switch conversations before it resolves.
+			var pollSession = sessionId;
+			var pollChatId  = chat.id;
+
+			var pollFailed = false;
+
+			fetch( restBase + '/chat/poll?session_id=' + encodeURIComponent( pollSession ), {
+				headers: chatHeaders()
+			} )
+			.then( function ( r ) {
+				// A dead security token (nonce expires after ~12-24h) would
+				// otherwise make polling fail forever in silence. Stop and tell
+				// the visitor to refresh instead of stranding them.
+				if ( 401 === r.status || 403 === r.status ) {
+					pollFailed = true;
+					return null;
+				}
+				return r.ok ? r.json() : null;
+			} )
+			.then( function ( data ) {
+				if ( pollFailed ) {
+					stopPolling();
+					appendMessage( i18n.pollExpired || 'Please refresh the page to keep chatting with our team.', 'bot', [] );
+					return;
+				}
+				if ( ! data ) {
+					return;
+				}
+
+				var target = null;
+				for ( var i = 0; i < store.chats.length; i++ ) {
+					if ( store.chats[ i ].id === pollChatId ) {
+						target = store.chats[ i ];
+						break;
+					}
+				}
+				if ( ! target ) {
+					return;
+				}
+				var isOpen = ( store.active === pollChatId );
+
+				var got = ( data.messages || [] );
+				got.forEach( function ( m ) {
+					if ( ! m || ! m.text ) {
+						return;
+					}
+					// Always persist to the chat the poll belonged to; only
+					// paint when that chat is the one on screen.
+					target.messages.push( { r: 'a', t: String( m.text ), s: [] } );
+					if ( isOpen ) {
+						appendMessage( m.text, 'agent', [] );
+					}
+				} );
+				if ( got.length ) {
+					saveStore();
+				}
+
+				if ( ! data.live ) {
+					target.live = false;
+					target.handoffSecret = '';
+					saveStore();
+					if ( isOpen ) {
+						stopPolling();
+						setLivePlaceholder( false );
+						var back = i18n.backToAi || 'You are back with the AI assistant.';
+						appendMessage( back, 'sys', [] );
+						persistMessage( 'y', back, [] );
+					}
+				}
+			} )
+			.catch( function () { /* transient network issue — next tick retries */ } );
+		}
+
+		function requestHuman() {
+			var chat = activeChat();
+			if ( chat.live ) {
+				return; // already waiting/live
+			}
+
+			// A conversation that never reached the server has no session id
+			// yet — the chat's own id works as the stable key in that case.
+			if ( '' === sessionId ) {
+				rememberSession( chat.id );
+			}
+
+			var transcript = chat.messages.slice( -10 ).map( function ( m ) {
+				return { role: 'u' === m.r ? 'user' : 'bot', text: m.t };
+			} );
+
+			fetch( restBase + '/chat/handoff', {
+				method:  'POST',
+				headers: Object.assign( { 'Content-Type': 'application/json' }, chatHeaders() ),
+				body: JSON.stringify( { session_id: sessionId, transcript: transcript } )
+			} )
+			.then( function ( r ) { return r.json().then( function ( b ) { return { ok: r.ok, body: b }; } ); } )
+			.then( function ( res ) {
+				if ( res.ok && res.body && res.body.secret ) {
+					var pending = messagesEl.querySelector( '.attendant-human-offer' );
+					if ( pending ) {
+						removeEl( pending );
+					}
+					// Clear state change: a divider, not a chat bubble, so the
+					// visitor plainly sees they are now with a person.
+					var connected = i18n.connectedDivider || 'Connected to our team';
+					appendMessage( connected, 'sys', [] );
+					persistMessage( 'y', connected, [] );
+
+					var note = ( res.body && res.body.message ) || i18n.humanRequested || 'Our team has been notified.';
+					appendMessage( note, 'agent', [] );
+					persistMessage( 'a', note, [] );
+
+					chat.live = true;
+					chat.handoffSecret = res.body.secret;
+					saveStore();
+					setLivePlaceholder( true );
+					startPolling();
+				} else {
+					var fail = ( res.body && res.body.message ) || i18n.humanFailed || 'Could not reach the team.';
+					appendMessage( fail, 'bot', [] );
+					persistMessage( 'b', fail, [] );
+				}
+			} )
+			.catch( function () {
+				appendMessage( i18n.humanFailed || 'Could not reach the team.', 'bot', [] );
+			} );
+		}
+
+		// Swap the input hint so it is obvious messages go to a person now.
+		function setLivePlaceholder( live ) {
+			inputEl.setAttribute( 'placeholder', live ? ( i18n.livePlaceholder || 'Message the team…' ) : placeholder );
+		}
+
+		// Offer a live person. Called only when the server says the assistant
+		// fell short, so the button is absent while the AI is doing its job.
+		function renderHumanOffer() {
+			if ( ! humanBtn ) {
+				return; // Slack handoff not configured on this site
+			}
+
+			// Keep it reachable from the header from now on.
+			humanBtn.classList.remove( 'attendant-is-hidden' );
+
+			// Never stack offers.
+			var existing = messagesEl.querySelector( '.attendant-human-offer' );
+			if ( existing ) {
+				removeEl( existing );
+			}
+
+			var wrap = document.createElement( 'div' );
+			wrap.className = 'attendant-human-offer';
+
+			var note = document.createElement( 'div' );
+			note.className = 'attendant-human-offer__note';
+			note.textContent = i18n.offerHuman || 'Would you like a person to help with this?';
+			wrap.appendChild( note );
+
+			var btn = document.createElement( 'button' );
+			btn.type = 'button';
+			btn.className = 'attendant-human-offer__btn';
+			btn.textContent = i18n.talkToHuman || 'Talk to a human';
+			btn.addEventListener( 'click', function () {
+				removeEl( wrap );
+				requestHuman();
+			} );
+			wrap.appendChild( btn );
+
+			messagesEl.appendChild( wrap );
+			scrollToBottom();
+		}
+
+		// Tell the server to close the Slack thread when the visitor abandons a
+		// live chat (starting a new one). Fire-and-forget.
+		function endHandoff( chat ) {
+			if ( ! chat || ! chat.live || ! chat.handoffSecret ) {
+				return;
+			}
+			var h = { 'Content-Type': 'application/json', 'X-Attendant-Nonce': nonce, 'X-Attendant-Handoff': chat.handoffSecret };
+			if ( restNonce ) {
+				h['X-WP-Nonce'] = restNonce;
+			}
+			fetch( restBase + '/chat/handoff', {
+				method:  'POST',
+				headers: h,
+				body: JSON.stringify( { session_id: chat.session || chat.id, end: true } )
+			} ).catch( function () {} );
+			chat.live = false;
+			chat.handoffSecret = '';
+		}
+
+		if ( humanBtn ) {
+			humanBtn.addEventListener( 'click', function () {
+				closeHistory();
+				requestHuman();
+				inputEl.focus();
+			} );
+		}
+
+		// Resume polling for a conversation that was already live (page
+		// navigation, reopened tab), and pause it while the tab is hidden.
+		if ( activeChat().live ) {
+			setLivePlaceholder( true );
+			startPolling();
+		}
+		document.addEventListener( 'visibilitychange', function () {
+			if ( ! document.hidden && activeChat().live ) {
+				startPolling();
+			}
 		} );
 
 		// ── DOM helpers ───────────────────────────────────────────────────────
@@ -616,8 +917,30 @@
 		 * @returns {Element}
 		 */
 		function appendMessage( text, role, sources ) {
+			// A system divider marks a change of who the visitor is talking to
+			// (handed to the team / back to the AI). Centered rule, not a bubble.
+			if ( 'sys' === role ) {
+				var div       = document.createElement( 'div' );
+				div.className = 'attendant-divider';
+				var span      = document.createElement( 'span' );
+				span.textContent = text;
+				div.appendChild( span );
+				messagesEl.appendChild( div );
+				scrollToBottom();
+				return div;
+			}
+
 			var wrap   = document.createElement( 'div' );
 			wrap.className = 'attendant-msg attendant-msg--' + role;
+
+			// A human teammate's reply carries a small name label so the
+			// visitor can tell it apart from the assistant.
+			if ( 'agent' === role ) {
+				var nameEl        = document.createElement( 'div' );
+				nameEl.className  = 'attendant-msg__agent-name';
+				nameEl.textContent = i18n.agent || 'Support team';
+				wrap.appendChild( nameEl );
+			}
 
 			var bubble = document.createElement( 'div' );
 			bubble.className = 'attendant-msg__bubble';

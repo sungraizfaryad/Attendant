@@ -1,40 +1,145 @@
 # Attendant — Progress
 
-_Last updated: 2026-08-22 (v2.1.0 SHIPPED to WP.org + GitHub)._
-_Rolling status only. Detail lives in `CLAUDE.md` and the cloud memory entries._
+_Last updated: 2026-09-05. v2.1.0 SHIPPED. Slack live-agent handoff on branch
+`slack-handoff` — **verified end to end on a real workspace 2026-09-05**,
+inbound included. Still NOT merged, NOT shipped, all work uncommitted._
 
-## Done (main @ 47eae11 = tag 2.1.0, deployed)
+## Shipped
 
-- Google Gemini added as second provider: FREE chat + FREE embeddings, one no-card key. OpenAI untouched for existing installs. Old 6-provider/OpenRouter/Slack/debug direction abandoned — parked on `backup/v2.2.0-full`.
-- LIVE-VERIFIED with a real free key on mui: 113 chunks embedded via Gemini ($0, 0 failures), RAG retrieval + search_posts tool call + reply working in the widget.
-- Embedding-provider stamp (`attendant_embedding_provider`) keeps chunk/query/Q&A vectors in one space; full re-index re-stamps + blanks content hashes + re-embeds Q&A pairs. FULLTEXT/fuzzy fallback in `includes/fallback/` when stamped key missing.
-- Wizard defaults to Gemini (free, AI Studio link); settings has 2-provider rows. Title: "Attendant - Free AI Site Search & Chatbot". Version 2.1.0.
-- Provider-switch re-index banner (admin_notices) on all 5 plugin admin screens until full re-index re-stamps; indexing page gets "run Index All Content below" wording. Condition: `ATTENDANT_Provider_Factory::needs_full_reindex()`. Live-verified on mui.
-- Default model `gemini-flash-lite-latest` (rolling alias, biggest free daily quota). All selectable models priced; estimate_cost fails closed (unknown id → highest rate) so the monthly-budget kill switch can't be blinded.
-- Per-provider spend ledgers (`ATTENDANT_Billing`, options nested [slug => [date => usd]]): switch provider → analytics shows that provider's history only ($0 fresh for Gemini); budget kill-switch watches ACTIVE provider; monthly budget now actually gates /chat (was display-only). Legacy flat maps migrate to openai bucket; normalize_map() heals mixed shapes per key; migrate_from_aicm no longer clobbers existing attendant_* options. Costs labeled "estimated" + "$0 on free tier" notes for Gemini.
-- Model dropdown: "fixed version" wording + layman bullets. Analytics logging notice deep-links to Settings #privacy (tabs follow hashchange now).
-- Cross-tab chat sync in widget: storage event repaints other tabs live, saveStore() merges before write (append-only tail merge) so concurrent tabs can't lose messages. Live-verified 2 tabs on mui.
-- `attendant_lead_captured` action fires after validated lead + send (email, name/phone/time/topic/session) — newsletter/CRM plugins hook it; readme FAQ documents. E2E-verified on mui (full chat flow → hook payload captured via mu-plugin).
-- 92 tests / 212 assertions green. Plugin Check 0 production errors. Two adversarial review rounds, all confirmed findings fixed. Both installs (mui + FLP) run this build; FLP 9,284 chunks intact. Build: `~/Desktop/attendant-2.1.0-gemini.zip`.
+- **v2.1.0 "Gemini free"** live on WP.org (SVN r3660619, tags 2.0.0 + 2.1.0) and
+  GitHub (`main` @ 1b3e0e2, tag 2.1.0 @ 47eae11). Title: "Attendant - Free AI
+  Site Search & Chatbot". Readme rewritten in plain language (no dashes, no
+  jargon); screenshots refreshed for the Gemini UI.
 
-## Decisions (durable)
+## In progress — branch `slack-handoff` (@ 6d8f4c3, 121 tests / 287 assertions)
 
-- Two providers only (google + openai). OpenRouter etc.: future maybe.
-- Gemini models: use rolling aliases (`gemini-flash-lite-latest` / `gemini-flash-latest`) — pinned ids get retired for NEW keys while still appearing in the models list (so test-connection passes but generateContent 404s).
-- Gemini 3 API contract: `thinkingLevel: minimal` (else thinking starves the reply under our token caps; `thinkingBudget: 0` is rejected), and replayed functionCall parts MUST echo part-level `thoughtSignature` + `id` or round 2 400s.
-- Per-model free-tier quotas are separate buckets — Flash-Lite has the biggest daily allowance, hence default.
-- Old local tags 2.1.0/2.2.0 point into the backup branch — delete before tagging the release.
+Slack live-agent handoff. Each visitor conversation becomes ONE THREAD in the
+owner's Slack channel; team replies land back in the chat widget.
 
-## Next steps (post-ship)
+- **Architecture**: `includes/integrations/class-attendant-slack.php` +
+  REST routes `/chat/handoff`, `/chat/poll`, `/slack/events`,
+  `/slack/channels`, `/slack/create-channel`, `/slack/test`. Session↔thread
+  maps and the agent-message queue are transients (24h), no new tables.
+- **Security**: Slack request-signature HMAC (5-min replay window, retries
+  skipped, dedup by event_id). Every handoff mints a 48-char per-session
+  secret (stored hashed) sent as `X-Attendant-Handoff` — the session id alone
+  is NOT a credential (an earlier review found it was; see CLAUDE.md mines).
+- **Setup wizard** (modal, `admin/views/partials/slack-wizard.php` +
+  `admin/js/attendant-slack-wizard.js`): sign in → create pre-filled app →
+  install → paste secret+token → create or choose channel → test → finish.
+  Integrations tab shows ONLY the wizard CTA until setup completes, then the
+  saved settings + "Re-run Slack setup".
+- **Channel provisioning**: the wizard creates the channel (bot owns it, so no
+  manual /invite) and invites teammates by email.
+- **Conditional human button**: hidden until the AI actually falls short
+  (unsourced + admits defeat, 2 misses in a row, or >6 visitor turns). On
+  handoff the AI writes a handover brief that leads the Slack thread.
+- **Diagnostics**: "Slack connection status" panel shows the last inbound event
+  and why it was skipped (wrong channel, bad signature, …). All Slack error
+  codes map to plain-language messages with fix links.
 
-- SHIPPED 2026-08-22: WP.org SVN r3660619 (trunk+assets+tag 2.1.0), GitHub main 47eae11 + tag. `gemini-only` merged & deleted; `backup/v2.2.0-full` kept for parts.
-- v2.2.0 plan: Slack handoff — port one-way notify from backup branch (half session), build two-way reply path (3-4 sessions: Slack app, events endpoint, widget polling, mode UX).
-- Screenshots on WP.org still show 2.0.0-era UI — captions accurate; refresh via assets-only deploy whenever.
-- FLP has dead 2.2.0-era options (handoff_*, slack placeholder) — harmless; clean whenever.
+## Fixed 2026-09-03 (uncommitted, on `slack-handoff`)
+
+Wizard reported success but the channel was unreachable. Two causes, both
+reproduced live against Sungraiz's workspace via WP-CLI:
+
+1. `api_call()` sent a JSON body. Slack's read methods ignore it and answer
+   with defaults, so `users.conversations` fell back to `types=public_channel`
+   and the just-created *private* channel never appeared ("No channels found").
+   `users.lookupByEmail` was broken the same way, so invites always failed.
+   Now form-encoded. Verified: `list_channels()` 0 → 1.
+2. Nothing ever put a human in the channel. The bot creates it, so the bot is
+   the only member; a private channel is not searchable, so the owner had no
+   route in and the test message landed in an empty room.
+
+Who-goes-in-the-channel is now a pick-list, not typing (Sungraiz's call —
+typing an email was "not good"):
+
+- `GET /slack/members` → `list_members()` (`users.list`, bots/deleted/Slackbot
+  filtered, sorted by name). The handler marks one person `you`: an email
+  matching the WP account, else `is_primary_owner`. `matched:false` means the
+  tick is a guess and the wizard says so.
+- Wizard step 6 renders that as a searchable checkbox list with `you`
+  pre-ticked; create is blocked if nothing is ticked. If `users.list` fails
+  (scope/transport) the step falls back to the old email textarea.
+- Invites go out by user id (`invite_by_ids` — one `conversations.invite` with
+  every id, partial failures read out of `errors`).
+- The settings tab has NO people UI at all: no "Add people" row, no email box
+  on Create channel. Adding people after setup is a Slack job. When that row
+  creates a channel the server resolves the owner itself via
+  `guess_owner_id()`.
+- `create_channel()` still returns `alone`; wizard and settings warn instead of
+  showing a tick.
+
+**Reset done 2026-09-03 on media-usage-inspector only** (not FLP), so the
+wizard starts clean: deleted `attendant_slack_bot_token`,
+`attendant_slack_signing_secret`, `attendant_slack_debug` and 2 Slack
+transients; blanked `slack_channel`, `slack_enabled` in `attendant_settings`.
+All 42 other settings keys, the API keys and the index were left alone.
+Backup of the deleted values:
+`<session scratchpad>/slack-reset-backup.json`. Sungraiz is deleting the old
+Slack app and re-creating it from the manifest URL (scopes unchanged).
+
+## Next steps
+
+- **Sungraiz is testing the wizard** on a real workspace. Two prerequisites:
+  re-create/reinstall the Slack app (new scopes: channels:manage, groups:write,
+  users:read, users:read.email) and note Slack must reach the site (no local).
+- Screenshots open in a viewer, and the trigger is an underlined blue link
+  ("click here to see the screenshot") printed INSIDE the step it explains —
+  a list item or a hint paragraph. A row of buttons under the instructions
+  read as decoration and got skipped. `attendant_wizard_shot()` prints (does
+  not return) the markup and escapes each part itself: `wp_kses_post` strips
+  `<button>` and every `data-` attribute, so call sites must echo it raw.
+- `#attendant-wiz-shotview` is a full-screen scroller: the whole overlay is
+  `overflow-y: auto`, the image is `width: 100%; height: auto`, and the close
+  button is `position: fixed` in the screen's top-right corner (48px, dashicon
+  at 30px) so it stays reachable however far down you scroll. Do NOT go back to
+  fitting the image with `object-fit: contain` and `max-height: 100%` — a
+  percentage height inside a flex column has no definite height to resolve
+  against, so it silently falls back to the natural size, overflows, and gets
+  clipped with no way to reach the rest. Opening resets `scrollTop` and focuses
+  the scroller so arrow keys page through immediately. Escape closes the viewer
+  first and the wizard only when no shot is open.
+- Screenshots: six in `admin/images/` (`slack-step-create-1/2`,
+  `slack-step-install-1/2`, `slack-step-credentials-1/2`), NATIVE resolution
+  WebP q82, page background auto-cropped off the edges — 452 KB for the set.
+  The first pass downscaled to 1200px and quantised to 256 colours: half the
+  size but visibly pixelated against a 1100px panel on a retina screen. Do not
+  downscale these again; the natural size is already at or under 2× the panel.
+  `attendant_wizard_shot()` takes a base name with NO extension and probes
+  webp/png/jpg, so a replacement can be dropped in any format.
+- Step 3's copy was rewritten to match what the manifest flow actually does
+  (Allow → Go to App Settings, not "Install to Workspace").
+- Re-running the wizard shows a notice at the top of step 1 (gated on
+  token + secret + channel all being present). It says plainly that re-running
+  never touches Slack, then splits into three paths: reconnect (leave the
+  credential boxes empty, they are kept), move to an existing channel, or make
+  a new one. It does NOT tell people to delete the old channel — deleting is
+  permanent, destroys support history, and is not required; only the NAME can
+  collide, and `name_taken` already has a friendly error. Archive is the
+  suggested tidy-up. Also warns that switching cuts off a live handoff.
+- `slack_channel_name` now rides beside `slack_channel` so the UI can say
+  "#website-chat" instead of "C0C07FE1NUQ" — set by create-channel, by the
+  wizard's existing-channel path, and by a hidden field on the settings form.
+  The sanitizer blanks a stale name whenever the id changes, so the label can
+  never name one channel while messages go to another. Everything falls back to
+  the raw id when the name is unknown.
+- Still missing: `slack-step-signin` for step 1. And `slack-step-create-1`
+  shows a `.local` request_url — worth re-shooting from the public site before
+  release.
+- Inbound Slack→site is CONFIRMED (2026-09-05, Sungraiz's workspace, fresh app
+  from the manifest URL). The whole wizard runs clean start to finish. The
+  status panel stays as the diagnostic for when it does not.
+- Not done, deliberately: full OAuth "Add to Slack" (needs a hosted broker or
+  swaps which two secrets get copied — see the Slack notes in CLAUDE.md).
+- After Slack: WhatsApp reuses the same inbound/outbound machinery.
 
 ## Key files
 
-- `includes/providers/` — interface, factory (+embedding stamp), google + openai providers.
-- `includes/providers/class-attendant-google-provider.php` — Gemini translation incl. thoughtSignature/id round-trip, thinkingLevel, batch embeddings @1536.
-- `includes/fallback/` — keyword retriever + fuzzy Q&A matcher.
-- `tests/unit/GoogleProviderTest.php` — handler-shape regression tests for the tool round-trip.
+- `includes/integrations/class-attendant-slack.php` — the whole Slack layer.
+- `includes/class-attendant-conversation-handler.php` — `should_offer_human()`,
+  `summarize_for_handoff()`.
+- `public/js/attendant-widget.js` — handoff, polling, cross-tab sync, dividers.
+- `admin/views/partials/slack-wizard.php` + `admin/js/attendant-slack-wizard.js`.
+- `tests/unit/SlackTest.php`, `tests/unit/OfferHumanTest.php`.

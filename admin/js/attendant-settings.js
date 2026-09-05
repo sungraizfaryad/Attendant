@@ -63,7 +63,7 @@
 
 	// Checkboxes that must be sent as explicit booleans: unchecked boxes are
 	// absent from FormData, so without this they could never be turned off.
-	const CHECKBOXES = [ 'logging_enabled', 'auto_sync', 'file_logging', 'lead_capture' ];
+	const CHECKBOXES = [ 'logging_enabled', 'auto_sync', 'file_logging', 'lead_capture', 'slack_enabled' ];
 
 	// -----------------------------------------------------------------
 	// Helper: show an admin notice banner.
@@ -184,5 +184,236 @@
 			} );
 		} );
 	} );
+
+	// -----------------------------------------------------------------
+	// Slack integration: channel loader + test message.
+	// -----------------------------------------------------------------
+	const slackStatus  = document.getElementById( 'attendant-slack-status' );
+	const slackLoadBtn = document.getElementById( 'attendant-slack-load-channels' );
+	const slackTestBtn = document.getElementById( 'attendant-slack-test' );
+	const slackSelect  = document.getElementById( 'attendant-slack-channel' );
+
+	// Render a status line. `friendly` (optional) is {message, link, link_label}
+	// from the server — shown as plain language with a clickable fix link.
+	function slackSay( text, ok, friendly ) {
+		if ( ! slackStatus ) {
+			return;
+		}
+		slackStatus.textContent = '';
+		slackStatus.style.color = ok ? '#00a32a' : '#d63638';
+		slackStatus.style.display = 'block';
+		slackStatus.style.marginTop = '8px';
+
+		var msg = friendly && friendly.message ? friendly.message : text;
+		slackStatus.appendChild( document.createTextNode( ( ok ? '✓ ' : '✗ ' ) + msg + ' ' ) );
+
+		if ( friendly && friendly.link ) {
+			var a = document.createElement( 'a' );
+			a.href = friendly.link;
+			a.target = '_blank';
+			a.rel = 'noopener noreferrer';
+			a.textContent = ( friendly.link_label || 'Open' ) + ' ↗';
+			slackStatus.appendChild( a );
+		}
+	}
+
+	function loadSlackChannels() {
+		if ( ! slackLoadBtn || ! slackSelect ) {
+			return;
+		}
+		slackLoadBtn.disabled = true;
+		slackSay( 'Loading…', true );
+		fetch( attendantAdmin.restUrl + '/slack/channels', {
+			headers: { 'X-WP-Nonce': attendantAdmin.nonce },
+		} )
+		.then( function ( res ) { return res.json(); } )
+		.then( function ( json ) {
+			const channels = ( json && json.channels ) || [];
+			const err      = json && json.error;
+			if ( ! channels.length ) {
+				if ( err && json.friendly ) {
+					slackSay( '', false, json.friendly );
+				} else {
+					// No error, just no channels the app has joined yet.
+					slackSay( 'No channels found yet. In Slack, open the channel you want and type /invite @Attendant Chat — for a private channel this is required — then click Reload channels.', false );
+				}
+				return;
+			}
+			const current = slackSelect.value;
+			let matched   = false;
+			slackSelect.innerHTML = '';
+			channels.forEach( function ( ch ) {
+				const opt = document.createElement( 'option' );
+				opt.value = ch.id;
+				opt.textContent = '#' + ch.name + ( ch.private ? ' (private)' : '' );
+				if ( ch.id === current ) {
+					opt.selected = true;
+					matched = true;
+				}
+				slackSelect.appendChild( opt );
+			} );
+
+			// Never silently swap the owner's saved channel for the first in the
+			// list — if it is not among them (bot removed, channel archived),
+			// keep it selected and say so.
+			if ( current && ! matched ) {
+				const keep = document.createElement( 'option' );
+				keep.value = current;
+				keep.textContent = current + ' — saved, but the app is no longer in it';
+				keep.selected = true;
+				slackSelect.insertBefore( keep, slackSelect.firstChild );
+				slackSay( 'Your saved channel is not in the list any more — the app may have been removed from it. Pick another, or re-invite the app and Reload.', false );
+				return;
+			}
+
+			syncSlackChannelName();
+			slackSay( channels.length + ' channels loaded — pick one and Save.', true );
+		} )
+		.catch( function () {
+			slackSay( attendantAdmin.i18n.error, false );
+		} )
+		.finally( function () {
+			slackLoadBtn.disabled = false;
+		} );
+	}
+
+	// The id is what we save; the name rides along so the UI can say "#support"
+	// instead of "C0C07FE1NUQ".
+	function syncSlackChannelName() {
+		const hidden = document.getElementById( 'attendant-slack-channel-name' );
+		if ( ! hidden || ! slackSelect ) {
+			return;
+		}
+		const opt = slackSelect.options[ slackSelect.selectedIndex ];
+		const raw = opt ? opt.textContent.trim() : '';
+		hidden.value = ( 0 === raw.indexOf( '#' ) )
+			? raw.slice( 1 ).replace( / \(private\)$/, '' )
+			: '';
+	}
+
+	if ( slackLoadBtn && slackSelect ) {
+		slackLoadBtn.addEventListener( 'click', loadSlackChannels );
+		slackSelect.addEventListener( 'change', syncSlackChannelName );
+
+		// Auto-load the moment the picker appears with nothing chosen yet, so
+		// the flow is: save tokens → page reloads → channels populate here.
+		const chanRow = document.getElementById( 'attendant-slack-channel-row' );
+		if ( chanRow && '1' === chanRow.dataset.autoload ) {
+			loadSlackChannels();
+		}
+	}
+
+	if ( slackTestBtn ) {
+		slackTestBtn.addEventListener( 'click', function () {
+			slackTestBtn.disabled = true;
+			fetch( attendantAdmin.restUrl + '/slack/test', {
+				method:  'POST',
+				headers: { 'X-WP-Nonce': attendantAdmin.nonce },
+			} )
+			.then( function ( res ) { return res.json(); } )
+			.then( function ( json ) {
+				if ( json && json.ok ) {
+					slackSay( 'Test message sent' + ( json.team ? ' to ' + json.team : '' ) + ' — check your channel.', true );
+				} else {
+					slackSay( '', false, ( json && json.friendly ) || { message: 'Something went wrong. Check your token and channel.' } );
+				}
+			} )
+			.catch( function () {
+				slackSay( attendantAdmin.i18n.error, false );
+			} )
+			.finally( function () {
+				slackTestBtn.disabled = false;
+			} );
+		} );
+	}
+
+	// -----------------------------------------------------------------
+	// Slack: create a channel (bot auto-joins) + optional invites.
+	// -----------------------------------------------------------------
+	const slackCreateBtn    = document.getElementById( 'attendant-slack-create-channel' );
+	const slackCreateStatus = document.getElementById( 'attendant-slack-create-status' );
+
+	function createStatus( text, ok, friendly ) {
+		if ( ! slackCreateStatus ) {
+			return;
+		}
+		slackCreateStatus.textContent = '';
+		slackCreateStatus.style.color = ok ? '#00a32a' : '#d63638';
+		slackCreateStatus.style.marginLeft = '8px';
+		var msg = friendly && friendly.message ? friendly.message : text;
+		slackCreateStatus.appendChild( document.createTextNode( ( ok ? '✓ ' : '✗ ' ) + msg ) );
+	}
+
+	if ( slackCreateBtn && slackSelect ) {
+		slackCreateBtn.addEventListener( 'click', function () {
+			const nameEl    = document.getElementById( 'attendant-slack-new-name' );
+			const privateEl = document.getElementById( 'attendant-slack-new-private' );
+			const name      = nameEl ? nameEl.value.trim() : '';
+
+			if ( '' === name ) {
+				createStatus( 'Type a channel name first.', false );
+				return;
+			}
+
+			slackCreateBtn.disabled = true;
+			createStatus( 'Creating…', true );
+
+			fetch( attendantAdmin.restUrl + '/slack/create-channel', {
+				method:  'POST',
+				headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': attendantAdmin.nonce },
+				body: JSON.stringify( { name: name, private: !! ( privateEl && privateEl.checked ) } ),
+			} )
+			.then( function ( res ) { return res.json(); } )
+			.then( function ( json ) {
+				if ( ! json || ! json.ok ) {
+					createStatus( '', false, ( json && json.friendly ) || { message: 'Could not create the channel.' } );
+					return;
+				}
+
+				// Select the new channel in the dropdown (already saved server-side).
+				const label = '#' + json.name + ( json.private ? ' (private)' : '' );
+				let opt = null;
+				for ( let i = 0; i < slackSelect.options.length; i++ ) {
+					if ( slackSelect.options[ i ].value === json.id ) {
+						opt = slackSelect.options[ i ];
+						break;
+					}
+				}
+				if ( ! opt ) {
+					opt = document.createElement( 'option' );
+					opt.value = json.id;
+					slackSelect.appendChild( opt );
+				}
+				opt.textContent = label;
+				opt.selected = true;
+
+				let msg = 'Channel #' + json.name + ' created and selected.';
+				if ( json.invited && json.invited.length ) {
+					msg += ' You have been added to it.';
+				}
+
+				// A channel only the bot is in is not a working setup — the
+				// owner cannot read it, and a private one is not searchable.
+				if ( json.alone ) {
+					createStatus(
+						msg + ' Nobody could be added to it — ' + ( json.private
+							? 'a private channel cannot be found in Slack search, so create a public one instead or ask a workspace admin to add you.'
+							: 'open Slack, search for #' + json.name + ', and join it.' ),
+						false
+					);
+					return;
+				}
+
+				msg += ' Click "Send test message" to confirm.';
+				createStatus( msg, true );
+			} )
+			.catch( function () {
+				createStatus( attendantAdmin.i18n.error, false );
+			} )
+			.finally( function () {
+				slackCreateBtn.disabled = false;
+			} );
+		} );
+	}
 
 }() );

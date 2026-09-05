@@ -241,11 +241,22 @@ class ATTENDANT_Frontend {
 				'welcomeMessage' => (string) Attendant_Plugin::get_setting( 'welcome_message', '' ),
 				// Input placeholder — localised so it can be translated.
 				'placeholder'    => __( 'Ask a question…', 'attendant' ),
+				// Whether the Slack live-agent handoff is available.
+				'handoff'        => ATTENDANT_Slack::is_configured(),
 				// Strings used by the chat-history UI.
 				'i18n'           => array(
 					'newConversation' => __( 'New conversation', 'attendant' ),
 					'noHistory'       => __( 'No previous conversations yet.', 'attendant' ),
 					'current'         => __( 'Current', 'attendant' ),
+					'agent'           => __( 'Support team', 'attendant' ),
+					'humanRequested'  => __( 'Our team has been notified. Replies will appear right here — you can keep browsing, this chat follows you.', 'attendant' ),
+					'humanFailed'     => __( 'Could not reach the team right now. Please try again in a moment.', 'attendant' ),
+					'backToAi'        => __( 'You are back with the AI assistant.', 'attendant' ),
+					'connectedDivider' => __( 'Connected to our team', 'attendant' ),
+					'talkToHuman'      => __( 'Talk to a human', 'attendant' ),
+					'offerHuman'       => __( 'Would you like a person to help with this?', 'attendant' ),
+					'livePlaceholder'  => __( 'Message the team…', 'attendant' ),
+					'pollExpired'     => __( 'Please refresh the page to keep chatting with our team.', 'attendant' ),
 				),
 			)
 		);
@@ -298,6 +309,23 @@ class ATTENDANT_Frontend {
 				<span class="attendant-widget__title">
 					<?php echo esc_html( $site_name ); ?>
 				</span>
+				<?php if ( ATTENDANT_Slack::is_configured() ) : ?>
+				<button
+					type="button"
+					class="attendant-widget__hbtn attendant-is-hidden"
+					id="attendant-human-btn"
+					aria-label="<?php esc_attr_e( 'Talk to a human', 'attendant' ); ?>"
+					title="<?php esc_attr_e( 'Talk to a human', 'attendant' ); ?>"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+						viewBox="0 0 24 24" fill="none" stroke="currentColor"
+						stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+						aria-hidden="true" focusable="false">
+						<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+						<circle cx="12" cy="7" r="4"/>
+					</svg>
+				</button>
+				<?php endif; ?>
 				<button
 					type="button"
 					class="attendant-widget__hbtn"

@@ -210,6 +210,48 @@
 	border-bottom-left-radius: 4px;
 }
 
+/* Live-agent (human) replies — bot side of the thread, subtly set apart */
+.attendant-msg--agent {
+	align-self:  flex-start;
+	align-items: flex-start;
+}
+
+.attendant-msg--agent .attendant-msg__bubble {
+	background:                var(--attendant-bot-bubble);
+	color:                     var(--attendant-bot-text);
+	border-bottom-left-radius: 4px;
+	border-left:               3px solid var(--attendant-brand, #0073aa);
+}
+
+.attendant-msg__agent-name {
+	font-size:     11px;
+	font-weight:   600;
+	opacity:       0.7;
+	margin-bottom: 2px;
+}
+
+/* System divider — marks the switch to/from a live human */
+.attendant-divider {
+	display:     flex;
+	align-items: center;
+	text-align:  center;
+	gap:         10px;
+	margin:      14px 4px;
+	color:       #646970;
+	font-size:   12px;
+	font-weight: 600;
+}
+.attendant-divider::before,
+.attendant-divider::after {
+	content:    "";
+	flex:       1;
+	height:     1px;
+	background: rgba(0, 0, 0, 0.12);
+}
+.attendant-divider span {
+	white-space: nowrap;
+}
+
 /* Inline formatting rendered by JS formatText() */
 .attendant-msg__bubble strong { font-weight: 600; }
 .attendant-msg__bubble br     { display: block; margin-bottom: 2px; }
@@ -493,4 +535,40 @@
 	color:      var(--attendant-header-text);
 	outline:    2px solid var(--attendant-color);
 	outline-offset: 2px;
+}
+
+/* Hidden until the assistant actually needs to hand over */
+.attendant-is-hidden { display: none !important; }
+
+/* Inline "talk to a human" offer, shown when the AI falls short */
+.attendant-human-offer {
+	margin:        10px 4px 4px;
+	padding:       12px;
+	border:        1px solid rgba(0, 0, 0, 0.1);
+	border-radius: var(--attendant-radius-lg);
+	background:    rgba(0, 0, 0, 0.02);
+	text-align:    center;
+}
+
+.attendant-human-offer__note {
+	font-size:     13px;
+	color:         #50575e;
+	margin-bottom: 8px;
+}
+
+.attendant-human-offer__btn {
+	display:       inline-block;
+	padding:       9px 16px;
+	border:        0;
+	border-radius: 999px;
+	background:    var(--attendant-color, #0073aa);
+	color:         #fff;
+	font-size:     13px;
+	font-weight:   600;
+	cursor:        pointer;
+}
+
+.attendant-human-offer__btn:hover,
+.attendant-human-offer__btn:focus {
+	filter: brightness(1.08);
 }
