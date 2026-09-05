@@ -1,17 +1,18 @@
 # Attendant — Progress
 
-_Last updated: 2026-09-05. v2.1.0 SHIPPED. Slack live-agent handoff on branch
-`slack-handoff` — **verified end to end on a real workspace 2026-09-05**,
-inbound included. Still NOT merged, NOT shipped, all work uncommitted._
+_Last updated: 2026-09-05. **v2.2.0 SHIPPED** to WP.org and GitHub. Slack
+live-agent handoff is live, verified end to end on a real workspace including
+the inbound direction._
 
 ## Shipped
 
-- **v2.1.0 "Gemini free"** live on WP.org (SVN r3660619, tags 2.0.0 + 2.1.0) and
-  GitHub (`main` @ 1b3e0e2, tag 2.1.0 @ 47eae11). Title: "Attendant - Free AI
-  Site Search & Chatbot". Readme rewritten in plain language (no dashes, no
-  jargon); screenshots refreshed for the Gemini UI.
+- **v2.2.0 "Slack handoff"** live on WP.org (SVN r3682498 trunk + assets,
+  r3682499 tag; tags 2.0.0 / 2.1.0 / 2.2.0) and GitHub (`main` @ e40439a,
+  tag 2.2.0). 126 tests / 306 assertions, Plugin Check on the built zip 0
+  errors. Build: `~/Desktop/attendant-2.2.0.zip` (644 KB).
+- **v2.1.0 "Gemini free"** (SVN r3660619, GitHub tag 2.1.0 @ 47eae11).
 
-## In progress — branch `slack-handoff` (@ 6d8f4c3, 121 tests / 287 assertions)
+## What shipped in 2.2.0 — the Slack layer
 
 Slack live-agent handoff. Each visitor conversation becomes ONE THREAD in the
 owner's Slack channel; team replies land back in the chat widget.
@@ -38,7 +39,7 @@ owner's Slack channel; team replies land back in the chat widget.
   and why it was skipped (wrong channel, bad signature, …). All Slack error
   codes map to plain-language messages with fix links.
 
-## Fixed 2026-09-03 (uncommitted, on `slack-handoff`)
+## Bugs found and fixed during real-workspace testing
 
 Wizard reported success but the channel was unreachable. Two causes, both
 reproduced live against Sungraiz's workspace via WP-CLI:
@@ -82,9 +83,6 @@ Slack app and re-creating it from the manifest URL (scopes unchanged).
 
 ## Next steps
 
-- **Sungraiz is testing the wizard** on a real workspace. Two prerequisites:
-  re-create/reinstall the Slack app (new scopes: channels:manage, groups:write,
-  users:read, users:read.email) and note Slack must reach the site (no local).
 - Screenshots open in a viewer, and the trigger is an underlined blue link
   ("click here to see the screenshot") printed INSIDE the step it explains —
   a list item or a hint paragraph. A row of buttons under the instructions
@@ -131,6 +129,9 @@ Slack app and re-creating it from the manifest URL (scopes unchanged).
 - Inbound Slack→site is CONFIRMED (2026-09-05, Sungraiz's workspace, fresh app
   from the manifest URL). The whole wizard runs clean start to finish. The
   status panel stays as the diagnostic for when it does not.
+- readme.txt declares Slack under BOTH `== External services ==` and
+  `== Privacy ==` — required by WP.org for a third party that receives visitor
+  messages, and a common rejection reason if missed.
 - Not done, deliberately: full OAuth "Add to Slack" (needs a hosted broker or
   swaps which two secrets get copied — see the Slack notes in CLAUDE.md).
 - After Slack: WhatsApp reuses the same inbound/outbound machinery.

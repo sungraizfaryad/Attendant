@@ -25,7 +25,7 @@ manual indexing controls, file-based chat logs, and email lead capture.
   `attendant/` is pending (requires deactivate on both sites + rsync + reactivate).
 - FLP install (`~/Local Sites/flp/app/public/wp-content/plugins/ai-chatmate/`) is
   test-only; rsync to it after every change. Real 4,160-property dataset.
-- Build zip lives at `~/Desktop/attendant-2.0.0.zip` (Plugin Check 0 errors).
+- Build zip lives at `~/Desktop/attendant-2.2.0.zip` (Plugin Check 0 errors).
 
 ## Don't trip these mines
 
@@ -203,14 +203,14 @@ stubbing `sanitize_text_field` for a new test, use
 `static fn( $v ) => trim( strip_tags( (string) $v ) )` — the pass-through stub
 HID the operator bug.
 
-121 tests / 287 assertions. Plugin Check on the zipped build must report **0 errors**.
+126 tests / 306 assertions. Plugin Check on the zipped build must report **0 errors**.
 
 ## Build & ship
 
 ```sh
 SRC="/Users/sungraizfaryad/Local Sites/media-usage-inspector/app/public/wp-content/plugins/attendant"
 BUILD=/tmp/attendant-build
-ZIP="$HOME/Desktop/attendant-2.0.0.zip"
+ZIP="$HOME/Desktop/attendant-2.2.0.zip"
 rm -f "$ZIP"                       # zip APPENDS to an existing archive — stale top dirs cause WP.org WRONGFORMAT
 rm -rf "$BUILD" && mkdir -p "$BUILD/attendant"
 cp -R "$SRC"/. "$BUILD/attendant"/
